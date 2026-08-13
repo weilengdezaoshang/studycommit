@@ -22,9 +22,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@nestjs/testing": "^11.1.29",
     "@types/node": "^24.0.0",
     "@types/pg": "^8.15.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.20.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.10"
   }
 }
