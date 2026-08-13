@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "StudyCommit",
+    "slug": "studycommit",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.studycommit.app" },
+    "android": { "package": "com.studycommit.app" }
+  }
+}

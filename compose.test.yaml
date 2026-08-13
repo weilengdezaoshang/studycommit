@@ -1,0 +1,24 @@
+name: studycommit-test
+services:
+  postgres-test:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: studycommit_test
+      POSTGRES_USER: studycommit
+      POSTGRES_PASSWORD: studycommit_test_only
+    ports: ["5433:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U studycommit -d studycommit_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  redis-test:
+    image: redis:8-alpine
+    ports: ["6380:6379"]
+    tmpfs: [/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

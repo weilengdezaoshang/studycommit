@@ -1,0 +1,290 @@
+<div id="studycommit-mobile-hifi">
+  <style>
+    #studycommit-mobile-hifi{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:light-dark(#172019,#eef2ed);width:100%;}
+    #studycommit-mobile-hifi *{box-sizing:border-box}
+    #studycommit-mobile-hifi button,#studycommit-mobile-hifi input,#studycommit-mobile-hifi textarea,#studycommit-mobile-hifi select{font:inherit}
+    #studycommit-mobile-hifi button{transition:opacity .18s ease,background-color .18s ease,border-color .18s ease}
+    #studycommit-mobile-hifi button:active{opacity:.72}
+    #studycommit-mobile-hifi .prototype-layout{display:grid;grid-template-columns:minmax(180px,220px) minmax(320px,390px);gap:28px;justify-content:center;align-items:start}
+    #studycommit-mobile-hifi .prototype-panel{position:sticky;top:12px;padding:4px 0}
+    #studycommit-mobile-hifi .prototype-panel h2{margin:0 0 5px;font-size:17px;font-weight:500}
+    #studycommit-mobile-hifi .prototype-panel>p{margin:0 0 18px;font-size:12px;line-height:1.55;color:light-dark(#69736b,#a9b2aa)}
+    #studycommit-mobile-hifi .flow-list{display:grid;gap:5px}
+    #studycommit-mobile-hifi .flow-list button{min-height:40px;padding:8px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:light-dark(#556159,#bec6bf);text-align:left;cursor:pointer}
+    #studycommit-mobile-hifi .flow-list button.active{border-color:light-dark(#ced8d0,#405047);background:light-dark(#edf3ee,#27342c);color:light-dark(#24432f,#dfece2);font-weight:500}
+    #studycommit-mobile-hifi .state-label{margin:22px 0 8px;font-size:11px;color:light-dark(#7c867e,#969f98)}
+    #studycommit-mobile-hifi .state-switch{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+    #studycommit-mobile-hifi .state-switch button{min-height:36px;border:1px solid light-dark(#d9dfda,#39443d);border-radius:7px;background:transparent;color:inherit;font-size:11px;cursor:pointer}
+    #studycommit-mobile-hifi .state-switch button.active{background:light-dark(#26382c,#dce8df);color:light-dark(#fff,#1d2b21);border-color:transparent}
+    #studycommit-mobile-hifi .phone{position:relative;width:390px;height:790px;overflow:hidden;border:8px solid light-dark(#202820,#0c100d);border-radius:42px;background:light-dark(#fbfcfa,#171b18);box-shadow:0 24px 70px rgba(21,35,25,.18)}
+    #studycommit-mobile-hifi .statusbar{height:34px;padding:10px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;font-size:11px;font-weight:500}
+    #studycommit-mobile-hifi .island{position:absolute;top:8px;left:50%;transform:translateX(-50%);width:95px;height:24px;border-radius:14px;background:light-dark(#202820,#080a09)}
+    #studycommit-mobile-hifi .apphead{height:58px;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;padding:4px 18px 8px}
+    #studycommit-mobile-hifi .apphead h1{margin:0;font-size:23px;font-weight:500;letter-spacing:-.02em}
+    #studycommit-mobile-hifi .apphead h1{text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #studycommit-mobile-hifi .head-action{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer}
+    #studycommit-mobile-hifi .head-action.avatar{width:34px;height:34px;justify-self:center;background:light-dark(#dce7df,#304137);font-size:12px;font-weight:500}
+    #studycommit-mobile-hifi .screen{display:none;height:606px;overflow:auto;padding:0 18px 92px;scrollbar-width:none}
+    #studycommit-mobile-hifi .screen.active{display:block}
+    #studycommit-mobile-hifi .eyebrow{font-size:11px;color:#55765f;font-weight:500}
+    #studycommit-mobile-hifi .hero{padding:18px;border:1px solid light-dark(#dbe5dd,#34433a);border-radius:16px;background:light-dark(#eff5f0,#202a23)}
+    #studycommit-mobile-hifi .hero h2{margin:7px 0 6px;font-size:19px;line-height:1.35;font-weight:500}
+    #studycommit-mobile-hifi .hero p{margin:0 0 16px;font-size:12px;line-height:1.55;color:light-dark(#687269,#aeb7af)}
+    #studycommit-mobile-hifi .primary{min-height:46px;border:0;border-radius:10px;padding:11px 16px;background:light-dark(#31563e,#c8ddcd);color:light-dark(#fff,#1c2a20);font-weight:500;cursor:pointer}
+    #studycommit-mobile-hifi .primary.block{width:100%}
+    #studycommit-mobile-hifi .secondary{min-height:44px;border:1px solid light-dark(#d5ddd7,#3c4941);border-radius:10px;padding:10px 14px;background:transparent;color:inherit;cursor:pointer}
+    #studycommit-mobile-hifi .section-title{display:flex;align-items:center;justify-content:space-between;margin:23px 2px 10px;font-size:13px;font-weight:500}
+    #studycommit-mobile-hifi .section-title span:last-child{font-size:11px;font-weight:400;color:light-dark(#7f8981,#9da69f)}
+    #studycommit-mobile-hifi .review-line{display:flex;align-items:center;gap:14px;padding:15px 2px;border-bottom:1px solid light-dark(#e3e8e4,#2d3731)}
+    #studycommit-mobile-hifi .review-line strong{font-size:26px;font-weight:500}
+    #studycommit-mobile-hifi .review-line div{flex:1}
+    #studycommit-mobile-hifi .review-line b{display:block;font-size:13px;font-weight:500}
+    #studycommit-mobile-hifi .review-line small{font-size:11px;color:light-dark(#758078,#a1aaa3)}
+    #studycommit-mobile-hifi .arrow{width:32px;height:32px;border:0;background:transparent;color:inherit;font-size:18px;cursor:pointer}
+    #studycommit-mobile-hifi .activity{padding:13px 2px;border-bottom:1px solid light-dark(#e5e9e5,#2d3731)}
+    #studycommit-mobile-hifi .activity b{display:block;font-size:13px;font-weight:500;margin-bottom:4px}
+    #studycommit-mobile-hifi .activity small{font-size:11px;color:light-dark(#7a857c,#9ca59e)}
+    #studycommit-mobile-hifi .field{display:block;margin:0 0 17px}
+    #studycommit-mobile-hifi .field>span{display:block;margin:0 0 7px;font-size:12px;font-weight:500}
+    #studycommit-mobile-hifi input,#studycommit-mobile-hifi textarea,#studycommit-mobile-hifi select{width:100%;border:1px solid light-dark(#d4ddd6,#3c4941);border-radius:10px;background:light-dark(#fff,#1c221e);color:inherit;padding:12px 13px;font-size:14px}
+    #studycommit-mobile-hifi textarea{min-height:84px;resize:none;line-height:1.5}
+    #studycommit-mobile-hifi .choice-row{display:flex;gap:8px;flex-wrap:wrap}
+    #studycommit-mobile-hifi .choice{min-height:44px;border:1px solid light-dark(#d4ddd6,#3c4941);border-radius:9px;background:transparent;color:inherit;padding:8px 13px;cursor:pointer}
+    #studycommit-mobile-hifi .choice.active{background:light-dark(#e5efe7,#2c3c32);border-color:#6e9279;color:light-dark(#24432f,#d9eadd)}
+    #studycommit-mobile-hifi .action-row{display:grid;grid-template-columns:1fr 1.5fr;gap:9px;margin-top:22px}
+    #studycommit-mobile-hifi .timer-wrap{text-align:center;padding-top:36px}
+    #studycommit-mobile-hifi .timer-topic{font-size:12px;color:#587860;font-weight:500}
+    #studycommit-mobile-hifi .timer-goal{max-width:285px;margin:10px auto 33px;font-size:17px;line-height:1.5;font-weight:500}
+    #studycommit-mobile-hifi .clock{font-variant-numeric:tabular-nums;font-size:53px;letter-spacing:-.04em;font-weight:400}
+    #studycommit-mobile-hifi .timer-state{margin:9px 0 34px;font-size:12px;color:light-dark(#77827a,#a4ada6)}
+    #studycommit-mobile-hifi .timer-actions{display:flex;justify-content:center;gap:18px}
+    #studycommit-mobile-hifi .round-action{width:62px;height:62px;border:1px solid light-dark(#d5ded7,#3c4941);border-radius:50%;background:transparent;color:inherit;cursor:pointer}
+    #studycommit-mobile-hifi .round-action.finish{background:light-dark(#31563e,#c8ddcd);color:light-dark(#fff,#1c2a20);border:0}
+    #studycommit-mobile-hifi .quick-capture{margin-top:42px;padding:14px;border-radius:12px;background:light-dark(#f1f4f1,#202622)}
+    #studycommit-mobile-hifi .quick-capture input{border:0;padding:8px;background:transparent}
+    #studycommit-mobile-hifi .summary-strip{display:flex;gap:8px;margin:0 0 20px}
+    #studycommit-mobile-hifi .summary-strip span{padding:6px 9px;border-radius:7px;background:light-dark(#eef3ef,#252e28);font-size:11px;color:light-dark(#68736a,#acb5ae)}
+    #studycommit-mobile-hifi .topic-picker{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:58px;margin-bottom:12px;padding:8px 2px 13px;border:0;border-bottom:1px solid light-dark(#e0e6e1,#303a33);background:transparent;color:inherit;text-align:left;cursor:pointer}
+    #studycommit-mobile-hifi .topic-picker b{display:block;font-size:16px;font-weight:500}
+    #studycommit-mobile-hifi .topic-picker small{font-size:11px;color:light-dark(#7b867e,#9ca69e)}
+    #studycommit-mobile-hifi .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;padding:3px;border-radius:10px;background:light-dark(#eff2ef,#242b26);margin-bottom:14px}
+    #studycommit-mobile-hifi .tabs button{min-height:44px;border:0;border-radius:8px;background:transparent;color:light-dark(#717c73,#a8b1aa);font-size:12px;cursor:pointer}
+    #studycommit-mobile-hifi .tabs button.active{background:light-dark(#fff,#343e37);color:inherit;box-shadow:0 1px 3px rgba(20,31,23,.08)}
+    #studycommit-mobile-hifi .searchbox{padding:11px 13px;border:1px solid light-dark(#d9e0da,#39463e);border-radius:10px;font-size:12px;color:light-dark(#7d877f,#99a39b)}
+    #studycommit-mobile-hifi .note-row{width:100%;padding:16px 2px;border:0;border-bottom:1px solid light-dark(#e2e7e3,#2e3831);background:transparent;color:inherit;text-align:left;cursor:pointer}
+    #studycommit-mobile-hifi .note-row b{display:block;margin-bottom:6px;font-size:14px;font-weight:500}
+    #studycommit-mobile-hifi .note-row p{margin:0 0 7px;font-size:12px;line-height:1.5;color:light-dark(#626d64,#afb8b0)}
+    #studycommit-mobile-hifi .note-row small{font-size:10px;color:light-dark(#818b83,#969f98)}
+    #studycommit-mobile-hifi .note-head{margin-bottom:22px}
+    #studycommit-mobile-hifi .note-head h2{margin:4px 0 10px;font-size:25px;line-height:1.25;font-weight:500;letter-spacing:-.025em}
+    #studycommit-mobile-hifi .meta{display:flex;gap:7px;flex-wrap:wrap}
+    #studycommit-mobile-hifi .meta span{padding:5px 8px;border-radius:7px;background:light-dark(#eef3ef,#273029);font-size:10px;color:light-dark(#657168,#acb5ae)}
+    #studycommit-mobile-hifi .note-summary{padding:15px 0;border-top:1px solid light-dark(#e0e6e1,#303a33);border-bottom:1px solid light-dark(#e0e6e1,#303a33)}
+    #studycommit-mobile-hifi .note-summary small{display:block;margin-bottom:7px;color:#587860;font-weight:500}
+    #studycommit-mobile-hifi .note-summary p{margin:0;font-size:14px;line-height:1.65}
+    #studycommit-mobile-hifi .article h3{margin:25px 0 8px;font-size:17px;font-weight:500}
+    #studycommit-mobile-hifi .article p,#studycommit-mobile-hifi .article li{font-size:14px;line-height:1.75;color:light-dark(#445047,#c7cec8)}
+    #studycommit-mobile-hifi .article ul{padding-left:21px}
+    #studycommit-mobile-hifi .map{position:relative;height:500px;overflow:hidden;border-radius:14px;background-color:light-dark(#f8faf8,#1b211d);background-image:radial-gradient(light-dark(#d9e0da,#354139) 1px,transparent 1px);background-size:18px 18px}
+    #studycommit-mobile-hifi .map svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+    #studycommit-mobile-hifi .map path{fill:none;stroke:light-dark(#adbcb1,#55665b);stroke-width:1.5}
+    #studycommit-mobile-hifi .node{position:absolute;transform:translate(-50%,-50%);width:128px;min-height:58px;padding:10px;border:1px solid light-dark(#ced9d1,#425047);border-radius:10px;background:light-dark(#fff,#252d27);color:inherit;text-align:left;box-shadow:0 5px 15px rgba(24,39,28,.08);cursor:pointer}
+    #studycommit-mobile-hifi .node b{display:block;font-size:12px;line-height:1.35;font-weight:500}
+    #studycommit-mobile-hifi .node small{display:block;margin-top:5px;font-size:9px;color:light-dark(#7d887f,#9ca69e)}
+    #studycommit-mobile-hifi .node.selected{border-color:#537d60;box-shadow:0 0 0 2px rgba(83,125,96,.22)}
+    #studycommit-mobile-hifi .map-tools{position:absolute;right:10px;top:10px;display:flex;gap:6px;z-index:2}
+    #studycommit-mobile-hifi .map-tools button{width:44px;height:44px;border:1px solid light-dark(#d5ddd7,#3b4840);border-radius:9px;background:light-dark(#fff,#252d27);color:inherit;cursor:pointer}
+    #studycommit-mobile-hifi .drawer{position:absolute;left:0;right:0;bottom:0;z-index:6;padding:12px 18px 24px;border-radius:22px 22px 0 0;background:light-dark(#fff,#222923);box-shadow:0 -12px 35px rgba(22,35,26,.18)}
+    #studycommit-mobile-hifi .drawer-handle{width:36px;height:4px;margin:0 auto 15px;border-radius:2px;background:light-dark(#ced5cf,#546057)}
+    #studycommit-mobile-hifi .drawer-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    #studycommit-mobile-hifi .drawer h3{margin:0 0 8px;font-size:18px;font-weight:500}
+    #studycommit-mobile-hifi .drawer p{margin:0 0 16px;font-size:13px;line-height:1.55;color:light-dark(#59655c,#b6beb7)}
+    #studycommit-mobile-hifi .drawer-close{width:44px;height:44px;border:0;border-radius:50%;background:transparent;color:inherit;font-size:20px;cursor:pointer}
+    #studycommit-mobile-hifi .log-day{margin:16px 0 12px;font-size:11px;color:light-dark(#7b867e,#9ca69e)}
+    #studycommit-mobile-hifi .log{position:relative;margin-left:6px;padding:0 0 23px 20px;border-left:1px solid light-dark(#d5ddd7,#3c4941)}
+    #studycommit-mobile-hifi .log:before{content:"";position:absolute;left:-4px;top:3px;width:7px;height:7px;border-radius:50%;background:#5b7f64}
+    #studycommit-mobile-hifi .log time{display:block;margin-bottom:5px;font-size:10px;color:light-dark(#7c867e,#9ba59d)}
+    #studycommit-mobile-hifi .log b{display:block;margin-bottom:6px;font-size:14px;font-weight:500}
+    #studycommit-mobile-hifi .log p{margin:0 0 7px;font-size:12px;line-height:1.55;color:light-dark(#626d64,#adb6af)}
+    #studycommit-mobile-hifi .log a{font-size:11px;color:#55785f}
+    #studycommit-mobile-hifi .review-progress{display:flex;justify-content:space-between;font-size:11px;color:light-dark(#748077,#a3aca5)}
+    #studycommit-mobile-hifi .progress-track{height:4px;margin:9px 0 46px;border-radius:2px;background:light-dark(#e1e7e2,#303a33);overflow:hidden}
+    #studycommit-mobile-hifi .progress-track i{display:block;width:25%;height:100%;background:#5f8469}
+    #studycommit-mobile-hifi .question{text-align:center;font-size:22px;line-height:1.5;font-weight:500;margin:0 8px 38px}
+    #studycommit-mobile-hifi .answer{display:none;padding:16px;margin-bottom:17px;border-radius:12px;background:light-dark(#eef3ef,#242d27);font-size:13px;line-height:1.65}
+    #studycommit-mobile-hifi .answer.show{display:block}
+    #studycommit-mobile-hifi .rating{display:none;grid-template-columns:1fr 1fr;gap:8px}
+    #studycommit-mobile-hifi .rating.show{display:grid}
+    #studycommit-mobile-hifi .rating button{min-height:52px;border:1px solid light-dark(#d4ddd6,#3c4941);border-radius:10px;background:transparent;color:inherit;cursor:pointer}
+    #studycommit-mobile-hifi .bottomnav{position:absolute;left:0;right:0;bottom:0;height:76px;display:grid;grid-template-columns:repeat(4,1fr);padding:5px 10px 12px;border-top:1px solid light-dark(#dfe5e0,#303932);background:light-dark(rgba(252,253,251,.98),rgba(23,27,24,.98));z-index:5}
+    #studycommit-mobile-hifi .bottomnav button{min-width:0;min-height:52px;border:0;border-radius:9px;background:transparent;color:light-dark(#7c867e,#97a098);font-size:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+    #studycommit-mobile-hifi .bottomnav button span{width:22px;height:22px;display:grid;place-items:center;margin:0}
+    #studycommit-mobile-hifi .bottomnav svg,#studycommit-mobile-hifi .head-action svg,#studycommit-mobile-hifi .arrow svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    #studycommit-mobile-hifi .bottomnav button.active{color:#50745a;font-weight:500}
+    #studycommit-mobile-hifi .phone.focus-mode .bottomnav{display:none}
+    #studycommit-mobile-hifi .phone.focus-mode .screen{height:682px;padding-bottom:28px}
+    #studycommit-mobile-hifi .phone.focus-mode .state-overlay{bottom:0}
+    #studycommit-mobile-hifi .state-overlay{display:none;position:absolute;inset:92px 0 76px;z-index:20;padding:92px 28px;text-align:center;background:light-dark(rgba(251,252,250,.97),rgba(23,27,24,.97))}
+    #studycommit-mobile-hifi .state-overlay.show{display:block}
+    #studycommit-mobile-hifi .state-overlay h3{margin:0 0 8px;font-size:18px;font-weight:500}
+    #studycommit-mobile-hifi .state-overlay p{margin:0 0 18px;font-size:13px;line-height:1.55;color:light-dark(#687269,#adb6af)}
+    #studycommit-mobile-hifi .toast{display:none;position:absolute;left:22px;right:22px;bottom:90px;z-index:30;padding:13px 15px;border-radius:10px;background:light-dark(#27322a,#dde9df);color:light-dark(#fff,#1c2a20);font-size:12px;box-shadow:0 8px 25px rgba(20,32,23,.18)}
+    #studycommit-mobile-hifi .toast.show{display:block}
+    /* StudyCommit theme v2 — mobile adaptation */
+    #studycommit-mobile-hifi{font-family:"Noto Sans SC","PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,sans-serif;color:light-dark(#182426,#e8f0f1)}
+    #studycommit-mobile-hifi button{touch-action:manipulation;transition:opacity .15s ease,background-color .2s ease,border-color .2s ease,color .2s ease}
+    #studycommit-mobile-hifi button:focus-visible,#studycommit-mobile-hifi input:focus-visible,#studycommit-mobile-hifi textarea:focus-visible,#studycommit-mobile-hifi select:focus-visible{outline:2px solid light-dark(#0f766e,#72cec5);outline-offset:2px}
+    #studycommit-mobile-hifi .prototype-panel>p{color:light-dark(#647477,#9eabad)}
+    #studycommit-mobile-hifi .flow-list button{min-height:44px;border-radius:9px;color:light-dark(#4e5d60,#b4c0c2)}
+    #studycommit-mobile-hifi .flow-list button.active{border-color:light-dark(#bcd2d1,#31504e);background:light-dark(#e0efed,#173c3a);color:light-dark(#075f59,#7dd8d0)}
+    #studycommit-mobile-hifi .state-switch button{min-height:44px;border-color:light-dark(#d1dcdd,#344345)}
+    #studycommit-mobile-hifi .state-switch button.active{background:light-dark(#0f766e,#76d0c8);color:light-dark(#fff,#102c2a)}
+    #studycommit-mobile-hifi .phone{border-color:light-dark(#1b2729,#070b0c);background:light-dark(#fbfcfc,#121a1c);box-shadow:0 26px 72px #18383d24}
+    #studycommit-mobile-hifi .island{background:light-dark(#1b2729,#06090a)}
+    #studycommit-mobile-hifi .apphead{height:60px;padding:4px 18px 8px}
+    #studycommit-mobile-hifi .apphead h1{font-size:22px;letter-spacing:-.025em}
+    #studycommit-mobile-hifi .head-action.avatar{background:light-dark(#d9ecea,#1c4140);color:light-dark(#0a625c,#80d6ce)}
+    #studycommit-mobile-hifi .screen{height:604px;padding-left:20px;padding-right:20px}
+    #studycommit-mobile-hifi .eyebrow{font-size:12px;color:light-dark(#0f7169,#70c5bd)}
+    #studycommit-mobile-hifi .hero{padding:20px;border-color:light-dark(#d4e2e2,#2c3e40);border-radius:17px;background:linear-gradient(145deg,light-dark(#e4f2f0,#15302f),light-dark(#f6faf9,#172426))}
+    #studycommit-mobile-hifi .hero h2{font-size:20px;letter-spacing:-.015em}.hero p{font-size:13px;color:light-dark(#58686b,#a8b5b7)}
+    #studycommit-mobile-hifi .primary{min-height:48px;border-radius:11px;background:light-dark(#0f766e,#72cec5);color:light-dark(#fff,#102d2a);box-shadow:0 4px 12px #0f766e20}
+    #studycommit-mobile-hifi .secondary{min-height:48px;border-color:light-dark(#ccd8d9,#37484a);border-radius:11px}
+    #studycommit-mobile-hifi .section-title{margin-top:24px;font-size:14px}.section-title span:last-child{font-size:12px;color:light-dark(#68777a,#97a4a6)}
+    #studycommit-mobile-hifi .review-line{padding:16px 2px;border-bottom-color:light-dark(#dce5e6,#293739)}
+    #studycommit-mobile-hifi .review-line b,#studycommit-mobile-hifi .activity b{font-size:14px}.review-line small,.activity small{font-size:12px;color:light-dark(#637275,#9da9ab)}
+    #studycommit-mobile-hifi .arrow{width:44px;height:44px;border-radius:10px}
+    #studycommit-mobile-hifi .activity{padding:15px 2px;border-bottom-color:light-dark(#dce5e6,#293739)}
+    #studycommit-mobile-hifi .field{margin-bottom:20px}.field>span{font-size:13px;margin-bottom:8px}
+    #studycommit-mobile-hifi input,#studycommit-mobile-hifi textarea,#studycommit-mobile-hifi select{min-height:48px;border-color:light-dark(#ccd8d9,#37484a);border-radius:11px;background:light-dark(#fff,#172123);font-size:15px;padding:13px 14px}
+    #studycommit-mobile-hifi .choice{min-height:48px;border-color:light-dark(#ccd8d9,#37484a);border-radius:10px;font-size:13px}
+    #studycommit-mobile-hifi .choice.active{background:light-dark(#dcefed,#193b39);border-color:#0f766e;color:light-dark(#075f59,#7bd3cb)}
+    #studycommit-mobile-hifi .timer-topic{font-size:13px;color:light-dark(#0f7169,#70c5bd)}.timer-goal{font-size:18px}.clock{color:light-dark(#142326,#eef5f6)}
+    #studycommit-mobile-hifi .round-action{width:64px;height:64px;border-color:light-dark(#ccd8d9,#37484a);font-size:13px}.round-action.finish{background:light-dark(#0f766e,#72cec5);color:light-dark(#fff,#102d2a)}
+    #studycommit-mobile-hifi .quick-capture{background:light-dark(#edf3f3,#182426);border:1px solid light-dark(#dce6e6,#2a393b)}
+    #studycommit-mobile-hifi .summary-strip span{font-size:12px;background:light-dark(#e7efef,#1b292b);color:light-dark(#566669,#a8b5b7)}
+    #studycommit-mobile-hifi .topic-picker{border-bottom-color:light-dark(#d7e1e2,#2c3a3c)}.topic-picker small{font-size:12px;color:light-dark(#647477,#99a6a8)}
+    #studycommit-mobile-hifi .tabs{background:light-dark(#e9eeee,#1a2527);border-radius:11px}.tabs button{min-height:46px;font-size:13px}.tabs button.active{background:light-dark(#fff,#263436);box-shadow:0 1px 4px #18383d12;color:light-dark(#075f59,#82d8d0)}
+    #studycommit-mobile-hifi .searchbox{min-height:44px;border-color:light-dark(#d1dcdd,#344345);font-size:13px;color:light-dark(#637275,#9ba8aa)}
+    #studycommit-mobile-hifi .note-row{padding:17px 2px;border-bottom-color:light-dark(#dce5e6,#293739)}.note-row b{font-size:15px}.note-row p{font-size:13px;color:light-dark(#526265,#a9b5b7)}.note-row small{font-size:11px;color:light-dark(#69787b,#94a1a3)}
+    #studycommit-mobile-hifi .meta span{font-size:11px;background:light-dark(#e7efef,#1b292b);color:light-dark(#57676a,#a8b5b7)}
+    #studycommit-mobile-hifi .note-summary{border-color:light-dark(#d7e1e2,#2c3a3c)}.note-summary small{font-size:12px;color:light-dark(#0f7169,#70c5bd)}.note-summary p{font-size:15px}
+    #studycommit-mobile-hifi .article p,#studycommit-mobile-hifi .article li{font-size:15px;color:light-dark(#36474a,#cad4d5)}
+    #studycommit-mobile-hifi .map{background-color:light-dark(#f5f9f9,#131d1f);background-image:radial-gradient(light-dark(#cedbdc,#344547) 1px,transparent 1px)}
+    #studycommit-mobile-hifi .map path{stroke:light-dark(#96adad,#526769)}
+    #studycommit-mobile-hifi .node{border-color:light-dark(#bfd0d1,#3a4d4f);background:light-dark(#fff,#1a2628);box-shadow:0 6px 16px #18383d16}.node b{font-size:13px}.node small{font-size:10px;color:light-dark(#637376,#9da9ab)}.node.selected{border-color:#0f766e;box-shadow:0 0 0 3px #0f766e20}
+    #studycommit-mobile-hifi .map-tools button{border-color:light-dark(#cbd8d9,#394a4c);background:light-dark(#fff,#1a2628)}
+    #studycommit-mobile-hifi .drawer{background:light-dark(#fff,#172123);box-shadow:0 -16px 40px #102b3028}.drawer p{font-size:14px;color:light-dark(#506063,#b0bcbe)}
+    #studycommit-mobile-hifi .log-day{font-size:12px}.log{border-left-color:light-dark(#cbd8d9,#3a4a4c)}.log:before{background:#0f766e}.log time{font-size:11px}.log p{font-size:13px;color:light-dark(#526265,#a9b5b7)}.log a{font-size:12px;color:light-dark(#0f7169,#70c5bd)}
+    #studycommit-mobile-hifi .review-progress{font-size:12px}.progress-track i{background:#0f766e}.answer{background:light-dark(#e8f2f1,#18302f);font-size:14px}.rating button{min-height:56px;border-color:light-dark(#ccd8d9,#37484a)}
+    #studycommit-mobile-hifi .bottomnav{height:80px;padding:6px 10px 14px;border-top-color:light-dark(#d7e1e2,#2b393b);background:light-dark(rgba(251,252,252,.98),rgba(18,26,28,.98));backdrop-filter:blur(14px)}
+    #studycommit-mobile-hifi .bottomnav button{min-height:56px;font-size:11px;color:light-dark(#69787b,#94a1a3);gap:4px}
+    #studycommit-mobile-hifi .bottomnav button span{width:34px;height:26px;border-radius:13px;transition:background-color .2s ease}
+    #studycommit-mobile-hifi .bottomnav button.active{color:light-dark(#075f59,#7bd3cb)}
+    #studycommit-mobile-hifi .bottomnav button.active span{background:light-dark(#dcefed,#193b39)}
+    #studycommit-mobile-hifi .state-overlay{background:light-dark(rgba(251,252,252,.97),rgba(18,26,28,.97))}.state-overlay p{font-size:14px;color:light-dark(#59696c,#a9b5b7)}
+    #studycommit-mobile-hifi .toast{background:light-dark(#173d39,#d7f0ed);color:light-dark(#fff,#123c38);font-size:13px}
+    @media(max-width:660px){#studycommit-mobile-hifi .prototype-layout{grid-template-columns:1fr;gap:16px}#studycommit-mobile-hifi .prototype-panel{position:static}#studycommit-mobile-hifi .flow-list{display:flex;overflow:auto;padding-bottom:5px}#studycommit-mobile-hifi .flow-list button{flex:0 0 auto}#studycommit-mobile-hifi .state-switch{grid-template-columns:repeat(4,1fr)}#studycommit-mobile-hifi .phone{width:min(390px,100%);margin:0 auto}}
+    @media(prefers-reduced-motion:reduce){#studycommit-mobile-hifi *{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+
+  <div class="prototype-layout">
+    <aside class="prototype-panel">
+      <h2>移动端核心流程</h2>
+      <p>点击页面名称切换画面，也可以直接操作手机内按钮完成学习闭环。</p>
+      <div class="flow-list">
+        <button class="active" data-go="today">01 今天</button><button data-go="setup">02 开始学习</button><button data-go="timer">03 专注计时</button><button data-go="wrapup">04 学习收尾</button><button data-go="notes">05 专题笔记</button><button data-go="note">06 笔记详情</button><button data-go="map">07 知识地图</button><button data-go="preview">08 节点预览</button><button data-go="logs">09 学习记录</button><button data-go="review">10 复习</button>
+      </div>
+      <div class="state-label">页面状态演示</div>
+      <div class="state-switch"><button class="active" data-state="normal">正常</button><button data-state="empty">空状态</button><button data-state="offline">离线</button><button data-state="error">保存失败</button></div>
+    </aside>
+
+    <main class="phone" aria-label="StudyCommit 移动端高保真设计稿">
+      <div class="island"></div><div class="statusbar"><span>9:41</span><span>5G　87%</span></div>
+      <header class="apphead"><button class="head-action" id="back" aria-label="返回"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><h1 id="page-title">今天</h1><button class="head-action avatar" aria-label="我的账户">W</button></header>
+
+      <section class="screen active" data-screen="today">
+        <div class="hero"><div class="eyebrow">今日学习 · 35 分钟</div><h2>继续积累，而不是重新开始</h2><p>上次学习：React Native · Fabric 渲染机制</p><button class="primary block" data-go="setup">开始学习</button></div>
+        <div class="section-title"><span>今日复习</span><span>约 8 分钟</span></div><div class="review-line"><strong>12</strong><div><b>张卡片到期</b><small>3 张来自薄弱内容</small></div><button class="arrow" data-go="review" aria-label="进入今日复习"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></div>
+        <div class="section-title"><span>最近学习</span><span>查看全部</span></div><div class="activity"><b>Fabric 渲染机制</b><small>学习 42 分钟 · 今天 20:52</small></div><div class="activity"><b>Electron IPC 安全</b><small>复习 8 张卡片 · 今天 18:42</small></div>
+      </section>
+
+      <section class="screen" data-screen="setup">
+        <label class="field"><span>学习专题</span><select><option>React Native</option><option>Electron</option><option>Agent</option></select></label>
+        <label class="field"><span>本次目标</span><textarea>理解 Fabric 的 Render、Commit 和 Mount，并能不看文档解释它们的职责。</textarea></label>
+        <label class="field"><span>预计时长</span><div class="choice-row"><button class="choice">25 分钟</button><button class="choice active">45 分钟</button><button class="choice">60 分钟</button></div></label>
+        <label class="field"><span>关联笔记（可选）</span><select><option>Fabric 渲染机制</option><option>暂不关联</option></select></label>
+        <div class="action-row"><button class="secondary" data-go="today">取消</button><button class="primary" data-go="timer">开始计时</button></div>
+      </section>
+
+      <section class="screen" data-screen="timer">
+        <div class="timer-wrap"><div class="timer-topic">React Native</div><div class="timer-goal">理解 Fabric 的 Render、Commit 和 Mount</div><div class="clock" id="clock">00:24:18</div><div class="timer-state" id="timer-state">专注中 · 预计还需 21 分钟</div><div class="timer-actions"><button class="round-action" id="pause">暂停</button><button class="round-action finish" data-go="wrapup">完成</button></div></div>
+        <div class="quick-capture"><div class="eyebrow">快速记录</div><input aria-label="快速记录" placeholder="记录一个想法或问题…"></div>
+      </section>
+
+      <section class="screen" data-screen="wrapup">
+        <div class="summary-strip"><span>42 分钟</span><span>React Native</span><span>3 条草稿</span></div>
+        <label class="field"><span>这次学到了什么？</span><textarea>理解了 Render、Commit 和 Mount 三个阶段的职责，以及 Shadow Tree 在流程中的作用。</textarea></label>
+        <label class="field"><span>还有什么没搞懂？</span><textarea>高优先级事件为什么可能在 UI 线程同步执行渲染？</textarea></label>
+        <label class="field"><span>下一步</span><input value="阅读 Fabric 源码中的 commit 路径"></label>
+        <label class="field"><span>整理本次记录</span><select><option>更新笔记：Fabric 渲染机制</option><option>创建新笔记</option><option>保留为草稿</option></select></label>
+        <button class="primary block" data-go="notes" data-toast="学习记录已保存">保存学习记录</button>
+      </section>
+
+      <section class="screen" data-screen="notes">
+        <button class="topic-picker"><span><b>React Native</b><small>当前专题 · 点击切换</small></span><span>⌄</span></button><div class="tabs"><button class="active">笔记</button><button data-go="map">知识地图</button><button data-go="logs">学习记录</button></div><div class="searchbox">⌕　搜索当前专题</div>
+        <button class="note-row" data-go="note"><b>Fabric 渲染机制</b><p>Fabric 通过 Render、Commit 和 Mount，将更新应用到原生视图。</p><small>今天更新 · 5 张卡片</small></button><button class="note-row"><b>React Native 新架构概览</b><p>新架构以 JSI 为基础，重构渲染系统和原生通信。</p><small>昨天更新 · 6 个关联</small></button><button class="note-row"><b>Hermes 运行时</b><p>面向 React Native 优化的 JavaScript 引擎。</p><small>8 月 9 日 · 4 张卡片</small></button>
+      </section>
+
+      <section class="screen" data-screen="note">
+        <div class="note-head"><div class="eyebrow">React Native</div><h2>Fabric 渲染机制</h2><div class="meta"><span>今天更新</span><span>5 张卡片</span><span>官方来源</span></div></div><div class="note-summary"><small>摘要</small><p>Fabric 通过 Render、Commit 和 Mount 三个阶段，将 React 更新应用到原生视图。</p></div><article class="article"><h3>渲染阶段</h3><p>Fabric 是 React Native 新架构中的渲染系统。它将 React 的更新转换为 Shadow Tree 的变化。</p><ul><li><b>Render：</b>创建新的 Shadow Tree。</li><li><b>Commit：</b>完成布局并提交新树。</li><li><b>Mount：</b>应用到宿主平台视图。</li></ul><h3>尚未解决</h3><p>高优先级事件为什么可能在 UI 线程同步执行渲染？</p></article>
+      </section>
+
+      <section class="screen" data-screen="map">
+        <button class="topic-picker"><span><b>React Native</b><small>8 篇笔记 · 知识地图</small></span><span>⌄</span></button><div class="tabs"><button data-go="notes">笔记</button><button class="active">知识地图</button><button data-go="logs">学习记录</button></div><div class="map"><div class="map-tools"><button aria-label="缩小">−</button><button aria-label="放大">＋</button></div><svg viewBox="0 0 354 500"><path d="M176 232 C110 232 108 110 78 110"/><path d="M176 232 C110 232 108 355 78 355"/><path d="M176 232 C240 232 244 105 278 105"/><path d="M176 232 C240 232 244 355 278 355"/></svg><button class="node" style="left:50%;top:46%" data-go="preview"><b>新架构概览</b><small>6 个关联</small></button><button class="node" style="left:23%;top:22%"><b>Hermes 运行时</b><small>4 张卡片</small></button><button class="node" style="left:23%;top:71%" data-go="preview"><b>Fabric 渲染机制</b><small>今天更新</small></button><button class="node" style="left:78%;top:21%"><b>TurboModules</b><small>待补摘要</small></button><button class="node" style="left:78%;top:71%"><b>JSI 接口层</b><small>需要实验</small></button></div>
+      </section>
+
+      <section class="screen" data-screen="preview">
+        <button class="topic-picker"><span><b>React Native</b><small>8 篇笔记 · 知识地图</small></span><span>⌄</span></button><div class="tabs"><button data-go="notes">笔记</button><button class="active">知识地图</button><button data-go="logs">学习记录</button></div><div class="map"><div class="map-tools"><button aria-label="缩小">−</button><button aria-label="放大">＋</button></div><svg viewBox="0 0 354 500"><path d="M176 232 C110 232 108 110 78 110"/><path d="M176 232 C110 232 108 355 78 355"/><path d="M176 232 C240 232 244 105 278 105"/></svg><button class="node" style="left:50%;top:34%"><b>新架构概览</b><small>6 个关联</small></button><button class="node selected" style="left:24%;top:63%"><b>Fabric 渲染机制</b><small>今天更新</small></button><button class="node" style="left:78%;top:22%"><b>TurboModules</b><small>待补摘要</small></button><div class="drawer"><div class="drawer-handle"></div><div class="drawer-head"><h3>Fabric 渲染机制</h3><button class="drawer-close" data-go="map" aria-label="关闭预览">×</button></div><p>Fabric 通过 Render、Commit 和 Mount 三个阶段，将 React 更新应用到原生视图。</p><div class="action-row"><button class="secondary">编辑摘要</button><button class="primary" data-go="note">打开笔记</button></div></div></div>
+      </section>
+
+      <section class="screen" data-screen="logs">
+        <button class="topic-picker"><span><b>React Native</b><small>本周 3 次 · 共 127 分钟</small></span><span>⌄</span></button><div class="tabs"><button data-go="notes">笔记</button><button data-go="map">知识地图</button><button class="active">学习记录</button></div><div class="log-day">8 月 11 日 · 今天</div><article class="log"><time>20:10—20:52 · 42 分钟</time><b>理解 Fabric 渲染流程</b><p>掌握三个阶段的职责；留下一个同步渲染问题。</p><a>关联笔记：Fabric 渲染机制</a></article><article class="log"><time>18:42—19:07 · 25 分钟</time><b>复习 React Native 新架构</b><p>完成 8 张卡片，JSI 安全边界回答错误。</p><a>查看本次复习</a></article><div class="log-day">8 月 9 日</div><article class="log"><time>21:00—22:00 · 60 分钟</time><b>阅读官方架构概览</b><p>创建专题和第一篇概览笔记。</p><a>关联笔记：新架构概览</a></article>
+      </section>
+
+      <section class="screen" data-screen="review">
+        <div class="review-progress"><span>React Native · Fabric</span><span>3 / 12</span></div><div class="progress-track"><i></i></div><div class="question">Fabric 为什么把 Render、Commit 和 Mount 分成不同阶段？</div><button class="primary block" id="reveal">显示答案</button><div class="answer" id="answer">分阶段允许 React 构建并提交新的 Shadow Tree，再由 Mount 将必要变化应用到宿主视图，同时为调度和并发处理提供边界。</div><div class="rating" id="rating"><button>忘记<br><small>10 分钟</small></button><button>困难<br><small>1 天</small></button><button>记住<br><small>3 天</small></button><button>简单<br><small>7 天</small></button></div>
+      </section>
+
+      <div class="state-overlay" id="state-overlay"><h3 id="state-title"></h3><p id="state-copy"></p><button class="primary" id="state-action">重试</button></div><div class="toast" id="toast">已保存</div>
+      <nav class="bottomnav"><button class="active" data-bottom="today" data-go="today"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg></span>今天</button><button data-bottom="notes" data-go="notes"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M8 8h7M8 12h7"/></svg></span>专题</button><button data-bottom="setup" data-go="setup"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>记录</button><button data-bottom="review" data-go="review"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4-8 4-8-4z"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4"/></svg></span>复习</button></nav>
+    </main>
+  </div>
+
+  <script>
+    (()=>{
+      const root=document.getElementById('studycommit-mobile-hifi');
+      const titles={today:'今天',setup:'开始学习',timer:'专注学习',wrapup:'完成学习',notes:'专题',note:'笔记详情',map:'专题',preview:'专题',logs:'专题',review:'复习'};
+      const history=['today'];
+      const show=(name,push=true)=>{
+        root.querySelectorAll('[data-screen]').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));
+        root.querySelectorAll('.flow-list [data-go]').forEach(el=>el.classList.toggle('active',el.dataset.go===name));
+        root.querySelector('#page-title').textContent=titles[name];
+        root.querySelector('.phone').classList.toggle('focus-mode',['setup','timer','wrapup','note'].includes(name));
+        const section=['notes','note','map','preview','logs'].includes(name)?'notes':name==='review'?'review':name==='today'?'today':'setup';
+        root.querySelectorAll('[data-bottom]').forEach(el=>el.classList.toggle('active',el.dataset.bottom===section));
+        root.querySelector('#back').style.visibility=name==='today'?'hidden':'visible';
+        root.querySelector('#state-overlay').classList.remove('show');
+        if(push&&history[history.length-1]!==name)history.push(name);
+      };
+      root.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>{show(btn.dataset.go);const msg=btn.dataset.toast;if(msg){const toast=root.querySelector('#toast');toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1600)}}));
+      root.querySelector('#back').addEventListener('click',()=>{if(history.length>1)history.pop();show(history[history.length-1],false)});
+      let paused=false;root.querySelector('#pause').addEventListener('click',e=>{paused=!paused;e.currentTarget.textContent=paused?'继续':'暂停';root.querySelector('#timer-state').textContent=paused?'已暂停 · 本次记录会保留':'专注中 · 预计还需 21 分钟'});
+      root.querySelector('#reveal').addEventListener('click',e=>{e.currentTarget.style.display='none';root.querySelector('#answer').classList.add('show');root.querySelector('#rating').classList.add('show')});
+      const states={empty:['还没有内容','完成一次学习后，相关内容会出现在这里。','开始学习'],offline:['当前处于离线状态','你仍然可以计时、写笔记和复习，恢复网络后会自动同步。','知道了'],error:['保存失败','内容已安全保存在本机，请检查连接后重试。','重新保存']};
+      root.querySelectorAll('[data-state]').forEach(btn=>btn.addEventListener('click',()=>{root.querySelectorAll('[data-state]').forEach(x=>x.classList.toggle('active',x===btn));const overlay=root.querySelector('#state-overlay');if(btn.dataset.state==='normal'){overlay.classList.remove('show');return}const data=states[btn.dataset.state];root.querySelector('#state-title').textContent=data[0];root.querySelector('#state-copy').textContent=data[1];root.querySelector('#state-action').textContent=data[2];overlay.classList.add('show')}));
+      root.querySelector('#state-action').addEventListener('click',()=>{root.querySelector('#state-overlay').classList.remove('show');root.querySelectorAll('[data-state]').forEach(x=>x.classList.toggle('active',x.dataset.state==='normal'))});
+      show('today',false);
+    })();
+  </script>
+</div>

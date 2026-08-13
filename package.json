@@ -1,0 +1,33 @@
+{
+  "name": "studycommit",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @studycommit/desktop --filter @studycommit/mobile --filter @studycommit/api dev",
+    "dev:api": "pnpm --filter @studycommit/api dev",
+    "dev:desktop": "pnpm --filter @studycommit/desktop dev",
+    "dev:mobile": "pnpm --filter @studycommit/mobile dev",
+    "dev:ios": "pnpm --filter @studycommit/mobile ios",
+    "dev:android": "pnpm --filter @studycommit/mobile android",
+    "infra:up": "docker compose up -d --wait",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f postgres redis",
+    "infra:status": "docker compose ps",
+    "infra:reset": "docker compose down -v",
+    "test": "pnpm -r --if-present test:run",
+    "test:mobile": "pnpm --filter @studycommit/mobile test:run",
+    "build": "pnpm --filter @studycommit/desktop --filter @studycommit/api build",
+    "typecheck": "pnpm -r typecheck",
+    "test:api": "pnpm --filter @studycommit/api test",
+    "test:api:unit": "pnpm --filter @studycommit/api test:unit",
+    "test:api:integration": "pnpm --filter @studycommit/api test:integration",
+    "test:api:e2e": "pnpm --filter @studycommit/api test:e2e",
+    "test:infra:up": "docker compose -f compose.test.yaml up -d --wait",
+    "test:infra:down": "docker compose -f compose.test.yaml down",
+    "test:infra:clean": "docker compose -f compose.test.yaml down -v"
+  }
+}
