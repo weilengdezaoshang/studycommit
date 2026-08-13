@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Delete, Get, Headers, HttpCode, Inject, Param, Patch, Post, Query, Res, UseGuards } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
 import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
 import { ZodPipe } from '../common/zod.pipe'
@@ -8,7 +8,7 @@ import { TopicsService } from './topics.service'
 @Controller('topics')
 @UseGuards(TestIdentityGuard)
 export class TopicsController {
-  constructor(private readonly topics: TopicsService) {}
+  constructor(@Inject(TopicsService) private readonly topics: TopicsService) {}
   @Post()
   async create(@CurrentUserId() userId: string, @Headers('idempotency-key') key: string | undefined, @Body(new ZodPipe(createTopicSchema)) body: CreateTopicInput, @Res({ passthrough: true }) reply: FastifyReply) {
     if (!key || key.length > 200) throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'Idempotency-Key 必填且最多 200 字符' })

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
 import { DatabaseService } from '../database/database.service'
 import { idempotencyRecords, topics } from '../database/schema'
@@ -11,7 +11,7 @@ function decodeCursor(value: string): Cursor { try { const parsed = JSON.parse(B
 
 @Injectable()
 export class TopicsRepository {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
   async findById(userId: string, id: string, includeDeleted = false) {
     const conditions = [eq(topics.userId, userId), eq(topics.id, id)]
     if (!includeDeleted) conditions.push(isNull(topics.deletedAt))

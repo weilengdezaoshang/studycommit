@@ -9,6 +9,9 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @studycommit/desktop --filter @studycommit/mobile --filter @studycommit/api dev",
     "dev:api": "pnpm --filter @studycommit/api dev",
+    "backend:setup": "node scripts/backend-setup.mjs",
+    "backend:start": "node scripts/backend-start.mjs",
+    "backend:stop": "node scripts/backend-stop.mjs",
     "dev:desktop": "pnpm --filter @studycommit/desktop dev",
     "dev:mobile": "pnpm --filter @studycommit/mobile dev",
     "dev:ios": "pnpm --filter @studycommit/mobile ios",

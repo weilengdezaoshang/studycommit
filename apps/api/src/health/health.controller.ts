@@ -1,9 +1,9 @@
-import { Controller, Get, HttpException, HttpStatus } from '@nestjs/common'
+import { Controller, Get, HttpException, HttpStatus, Inject } from '@nestjs/common'
 import { HealthService } from './health.service'
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly health: HealthService) {}
+  constructor(@Inject(HealthService) private readonly health: HealthService) {}
 
   @Get('live')
   liveness() {

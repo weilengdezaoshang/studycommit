@@ -1,11 +1,11 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { createHash } from 'node:crypto'
 import { TopicsRepository } from './topics.repository'
 import type { CreateTopicInput, ListTopicsInput, UpdateTopicInput } from './topic.schemas'
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 @Injectable()
 export class TopicsService {
-  constructor(private readonly repository: TopicsRepository) {}
+  constructor(@Inject(TopicsRepository) private readonly repository: TopicsRepository) {}
   async create(userId: string, input: CreateTopicInput, key: string) {
     const requestHash = hash(input)
     const existing = await this.repository.findIdempotency(userId, key)

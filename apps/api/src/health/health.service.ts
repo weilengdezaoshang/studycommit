@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { DatabaseService } from '../database/database.service'
 import { RedisService } from '../infrastructure/redis.service'
 
@@ -15,8 +15,8 @@ export interface ReadinessResult {
 @Injectable()
 export class HealthService {
   constructor(
-    private readonly database: DatabaseService,
-    private readonly redis: RedisService
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(RedisService) private readonly redis: RedisService
   ) {}
 
   async readiness(): Promise<ReadinessResult> {

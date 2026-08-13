@@ -46,6 +46,28 @@ curl http://localhost:3000/api/health/live
 curl http://localhost:3000/api/health/ready
 ```
 
+后端脚本支持 macOS、Windows 和 Linux，三个系统使用相同命令。系统内部会自动选择已经安装的容器运行环境：macOS 可使用 Colima，Windows 使用 Docker Desktop，Linux 使用 Docker Engine。
+
+首次使用执行环境准备。macOS 会检查并安装 Colima/Docker CLI；Windows 会检查 Docker Desktop，缺少时调用 winget 并提示完成必要的重启；随后预拉取镜像、安装项目依赖并启动后端：
+
+```bash
+pnpm backend:setup
+```
+
+安装完成后，日常启动只需要：
+
+```bash
+pnpm backend:start
+```
+
+按 `Ctrl+C` 停止 API。需要同时关闭 PostgreSQL、Redis 和 Colima 时执行：
+
+```bash
+pnpm backend:stop
+```
+
+macOS 启动脚本会在本机 `127.0.0.1:7890` 有代理监听时自动配置下载代理。停止命令只关闭本项目容器，不关闭 Colima 或 Docker Desktop，也不会删除数据库 Volume，避免影响其他项目。
+
 首次启动或数据库 Schema 更新后执行迁移：
 
 ```bash
