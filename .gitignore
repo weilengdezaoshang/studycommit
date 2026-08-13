@@ -1,0 +1,22 @@
+node_modules/
+.pnpm-store/
+dist/
+out/
+.expo/
+*.log
+.DS_Store
+coverage/
+.env
+.env.local
+.env.test
+.env.test.local
+data/
+apps/mobile/android/
+apps/mobile/ios/
+apps/desktop/test-results/
+apps/desktop/playwright-report/
+
+# 文档默认仅保留 README，产品需求和开发过程文档不提交
+*.md
+!README.md
+!**/README.md
