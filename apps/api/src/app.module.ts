@@ -6,9 +6,14 @@ import { InfrastructureModule } from './infrastructure/infrastructure.module'
 import { validateEnv } from './config/env'
 import { DatabaseModule } from './database/database.module'
 import { TopicsModule } from './topics/topics.module'
+import { LoggerModule } from 'nestjs-pino'
+import { createLoggingConfig, type RuntimeEnvironment } from './common/logging/logging.config'
 
 @Module({
   imports: [
+    LoggerModule.forRoot(createLoggingConfig(
+      (process.env.NODE_ENV ?? 'development') as RuntimeEnvironment
+    )),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: process.env.NODE_ENV === 'test' ? ['.env.test.local', '.env.test'] : ['.env.local', '.env'],

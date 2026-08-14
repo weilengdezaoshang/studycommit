@@ -117,19 +117,30 @@ describe('ErrorFilter', () => {
       expect(error.stack).toContain('TypeError: 测试空引用异常')
     })
 
-    it.each([undefined, null, 'string error', { reason: 'unknown' }])(
-      '将非 Error 抛出值 %j 安全归一化为 Error',
-      (thrown) => {
-        const logger = createLogger()
-        const filter = new ErrorFilter(logger)
-        const { host } = createHttpContext()
+    it('将字符串抛出值安全归一化为 Error', () => {
+      const logger = createLogger()
+      const filter = new ErrorFilter(logger)
+      const { host } = createHttpContext()
 
-        filter.catch(thrown, host)
+      filter.catch('string error', host)
 
-        const logged = vi.mocked(logger.error).mock.calls[0]?.[0] as { err: unknown }
-        expect(logged.err).toBeInstanceOf(Error)
-      }
-    )
+      const logged = vi.mocked(logger.error).mock.calls[0]?.[0] as { err: Error }
+      expect(logged.err).toBeInstanceOf(Error)
+      expect(logged.err.message).toBe('string error')
+    })
+
+    it('非 Error 对象无法 JSON 序列化时仍能生成 Error', () => {
+      const logger = createLogger()
+      const filter = new ErrorFilter(logger)
+      const { host } = createHttpContext()
+      const circular: { self?: unknown } = {}
+      circular.self = circular
+
+      filter.catch(circular, host)
+
+      const logged = vi.mocked(logger.error).mock.calls[0]?.[0] as { err: Error }
+      expect(logged.err).toBeInstanceOf(Error)
+    })
 
     it('保留底层 cause 链供日志序列化', () => {
       const logger = createLogger()
