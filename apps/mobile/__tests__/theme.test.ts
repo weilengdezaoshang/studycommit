@@ -1,3 +1,7 @@
+import { createElement } from 'react'
+import { Text } from 'react-native'
+import { render, screen } from '@testing-library/react-native'
+import { ThemeProvider, useAppTheme } from '../src/theme/ThemeProvider'
 import { createTheme } from '../src/theme/theme'
 
 describe('createTheme', () => {
@@ -6,6 +10,11 @@ describe('createTheme', () => {
 
     expect(theme.isDark).toBe(false)
     expect(theme.colors.background).toBe('#F3F7F7')
+  })
+
+  it('falls back to light for an absent system preference', () => {
+    expect(createTheme(null).isDark).toBe(false)
+    expect(createTheme(undefined).isDark).toBe(false)
   })
 
   it('creates a dark theme for the dark system preference', () => {
@@ -20,5 +29,39 @@ describe('createTheme', () => {
     const darkKeys = Object.keys(createTheme('dark').colors).sort()
 
     expect(darkKeys).toEqual(lightKeys)
+  })
+})
+
+function ThemeProbe() {
+  const theme = useAppTheme()
+  return createElement(Text, null, theme.isDark ? 'dark theme' : 'light theme')
+}
+
+describe('<ThemeProvider />', () => {
+  it.each([
+    ['light', 'light theme'],
+    ['dark', 'dark theme'],
+  ] as const)('supports an explicit %s override', async (colorScheme, expected) => {
+    await render(
+      createElement(
+        ThemeProvider,
+        { colorScheme },
+        createElement(ThemeProbe),
+      ),
+    )
+
+    expect(screen.getByText(expected)).toBeOnTheScreen()
+  })
+
+  it('fails clearly when the hook is used outside its provider', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+
+    try {
+      await expect(render(createElement(ThemeProbe))).rejects.toThrow(
+        'useAppTheme must be used within ThemeProvider',
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 })

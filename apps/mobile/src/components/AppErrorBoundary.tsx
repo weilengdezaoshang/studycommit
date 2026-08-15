@@ -81,7 +81,7 @@ function AppCrashFallback({ onRetry }: AppCrashFallbackProps) {
               {
                 backgroundColor: theme.colors.primary,
                 borderRadius: theme.radii.md,
-                opacity: pressed ? 0.78 : 1,
+                opacity: pressed ? theme.motion.pressedOpacity : 1,
               },
             ]}
           >

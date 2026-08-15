@@ -1,5 +1,13 @@
 import type { ColorSchemeName } from 'react-native'
-import { darkColors, lightColors, radii, spacing, typography } from './tokens'
+import {
+  darkColors,
+  lightColors,
+  motion,
+  radii,
+  sizes,
+  spacing,
+  typography,
+} from './tokens'
 
 export type AppTheme = {
   isDark: boolean
@@ -7,6 +15,8 @@ export type AppTheme = {
   spacing: typeof spacing
   radii: typeof radii
   typography: typeof typography
+  sizes: typeof sizes
+  motion: typeof motion
 }
 
 export function createTheme(colorScheme: ColorSchemeName | null | undefined): AppTheme {
@@ -18,5 +28,7 @@ export function createTheme(colorScheme: ColorSchemeName | null | undefined): Ap
     spacing,
     radii,
     typography,
+    sizes,
+    motion,
   }
 }

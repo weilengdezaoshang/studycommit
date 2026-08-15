@@ -1,7 +1,8 @@
 import type { ComponentProps } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { useAppTheme } from '../theme/ThemeProvider'
+import { AppText } from './AppText'
 
 type IconName = ComponentProps<typeof Ionicons>['name']
 
@@ -37,13 +38,13 @@ export function ScreenPlaceholder({ description, icon, title }: ScreenPlaceholde
           color={theme.colors.onPrimarySurface}
           importantForAccessibility="no-hide-descendants"
           name={icon}
-          size={32}
+          size={theme.sizes.iconXl}
         />
       </View>
-      <Text accessibilityRole="header" style={[styles.title, { color: theme.colors.text }]}>
+      <AppText variant="heading" weight="semibold" style={styles.title}>
         {title}
-      </Text>
-      <Text style={[styles.description, { color: theme.colors.textMuted }]}>{description}</Text>
+      </AppText>
+      <AppText color="muted" style={styles.description}>{description}</AppText>
     </ScrollView>
   )
 }
@@ -62,16 +63,11 @@ const styles = StyleSheet.create({
   },
   title: {
     marginTop: 24,
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '600',
     textAlign: 'center',
   },
   description: {
     maxWidth: 520,
     marginTop: 12,
-    fontSize: 16,
-    lineHeight: 26,
     textAlign: 'center',
   },
 })

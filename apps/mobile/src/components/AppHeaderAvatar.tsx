@@ -1,6 +1,7 @@
-import { Pressable, StyleSheet, Text } from 'react-native'
+import { Pressable, StyleSheet } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useAppTheme } from '../theme/ThemeProvider'
+import { AppText } from './AppText'
 
 export function AppHeaderAvatar() {
   const navigation = useNavigation()
@@ -18,24 +19,20 @@ export function AppHeaderAvatar() {
         {
           backgroundColor: theme.colors.primarySurface,
           borderRadius: theme.radii.pill,
-          opacity: pressed ? 0.72 : 1,
+          opacity: pressed ? theme.motion.pressedOpacity : 1,
         },
       ]}
     >
-      <Text style={[styles.label, { color: theme.colors.onPrimarySurface }]}>W</Text>
+      <AppText style={{ color: theme.colors.onPrimarySurface }} variant="label" weight="semibold">W</AppText>
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
   button: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
   },
 })
