@@ -13,7 +13,7 @@ export async function createApp(): Promise<NestFastifyApplication> {
   app.useLogger(app.get(Logger))
   app.setGlobalPrefix('api')
   app.enableCors({ origin: process.env.NODE_ENV === 'production' ? false : true })
-  app.useGlobalFilters(new ErrorFilter(app.get(PinoLogger)))
+  app.useGlobalFilters(new ErrorFilter(await app.resolve(PinoLogger)))
   app.enableShutdownHooks()
   const document = SwaggerModule.createDocument(app, new DocumentBuilder().setTitle('StudyCommit API').setVersion('1.0').build())
   SwaggerModule.setup('api/docs', app, document)
