@@ -5,6 +5,7 @@ import Redis from 'ioredis'
 @Injectable()
 export class RedisService implements OnModuleDestroy {
   private readonly client: Redis
+  private closePromise?: Promise<void>
 
   constructor(@Inject(ConfigService) config: ConfigService) {
     this.client = new Redis(config.get<string>('REDIS_URL') ?? 'redis://localhost:6379', {
@@ -23,7 +24,12 @@ export class RedisService implements OnModuleDestroy {
     await this.client.ping()
   }
 
-  async onModuleDestroy(): Promise<void> {
-    if (this.client.status !== 'end') this.client.disconnect()
+  onModuleDestroy(): Promise<void> {
+    if (this.closePromise) return this.closePromise
+
+    this.closePromise = this.client.status === 'ready'
+      ? this.client.quit().then(() => undefined)
+      : Promise.resolve(this.client.disconnect(false))
+    return this.closePromise
   }
 }

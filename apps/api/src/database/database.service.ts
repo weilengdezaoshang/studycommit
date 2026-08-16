@@ -8,10 +8,16 @@ import * as schema from './schema'
 export class DatabaseService implements OnModuleDestroy {
   readonly pool: Pool
   readonly db: NodePgDatabase<typeof schema>
+  private closePromise?: Promise<void>
+
   constructor(@Inject(ConfigService) config: ConfigService) {
     this.pool = new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL'), max: 10, connectionTimeoutMillis: 2000 })
     this.db = drizzle(this.pool, { schema })
   }
   async ping() { await this.pool.query('SELECT 1') }
-  async onModuleDestroy() { await this.pool.end() }
+
+  onModuleDestroy(): Promise<void> {
+    this.closePromise ??= this.pool.end()
+    return this.closePromise
+  }
 }
