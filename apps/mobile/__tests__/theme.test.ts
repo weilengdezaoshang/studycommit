@@ -3,13 +3,14 @@ import { Text } from 'react-native'
 import { render, screen } from '@testing-library/react-native'
 import { ThemeProvider, useAppTheme } from '../src/theme/ThemeProvider'
 import { createTheme } from '../src/theme/theme'
+import { darkColors, lightColors, spacing } from '@studycommit/design-tokens'
 
 describe('createTheme', () => {
   it('creates a light theme by default', () => {
     const theme = createTheme(undefined)
 
     expect(theme.isDark).toBe(false)
-    expect(theme.colors.background).toBe('#F3F7F7')
+    expect(theme.colors.background).toBe(lightColors.background)
   })
 
   it('falls back to light for an absent system preference', () => {
@@ -21,7 +22,7 @@ describe('createTheme', () => {
     const theme = createTheme('dark')
 
     expect(theme.isDark).toBe(true)
-    expect(theme.colors.background).toBe('#121A1C')
+    expect(theme.colors.background).toBe(darkColors.background)
   })
 
   it('keeps the same semantic color contract in both themes', () => {
@@ -29,6 +30,13 @@ describe('createTheme', () => {
     const darkKeys = Object.keys(createTheme('dark').colors).sort()
 
     expect(darkKeys).toEqual(lightKeys)
+  })
+
+  it('uses the shared tokens as its single source of truth', () => {
+    const theme = createTheme('light')
+
+    expect(theme.colors).toBe(lightColors)
+    expect(theme.spacing).toBe(spacing)
   })
 })
 

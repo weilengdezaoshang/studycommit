@@ -1,6 +1,7 @@
 import { StyleSheet, Text } from 'react-native'
 import { screen } from '@testing-library/react-native'
 import { Screen } from '../src/components/Screen'
+import { darkColors } from '@studycommit/design-tokens'
 import {
   renderWithAppProviders,
   TEST_SAFE_AREA_METRICS,
@@ -35,6 +36,6 @@ describe('<Screen />', () => {
     })
 
     const style = StyleSheet.flatten(screen.getByTestId('subject-screen').props.style)
-    expect(style.backgroundColor).toBe('#121A1C')
+    expect(style.backgroundColor).toBe(darkColors.background)
   })
 })

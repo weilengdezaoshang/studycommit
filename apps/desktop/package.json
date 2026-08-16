@@ -12,6 +12,7 @@
     "test:e2e": "pnpm build && playwright test"
   },
   "dependencies": {
+    "@studycommit/design-tokens": "workspace:*",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "react": "19.2.3",

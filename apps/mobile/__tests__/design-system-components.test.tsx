@@ -5,15 +5,16 @@ import { Card } from '../src/components/Card'
 import { IconButton } from '../src/components/IconButton'
 import { TextField } from '../src/components/TextField'
 import { ThemeProvider } from '../src/theme/ThemeProvider'
+import { sizes } from '../src/theme/tokens'
 
 const wrap = (child: React.ReactNode) => render(<ThemeProvider colorScheme="light">{child}</ThemeProvider>)
 
 describe('design-system primitives', () => {
-  it('renders a named 48dp icon button and handles presses', async () => {
+  it('uses the mobile touch target for a named icon button and handles presses', async () => {
     const onPress = jest.fn()
     await wrap(<IconButton accessibilityLabel="搜索专题" icon="search-outline" onPress={onPress} />)
     const button = screen.getByRole('button', { name: '搜索专题' })
-    expect(button).toHaveStyle({ minHeight: 48, minWidth: 48 })
+    expect(button).toHaveStyle({ minHeight: sizes.touchTarget, minWidth: sizes.touchTarget })
     await userEvent.setup().press(button)
     expect(onPress).toHaveBeenCalledTimes(1)
   })
