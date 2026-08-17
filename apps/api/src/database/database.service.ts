@@ -11,10 +11,16 @@ export class DatabaseService implements OnModuleDestroy {
   private closePromise?: Promise<void>
 
   constructor(@Inject(ConfigService) config: ConfigService) {
-    this.pool = new Pool({ connectionString: config.getOrThrow<string>('DATABASE_URL'), max: 10, connectionTimeoutMillis: 2000 })
+    this.pool = new Pool({
+      connectionString: config.getOrThrow<string>('DATABASE_URL'),
+      max: 10,
+      connectionTimeoutMillis: 2000,
+    })
     this.db = drizzle(this.pool, { schema })
   }
-  async ping() { await this.pool.query('SELECT 1') }
+  async ping() {
+    await this.pool.query('SELECT 1')
+  }
 
   onModuleDestroy(): Promise<void> {
     this.closePromise ??= this.pool.end()

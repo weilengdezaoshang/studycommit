@@ -1,4 +1,13 @@
-import { darkColors, lightColors, motion, radii, sizes, spacing, typography, type SemanticColors } from '@studycommit/design-tokens'
+import {
+  darkColors,
+  lightColors,
+  motion,
+  radii,
+  sizes,
+  spacing,
+  typography,
+  type SemanticColors,
+} from '@studycommit/design-tokens'
 
 export type ColorScheme = 'light' | 'dark'
 export type CssVariables = Record<`--${string}`, string>
@@ -12,11 +21,17 @@ type MediaQueryLike = {
 const kebabCase = (value: string) => value.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
 
 function appendColors(variables: CssVariables, colors: SemanticColors) {
-  for (const [name, value] of Object.entries(colors)) variables[`--color-${kebabCase(name)}`] = value
+  for (const [name, value] of Object.entries(colors))
+    variables[`--color-${kebabCase(name)}`] = value
 }
 
-function appendPixels(variables: CssVariables, prefix: string, values: Readonly<Record<string, number>>) {
-  for (const [name, value] of Object.entries(values)) variables[`--${prefix}-${kebabCase(name)}`] = `${value}px`
+function appendPixels(
+  variables: CssVariables,
+  prefix: string,
+  values: Readonly<Record<string, number>>,
+) {
+  for (const [name, value] of Object.entries(values))
+    variables[`--${prefix}-${kebabCase(name)}`] = `${value}px`
 }
 
 export function createCssVariables(colorScheme: ColorScheme): CssVariables {
@@ -37,7 +52,8 @@ export function createCssVariables(colorScheme: ColorScheme): CssVariables {
 }
 
 export function applyTheme(target: StyleTarget, colorScheme: ColorScheme) {
-  for (const [name, value] of Object.entries(createCssVariables(colorScheme))) target.setProperty(name, value)
+  for (const [name, value] of Object.entries(createCssVariables(colorScheme)))
+    target.setProperty(name, value)
 }
 
 export function observeSystemTheme(target: StyleTarget, mediaQuery: MediaQueryLike) {

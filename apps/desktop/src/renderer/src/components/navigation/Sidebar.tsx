@@ -5,7 +5,9 @@ export function Sidebar(): React.JSX.Element {
   return (
     <aside className="sidebar">
       <div className="brand" aria-label="StudyCommit">
-        <span className="brand__mark" aria-hidden="true">S</span>
+        <span className="brand__mark" aria-hidden="true">
+          S
+        </span>
         <span>StudyCommit</span>
       </div>
 

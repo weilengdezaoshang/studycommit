@@ -12,7 +12,15 @@ export type IconButtonProps = Omit<PressableProps, 'children' | 'accessibilityLa
   variant?: 'default' | 'subtle' | 'danger'
 }
 
-export function IconButton({ accessibilityLabel, disabled, icon, iconSize, style, variant = 'default', ...props }: IconButtonProps) {
+export function IconButton({
+  accessibilityLabel,
+  disabled,
+  icon,
+  iconSize,
+  style,
+  variant = 'default',
+  ...props
+}: IconButtonProps) {
   const theme = useAppTheme()
   const palette = {
     default: { background: theme.colors.surface, foreground: theme.colors.text },
@@ -27,12 +35,30 @@ export function IconButton({ accessibilityLabel, disabled, icon, iconSize, style
       accessibilityState={{ disabled: Boolean(disabled) }}
       disabled={disabled}
       style={(state) => [
-        { alignItems: 'center', backgroundColor: palette.background, borderRadius: theme.radii.pill, justifyContent: 'center', minHeight: theme.sizes.touchTarget, minWidth: theme.sizes.touchTarget, opacity: disabled ? theme.motion.disabledOpacity : state.pressed ? theme.motion.pressedOpacity : 1 },
+        {
+          alignItems: 'center',
+          backgroundColor: palette.background,
+          borderRadius: theme.radii.pill,
+          justifyContent: 'center',
+          minHeight: theme.sizes.touchTarget,
+          minWidth: theme.sizes.touchTarget,
+          opacity: disabled
+            ? theme.motion.disabledOpacity
+            : state.pressed
+              ? theme.motion.pressedOpacity
+              : 1,
+        },
         typeof style === 'function' ? style(state) : style,
       ]}
       {...props}
     >
-      <Ionicons accessibilityElementsHidden color={palette.foreground} importantForAccessibility="no-hide-descendants" name={icon} size={iconSize ?? theme.sizes.iconLg} />
+      <Ionicons
+        accessibilityElementsHidden
+        color={palette.foreground}
+        importantForAccessibility="no-hide-descendants"
+        name={icon}
+        size={iconSize ?? theme.sizes.iconLg}
+      />
     </Pressable>
   )
 }

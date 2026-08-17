@@ -2,7 +2,7 @@ import {
   BadRequestException,
   HttpException,
   NotFoundException,
-  type ArgumentsHost
+  type ArgumentsHost,
 } from '@nestjs/common'
 import { describe, expect, it, vi } from 'vitest'
 import { AppError } from './app.error'
@@ -14,14 +14,14 @@ function createHttpContext(options?: { sent?: boolean; requestId?: string }) {
   const request = {
     id: options?.requestId ?? 'req-test-001',
     method: 'POST',
-    url: '/api/study-sessions'
+    url: '/api/study-sessions',
   }
   const response = { sent: options?.sent ?? false, status }
   const host = {
     switchToHttp: () => ({
       getRequest: () => request,
-      getResponse: () => response
-    })
+      getResponse: () => response,
+    }),
   } as ArgumentsHost
 
   return { host, request, response, send, status }
@@ -42,22 +42,27 @@ describe('ErrorFilter', () => {
       filter.catch(error, host)
 
       expect(status).toHaveBeenCalledWith(409)
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({
-        error: {
-          code: 'ACTIVE_STUDY_SESSION_EXISTS',
-          message: '当前已有进行中的学习会话',
-          details: null
-        },
-        requestId: 'req-test-001',
-        path: '/api/study-sessions'
-      }))
-      expect(logger.warn).toHaveBeenCalledWith(expect.objectContaining({
-        requestId: 'req-test-001',
-        errorCode: 'ACTIVE_STUDY_SESSION_EXISTS',
-        method: 'POST',
-        path: '/api/study-sessions',
-        statusCode: 409
-      }), '当前已有进行中的学习会话')
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: {
+            code: 'ACTIVE_STUDY_SESSION_EXISTS',
+            message: '当前已有进行中的学习会话',
+            details: null,
+          },
+          requestId: 'req-test-001',
+          path: '/api/study-sessions',
+        }),
+      )
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: 'req-test-001',
+          errorCode: 'ACTIVE_STUDY_SESSION_EXISTS',
+          method: 'POST',
+          path: '/api/study-sessions',
+          statusCode: 409,
+        }),
+        '当前已有进行中的学习会话',
+      )
       expect(logger.error).not.toHaveBeenCalled()
     })
 
@@ -67,21 +72,26 @@ describe('ErrorFilter', () => {
       const { host, send } = createHttpContext()
       const details = { fieldErrors: { title: ['不能为空'] } }
 
-      filter.catch(new BadRequestException({
-        code: 'VALIDATION_ERROR',
-        message: '请求参数不合法',
-        details
-      }), host)
+      filter.catch(
+        new BadRequestException({
+          code: 'VALIDATION_ERROR',
+          message: '请求参数不合法',
+          details,
+        }),
+        host,
+      )
 
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({
-        error: { code: 'VALIDATION_ERROR', message: '请求参数不合法', details }
-      }))
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: { code: 'VALIDATION_ERROR', message: '请求参数不合法', details },
+        }),
+      )
       expect(JSON.stringify(send.mock.calls[0]?.[0])).not.toContain('stack')
     })
 
     it.each([
       [new NotFoundException(), 404, 'HTTP_ERROR', 'Not Found'],
-      [new HttpException('请求被拒绝', 403), 403, 'HTTP_ERROR', '请求被拒绝']
+      [new HttpException('请求被拒绝', 403), 403, 'HTTP_ERROR', '请求被拒绝'],
     ])('兼容 Nest 标准 HTTP 异常 %#', (error, expectedStatus, expectedCode, expectedMessage) => {
       const logger = createLogger()
       const filter = new ErrorFilter(logger)
@@ -90,9 +100,11 @@ describe('ErrorFilter', () => {
       filter.catch(error, host)
 
       expect(status).toHaveBeenCalledWith(expectedStatus)
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({
-        error: expect.objectContaining({ code: expectedCode, message: expectedMessage })
-      }))
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: expectedCode, message: expectedMessage }),
+        }),
+      )
       expect(logger.warn).toHaveBeenCalledOnce()
       expect(logger.error).not.toHaveBeenCalled()
     })
@@ -107,13 +119,16 @@ describe('ErrorFilter', () => {
 
       filter.catch(error, host)
 
-      expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({
-        err: error,
-        requestId: 'req-test-001',
-        method: 'POST',
-        path: '/api/study-sessions',
-        statusCode: 500
-      }), '请求处理发生未预期异常')
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          err: error,
+          requestId: 'req-test-001',
+          method: 'POST',
+          path: '/api/study-sessions',
+          statusCode: 500,
+        }),
+        '请求处理发生未预期异常',
+      )
       expect(error.stack).toContain('TypeError: 测试空引用异常')
     })
 
@@ -166,14 +181,16 @@ describe('ErrorFilter', () => {
 
       expect(status).toHaveBeenCalledWith(500)
       const serialized = JSON.stringify(send.mock.calls[0]?.[0])
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({
-        error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: '服务器内部错误',
-          details: null
-        },
-        requestId: 'req-test-001'
-      }))
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: {
+            code: 'INTERNAL_SERVER_ERROR',
+            message: '服务器内部错误',
+            details: null,
+          },
+          requestId: 'req-test-001',
+        }),
+      )
       expect(serialized).not.toContain('postgres://')
       expect(serialized).not.toContain('stack')
     })
@@ -183,19 +200,24 @@ describe('ErrorFilter', () => {
       const filter = new ErrorFilter(logger)
       const { host, send } = createHttpContext()
 
-      filter.catch(new AppError(
-        'DATABASE_OPERATION_FAILED',
-        500,
-        'PostgreSQL password=secret connection refused'
-      ), host)
+      filter.catch(
+        new AppError(
+          'DATABASE_OPERATION_FAILED',
+          500,
+          'PostgreSQL password=secret connection refused',
+        ),
+        host,
+      )
 
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({
-        error: {
-          code: 'INTERNAL_SERVER_ERROR',
-          message: '服务器内部错误',
-          details: null
-        }
-      }))
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: {
+            code: 'INTERNAL_SERVER_ERROR',
+            message: '服务器内部错误',
+            details: null,
+          },
+        }),
+      )
       expect(logger.error).toHaveBeenCalledOnce()
     })
   })
@@ -208,10 +230,15 @@ describe('ErrorFilter', () => {
 
       filter.catch(new Error('boom'), host)
 
-      expect(send).toHaveBeenCalledWith(expect.objectContaining({ requestId: 'req-correlation-999' }))
-      expect(logger.error).toHaveBeenCalledWith(expect.objectContaining({
-        requestId: 'req-correlation-999'
-      }), expect.any(String))
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({ requestId: 'req-correlation-999' }),
+      )
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: 'req-correlation-999',
+        }),
+        expect.any(String),
+      )
     })
 
     it('响应已发送时仍记录异常，但不二次发送', () => {

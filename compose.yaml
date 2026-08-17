@@ -10,12 +10,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-studycommit}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studycommit_dev_only}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studycommit} -d ${POSTGRES_DB:-studycommit}"]
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-studycommit} -d ${POSTGRES_DB:-studycommit}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,13 +26,13 @@ services:
     image: redis:8-alpine
     container_name: studycommit-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ['redis-server', '--appendonly', 'yes']
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - '${REDIS_PORT:-6379}:6379'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 3s
       retries: 10

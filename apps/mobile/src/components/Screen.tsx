@@ -9,12 +9,7 @@ type ScreenProps = PropsWithChildren<{
   testID?: string
 }>
 
-export function Screen({
-  children,
-  includeBottomInset = true,
-  style,
-  testID,
-}: ScreenProps) {
+export function Screen({ children, includeBottomInset = true, style, testID }: ScreenProps) {
   const insets = useSafeAreaInsets()
   const theme = useAppTheme()
 

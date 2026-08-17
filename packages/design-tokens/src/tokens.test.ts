@@ -1,13 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  darkColors,
-  lightColors,
-  motion,
-  radii,
-  sizes,
-  spacing,
-  typography,
-} from './index'
+import { darkColors, lightColors, motion, radii, sizes, spacing, typography } from './index'
 
 describe('cross-platform design tokens', () => {
   it('keeps the same semantic color contract in light and dark themes', () => {

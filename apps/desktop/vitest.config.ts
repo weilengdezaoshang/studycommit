@@ -6,12 +6,12 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@renderer': resolve(__dirname, 'src/renderer/src')
-    }
+      '@renderer': resolve(__dirname, 'src/renderer/src'),
+    },
   },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/renderer/src/test/setup.ts'],
-    clearMocks: true
-  }
+    clearMocks: true,
+  },
 })

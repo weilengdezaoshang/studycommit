@@ -2,10 +2,7 @@ import { StyleSheet, Text } from 'react-native'
 import { screen } from '@testing-library/react-native'
 import { Screen } from '../src/components/Screen'
 import { darkColors } from '@studycommit/design-tokens'
-import {
-  renderWithAppProviders,
-  TEST_SAFE_AREA_METRICS,
-} from '../src/test/render'
+import { renderWithAppProviders, TEST_SAFE_AREA_METRICS } from '../src/test/render'
 
 describe('<Screen />', () => {
   it('renders content inside deterministic safe-area insets', async () => {
@@ -23,9 +20,7 @@ describe('<Screen />', () => {
   })
 
   it('can leave the bottom inset to a future tab navigator', async () => {
-    await renderWithAppProviders(
-      <Screen includeBottomInset={false} testID="subject-screen" />,
-    )
+    await renderWithAppProviders(<Screen includeBottomInset={false} testID="subject-screen" />)
 
     expect(screen.getByTestId('subject-screen')).toHaveStyle({ paddingBottom: 0 })
   })

@@ -7,6 +7,6 @@ export default defineConfig({
   preload: { plugins: [externalizeDepsPlugin()] },
   renderer: {
     resolve: { alias: { '@renderer': resolve('src/renderer/src') } },
-    plugins: [react()]
-  }
+    plugins: [react()],
+  },
 })

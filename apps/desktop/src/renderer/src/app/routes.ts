@@ -18,7 +18,7 @@ export const routes = {
   topicMap: (topicId: string): string => `/topics/${encodeId(topicId)}/map`,
   topicLogs: (topicId: string): string => `/topics/${encodeId(topicId)}/logs`,
   note: (topicId: string, noteId: string): string =>
-    `/topics/${encodeId(topicId)}/notes/${encodeId(noteId)}`
+    `/topics/${encodeId(topicId)}/notes/${encodeId(noteId)}`,
 } as const
 
 export const TOP_LEVEL_PATHS = [
@@ -26,7 +26,7 @@ export const TOP_LEVEL_PATHS = [
   routes.drafts(),
   routes.topics(),
   routes.review(),
-  routes.settings()
+  routes.settings(),
 ] as const
 
 export type TopLevelPath = (typeof TOP_LEVEL_PATHS)[number]

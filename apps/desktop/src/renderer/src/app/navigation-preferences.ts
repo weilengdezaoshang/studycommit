@@ -11,7 +11,7 @@ export interface NavigationPreferencesV1 {
 export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferencesV1 = {
   version: 1,
   lastTopLevelPath: '/today',
-  lastTopicSectionById: {}
+  lastTopicSectionById: {},
 }
 
 function isNavigationPreferences(value: unknown): value is NavigationPreferencesV1 {
@@ -23,7 +23,7 @@ function isNavigationPreferences(value: unknown): value is NavigationPreferences
   }
 
   return Object.entries(candidate.lastTopicSectionById).every(
-    ([topicId, section]) => topicId.length > 0 && isTopicSection(section)
+    ([topicId, section]) => topicId.length > 0 && isTopicSection(section),
   )
 }
 
@@ -42,14 +42,14 @@ export function loadNavigationPreferences(storage: Storage): NavigationPreferenc
 
 export function saveNavigationPreferences(
   storage: Storage,
-  preferences: NavigationPreferencesV1
+  preferences: NavigationPreferencesV1,
 ): void {
   storage.setItem(
     NAVIGATION_STORAGE_KEY,
     JSON.stringify({
       version: 1,
       lastTopLevelPath: preferences.lastTopLevelPath,
-      lastTopicSectionById: preferences.lastTopicSectionById
-    })
+      lastTopicSectionById: preferences.lastTopicSectionById,
+    }),
   )
 }

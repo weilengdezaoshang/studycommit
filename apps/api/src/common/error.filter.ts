@@ -28,22 +28,28 @@ export class ErrorFilter implements ExceptionFilter {
 
     if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
       const error = this.toError(exception)
-      logger.error({
-        err: error,
-        requestId: request.id,
-        method: request.method,
-        path: request.url,
-        statusCode
-      }, '请求处理发生未预期异常')
+      logger.error(
+        {
+          err: error,
+          requestId: request.id,
+          method: request.method,
+          path: request.url,
+          statusCode,
+        },
+        '请求处理发生未预期异常',
+      )
     } else {
       const payload = this.getPublicPayload(exception, statusCode)
-      logger.warn({
-        requestId: request.id,
-        errorCode: payload.code,
-        method: request.method,
-        path: request.url,
-        statusCode
-      }, payload.message)
+      logger.warn(
+        {
+          requestId: request.id,
+          errorCode: payload.code,
+          method: request.method,
+          path: request.url,
+          statusCode,
+        },
+        payload.message,
+      )
     }
 
     if (response.sent) return
@@ -53,7 +59,7 @@ export class ErrorFilter implements ExceptionFilter {
       error: payload,
       requestId: request.id,
       timestamp: new Date().toISOString(),
-      path: request.url
+      path: request.url,
     })
   }
 
@@ -68,7 +74,7 @@ export class ErrorFilter implements ExceptionFilter {
       return {
         code: 'INTERNAL_SERVER_ERROR',
         message: '服务器内部错误',
-        details: null
+        details: null,
       }
     }
 
@@ -76,7 +82,7 @@ export class ErrorFilter implements ExceptionFilter {
       return {
         code: exception.code,
         message: exception.message,
-        details: null
+        details: null,
       }
     }
 
@@ -89,12 +95,16 @@ export class ErrorFilter implements ExceptionFilter {
         return {
           code: typeof raw.code === 'string' ? raw.code : 'HTTP_ERROR',
           message: this.getHttpMessage(raw.message, exception.message),
-          details: 'details' in raw ? raw.details : null
+          details: 'details' in raw ? raw.details : null,
         }
       }
     }
 
-    return { code: 'HTTP_ERROR', message: exception instanceof Error ? exception.message : 'HTTP Error', details: null }
+    return {
+      code: 'HTTP_ERROR',
+      message: exception instanceof Error ? exception.message : 'HTTP Error',
+      details: null,
+    }
   }
 
   private getHttpMessage(message: unknown, fallback: string): string {

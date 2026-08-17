@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { darkColors, lightColors, motion, radii, spacing, typography } from '@studycommit/design-tokens'
+import {
+  darkColors,
+  lightColors,
+  motion,
+  radii,
+  spacing,
+  typography,
+} from '@studycommit/design-tokens'
 import { createCssVariables, observeSystemTheme } from './css-variables'
 
 describe('desktop CSS variable adapter', () => {
@@ -26,7 +33,9 @@ describe('desktop CSS variable adapter', () => {
     let changeListener: (() => void) | undefined
     const mediaQuery = {
       matches: false,
-      addEventListener: vi.fn((_event: string, listener: () => void) => { changeListener = listener }),
+      addEventListener: vi.fn((_event: string, listener: () => void) => {
+        changeListener = listener
+      }),
       removeEventListener: vi.fn(),
     }
 
@@ -35,7 +44,10 @@ describe('desktop CSS variable adapter', () => {
 
     mediaQuery.matches = true
     changeListener?.()
-    expect(setProperty).toHaveBeenLastCalledWith('--motion-pressed-opacity', String(motion.pressedOpacity))
+    expect(setProperty).toHaveBeenLastCalledWith(
+      '--motion-pressed-opacity',
+      String(motion.pressedOpacity),
+    )
     expect(setProperty).toHaveBeenCalledWith('--color-primary', darkColors.primary)
 
     dispose()

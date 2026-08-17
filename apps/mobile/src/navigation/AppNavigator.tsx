@@ -29,10 +29,7 @@ const TopicsStack = createNativeStackNavigator<TopicsStackParamList>()
 const RecordsStack = createNativeStackNavigator<RecordsStackParamList>()
 const ReviewStack = createNativeStackNavigator<ReviewStackParamList>()
 
-const tabIcons: Record<
-  keyof MainTabParamList,
-  { focused: IconName; unfocused: IconName }
-> = {
+const tabIcons: Record<keyof MainTabParamList, { focused: IconName; unfocused: IconName }> = {
   TodayTab: { focused: 'today', unfocused: 'today-outline' },
   TopicsTab: { focused: 'book', unfocused: 'book-outline' },
   RecordsTab: { focused: 'create', unfocused: 'create-outline' },

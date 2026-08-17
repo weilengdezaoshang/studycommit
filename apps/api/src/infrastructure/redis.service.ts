@@ -12,7 +12,7 @@ export class RedisService implements OnModuleDestroy {
       lazyConnect: true,
       connectTimeout: 2_000,
       maxRetriesPerRequest: 1,
-      retryStrategy: () => null
+      retryStrategy: () => null,
     })
     this.client.on('error', () => undefined)
   }
@@ -27,9 +27,10 @@ export class RedisService implements OnModuleDestroy {
   onModuleDestroy(): Promise<void> {
     if (this.closePromise) return this.closePromise
 
-    this.closePromise = this.client.status === 'ready'
-      ? this.client.quit().then(() => undefined)
-      : Promise.resolve(this.client.disconnect(false))
+    this.closePromise =
+      this.client.status === 'ready'
+        ? this.client.quit().then(() => undefined)
+        : Promise.resolve(this.client.disconnect(false))
     return this.closePromise
   }
 }

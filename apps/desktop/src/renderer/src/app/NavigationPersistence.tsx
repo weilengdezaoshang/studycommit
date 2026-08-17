@@ -1,9 +1,6 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router'
-import {
-  loadNavigationPreferences,
-  saveNavigationPreferences
-} from './navigation-preferences'
+import { loadNavigationPreferences, saveNavigationPreferences } from './navigation-preferences'
 import { isTopicSection, isTopLevelPath, type TopLevelPath } from './routes'
 
 export function NavigationPersistence(): null {

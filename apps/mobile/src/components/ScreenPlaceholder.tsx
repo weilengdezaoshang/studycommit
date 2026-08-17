@@ -44,7 +44,9 @@ export function ScreenPlaceholder({ description, icon, title }: ScreenPlaceholde
       <AppText variant="heading" weight="semibold" style={styles.title}>
         {title}
       </AppText>
-      <AppText color="muted" style={styles.description}>{description}</AppText>
+      <AppText color="muted" style={styles.description}>
+        {description}
+      </AppText>
     </ScrollView>
   )
 }

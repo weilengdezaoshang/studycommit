@@ -18,7 +18,7 @@ describe('RedisService shutdown', () => {
     const client = {
       status: 'ready',
       quit: vi.fn().mockResolvedValue('OK'),
-      disconnect: vi.fn()
+      disconnect: vi.fn(),
     }
     const service = createService(client)
 
@@ -32,7 +32,7 @@ describe('RedisService shutdown', () => {
     const client = {
       status: 'wait',
       quit: vi.fn().mockResolvedValue('OK'),
-      disconnect: vi.fn()
+      disconnect: vi.fn(),
     }
     const service = createService(client)
 
@@ -47,7 +47,7 @@ describe('RedisService shutdown', () => {
     const client = {
       status: 'connecting',
       quit: vi.fn().mockResolvedValue('OK'),
-      disconnect: vi.fn()
+      disconnect: vi.fn(),
     }
     const service = createService(client)
 
@@ -62,14 +62,11 @@ describe('RedisService shutdown', () => {
     const client = {
       status: 'ready',
       quit: vi.fn().mockResolvedValue('OK'),
-      disconnect: vi.fn()
+      disconnect: vi.fn(),
     }
     const service = createService(client)
 
-    await Promise.all([
-      service.onModuleDestroy(),
-      service.onModuleDestroy()
-    ])
+    await Promise.all([service.onModuleDestroy(), service.onModuleDestroy()])
     await service.onModuleDestroy()
 
     expect(client.quit).toHaveBeenCalledOnce()

@@ -1,4 +1,11 @@
-import { ensureDocker, loadEnvFile, log, projectRoot, proxyEnv, restartMacDockerIfAvailable } from './lib/backend.mjs'
+import {
+  ensureDocker,
+  loadEnvFile,
+  log,
+  projectRoot,
+  proxyEnv,
+  restartMacDockerIfAvailable,
+} from './lib/backend.mjs'
 import { run, runForeground } from './lib/command.mjs'
 
 try {
@@ -8,7 +15,11 @@ try {
   log('正在启动 PostgreSQL 和 Redis')
   let started = false
   for (let attempt = 1; attempt <= 3 && !started; attempt += 1) {
-    started = run('docker', ['compose', 'up', '-d', '--wait'], { cwd: projectRoot, env, allowFailure: true })
+    started = run('docker', ['compose', 'up', '-d', '--wait'], {
+      cwd: projectRoot,
+      env,
+      allowFailure: true,
+    })
     if (!started) restartMacDockerIfAvailable()
   }
   if (!started) throw new Error('连续 3 次无法启动 PostgreSQL 和 Redis。')

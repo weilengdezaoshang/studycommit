@@ -14,8 +14,8 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
-      contextIsolation: true
-    }
+      contextIsolation: true,
+    },
   })
 
   window.once('ready-to-show', () => window.show())
@@ -28,7 +28,8 @@ function createWindow(): void {
     try {
       const target = new URL(url)
       const current = new URL(currentUrl)
-      const isSameDocument = target.origin === current.origin && target.pathname === current.pathname
+      const isSameDocument =
+        target.origin === current.origin && target.pathname === current.pathname
       if (!isSameDocument) event.preventDefault()
     } catch {
       event.preventDefault()

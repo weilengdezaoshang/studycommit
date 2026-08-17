@@ -8,7 +8,7 @@ function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
-    </MemoryRouter>
+    </MemoryRouter>,
   )
 }
 
@@ -57,8 +57,8 @@ describe('application shell', () => {
       JSON.stringify({
         version: 1,
         lastTopLevelPath: '/topics',
-        lastTopicSectionById: { 'topic-1': 'map' }
-      })
+        lastTopicSectionById: { 'topic-1': 'map' },
+      }),
     )
     renderAt('/topics/topic-1')
     expect(await screen.findByRole('heading', { name: '知识地图' })).toBeInTheDocument()

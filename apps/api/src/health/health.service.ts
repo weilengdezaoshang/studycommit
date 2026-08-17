@@ -16,23 +16,20 @@ export interface ReadinessResult {
 export class HealthService {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
-    @Inject(RedisService) private readonly redis: RedisService
+    @Inject(RedisService) private readonly redis: RedisService,
   ) {}
 
   async readiness(): Promise<ReadinessResult> {
-    const [postgres, redis] = await Promise.allSettled([
-      this.database.ping(),
-      this.redis.ping()
-    ])
+    const [postgres, redis] = await Promise.allSettled([this.database.ping(), this.redis.ping()])
 
     const dependencies = {
       postgres: postgres.status === 'fulfilled' ? 'up' : 'down',
-      redis: redis.status === 'fulfilled' ? 'up' : 'down'
+      redis: redis.status === 'fulfilled' ? 'up' : 'down',
     } as const
 
     return {
       status: dependencies.postgres === 'up' && dependencies.redis === 'up' ? 'ready' : 'not_ready',
-      dependencies
+      dependencies,
     }
   }
 }

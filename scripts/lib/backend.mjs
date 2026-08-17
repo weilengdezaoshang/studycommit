@@ -6,7 +6,9 @@ import { commandExists, run } from './command.mjs'
 
 export const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 export const log = (message) => console.log(`\n[StudyCommit] ${message}`)
-export const fail = (message) => { throw new Error(message) }
+export const fail = (message) => {
+  throw new Error(message)
+}
 
 export function loadEnvFile(baseEnv = process.env) {
   const envPath = resolve(projectRoot, '.env')
@@ -25,7 +27,10 @@ export function loadEnvFile(baseEnv = process.env) {
 export function portIsOpen(host, port, timeout = 500) {
   return new Promise((resolveResult) => {
     const socket = createConnection({ host, port })
-    const done = (result) => { socket.destroy(); resolveResult(result) }
+    const done = (result) => {
+      socket.destroy()
+      resolveResult(result)
+    }
     socket.setTimeout(timeout)
     socket.once('connect', () => done(true))
     socket.once('timeout', () => done(false))
@@ -36,11 +41,13 @@ export function portIsOpen(host, port, timeout = 500) {
 export async function proxyEnv() {
   const env = { ...process.env }
   if (env.HTTPS_PROXY || env.https_proxy) return env
-  if (process.platform === 'darwin' && await portIsOpen('127.0.0.1', 7890)) {
+  if (process.platform === 'darwin' && (await portIsOpen('127.0.0.1', 7890))) {
     Object.assign(env, {
-      http_proxy: 'http://127.0.0.1:7890', https_proxy: 'http://127.0.0.1:7890',
-      HTTP_PROXY: 'http://127.0.0.1:7890', HTTPS_PROXY: 'http://127.0.0.1:7890',
-      GODEBUG: 'http2client=0'
+      http_proxy: 'http://127.0.0.1:7890',
+      https_proxy: 'http://127.0.0.1:7890',
+      HTTP_PROXY: 'http://127.0.0.1:7890',
+      HTTPS_PROXY: 'http://127.0.0.1:7890',
+      GODEBUG: 'http2client=0',
     })
     log('检测到本机 7890 代理，已用于容器运行环境下载')
   }
@@ -48,7 +55,9 @@ export async function proxyEnv() {
 }
 
 export function dockerReady(env = process.env) {
-  return commandExists('docker') && run('docker', ['info'], { quiet: true, allowFailure: true, env })
+  return (
+    commandExists('docker') && run('docker', ['info'], { quiet: true, allowFailure: true, env })
+  )
 }
 
 export async function ensureDocker(env) {
@@ -57,7 +66,15 @@ export async function ensureDocker(env) {
     log('Docker Engine 未运行，正在自动启动 Colima')
     const args = ['start', '--cpu', '2', '--memory', '4', '--disk', '20']
     const proxy = env.HTTPS_PROXY ?? env.https_proxy
-    if (proxy) args.push('--env', `HTTP_PROXY=${proxy}`, '--env', `HTTPS_PROXY=${proxy}`, '--env', 'NO_PROXY=localhost,127.0.0.1,::1')
+    if (proxy)
+      args.push(
+        '--env',
+        `HTTP_PROXY=${proxy}`,
+        '--env',
+        `HTTPS_PROXY=${proxy}`,
+        '--env',
+        'NO_PROXY=localhost,127.0.0.1,::1',
+      )
     run('colima', args, { env })
   } else if (process.platform === 'win32') {
     fail('Docker Desktop 尚未运行。请启动 Docker Desktop，等待 Engine Ready 后重试。')
@@ -69,7 +86,9 @@ export async function ensureDocker(env) {
 
 export function restartMacDockerIfAvailable() {
   if (process.platform !== 'darwin' || !commandExists('colima')) return
-  run('colima', ['ssh', '--', 'sudo', 'systemctl', 'set-environment', 'GODEBUG=http2client=0'], { allowFailure: true })
+  run('colima', ['ssh', '--', 'sudo', 'systemctl', 'set-environment', 'GODEBUG=http2client=0'], {
+    allowFailure: true,
+  })
   run('colima', ['ssh', '--', 'sudo', 'systemctl', 'restart', 'docker'], { allowFailure: true })
 }
 

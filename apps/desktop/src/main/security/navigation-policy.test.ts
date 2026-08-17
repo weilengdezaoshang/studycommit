@@ -12,7 +12,7 @@ describe('external navigation policy', () => {
     'file:///tmp/example',
     'javascript:alert(1)',
     'studycommit://topics/1',
-    'not a url'
+    'not a url',
   ])('rejects %s', (url) => {
     expect(isAllowedExternalUrl(url)).toBe(false)
   })

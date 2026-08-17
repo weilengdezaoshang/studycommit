@@ -31,6 +31,32 @@
     "test:api:e2e": "pnpm --filter @studycommit/api test:e2e",
     "test:infra:up": "docker compose -f compose.test.yaml up -d --wait",
     "test:infra:down": "docker compose -f compose.test.yaml down",
-    "test:infra:clean": "docker compose -f compose.test.yaml down -v"
+    "test:infra:clean": "docker compose -f compose.test.yaml down -v",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.11.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.67.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yml,yaml,css}": [
+      "prettier --write"
+    ]
   }
 }

@@ -21,10 +21,7 @@ describe('DatabaseService shutdown', () => {
     const end = vi.fn().mockResolvedValue(undefined)
     const service = createService(end)
 
-    await Promise.all([
-      service.onModuleDestroy(),
-      service.onModuleDestroy()
-    ])
+    await Promise.all([service.onModuleDestroy(), service.onModuleDestroy()])
     await service.onModuleDestroy()
 
     expect(end).toHaveBeenCalledOnce()

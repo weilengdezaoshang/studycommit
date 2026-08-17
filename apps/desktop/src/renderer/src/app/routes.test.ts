@@ -12,7 +12,7 @@ describe('routes', () => {
 
   it('generates topic paths and safely encodes ids', () => {
     expect(routes.topicOverview('Electron 基础')).toBe(
-      '/topics/Electron%20%E5%9F%BA%E7%A1%80/overview'
+      '/topics/Electron%20%E5%9F%BA%E7%A1%80/overview',
     )
     expect(routes.topicNotes('topic-1')).toBe('/topics/topic-1/notes')
     expect(routes.topicMap('topic-1')).toBe('/topics/topic-1/map')

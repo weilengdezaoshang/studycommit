@@ -5,10 +5,12 @@ describe('createLoggingConfig', () => {
   it('开发环境输出可读的 debug 日志', () => {
     const config = createLoggingConfig('development')
 
-    expect(config.pinoHttp).toEqual(expect.objectContaining({
-      level: 'debug',
-      transport: expect.objectContaining({ target: 'pino-pretty' })
-    }))
+    expect(config.pinoHttp).toEqual(
+      expect.objectContaining({
+        level: 'debug',
+        transport: expect.objectContaining({ target: 'pino-pretty' }),
+      }),
+    )
   })
 
   it('生产环境输出 JSON info 日志，不加载 pretty transport', () => {
@@ -28,12 +30,14 @@ describe('createLoggingConfig', () => {
   it('为每条日志增加服务名和运行环境', () => {
     const config = createLoggingConfig('production')
 
-    expect(config.pinoHttp).toEqual(expect.objectContaining({
-      base: {
-        service: 'studycommit-api',
-        environment: 'production'
-      }
-    }))
+    expect(config.pinoHttp).toEqual(
+      expect.objectContaining({
+        base: {
+          service: 'studycommit-api',
+          environment: 'production',
+        },
+      }),
+    )
   })
 
   it('配置请求头、请求体和响应头的敏感字段脱敏', () => {
@@ -41,14 +45,16 @@ describe('createLoggingConfig', () => {
     const redact = config.pinoHttp.redact as { paths: string[]; censor: string }
 
     expect(redact.censor).toBe('[REDACTED]')
-    expect(redact.paths).toEqual(expect.arrayContaining([
-      'req.headers.authorization',
-      'req.headers.cookie',
-      'req.body.password',
-      'req.body.token',
-      'req.body.accessToken',
-      'req.body.refreshToken',
-      'res.headers["set-cookie"]'
-    ]))
+    expect(redact.paths).toEqual(
+      expect.arrayContaining([
+        'req.headers.authorization',
+        'req.headers.cookie',
+        'req.body.password',
+        'req.body.token',
+        'req.body.accessToken',
+        'req.body.refreshToken',
+        'res.headers["set-cookie"]',
+      ]),
+    )
   })
 })

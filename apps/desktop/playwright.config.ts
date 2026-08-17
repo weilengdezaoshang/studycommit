@@ -9,6 +9,6 @@ export default defineConfig({
   reporter: process.env.CI ? [['html', { open: 'never' }], ['list']] : 'list',
   use: {
     trace: 'retain-on-failure',
-    screenshot: 'only-on-failure'
-  }
+    screenshot: 'only-on-failure',
+  },
 })

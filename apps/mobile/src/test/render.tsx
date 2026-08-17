@@ -1,9 +1,6 @@
 import type { ReactElement } from 'react'
 import { render, type RenderOptions } from '@testing-library/react-native'
-import {
-  SafeAreaProvider,
-  type Metrics,
-} from 'react-native-safe-area-context'
+import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context'
 import { ThemeProvider } from '../theme/ThemeProvider'
 
 export const TEST_SAFE_AREA_METRICS: Metrics = {

@@ -5,7 +5,10 @@ import { ThemeProvider } from '../src/theme/ThemeProvider'
 import { createTheme } from '../src/theme/theme'
 import { typography } from '../src/theme/tokens'
 
-function renderText(props: React.ComponentProps<typeof AppText> = {}, scheme: 'light' | 'dark' = 'light') {
+function renderText(
+  props: React.ComponentProps<typeof AppText> = {},
+  scheme: 'light' | 'dark' = 'light',
+) {
   return render(
     <ThemeProvider colorScheme={scheme}>
       <AppText {...props}>测试文字</AppText>
@@ -16,13 +19,19 @@ function renderText(props: React.ComponentProps<typeof AppText> = {}, scheme: 'l
 describe('<AppText />', () => {
   it('uses the body typography and default semantic color', async () => {
     await renderText()
-    expect(screen.getByText('测试文字')).toHaveStyle({ ...typography.body, color: createTheme('light').colors.text })
+    expect(screen.getByText('测试文字')).toHaveStyle({
+      ...typography.body,
+      color: createTheme('light').colors.text,
+    })
   })
 
-  it.each(Object.keys(typography) as Array<keyof typeof typography>)('maps the %s variant', async (variant) => {
-    await renderText({ variant })
-    expect(screen.getByText('测试文字')).toHaveStyle(typography[variant])
-  })
+  it.each(Object.keys(typography) as Array<keyof typeof typography>)(
+    'maps the %s variant',
+    async (variant) => {
+      await renderText({ variant })
+      expect(screen.getByText('测试文字')).toHaveStyle(typography[variant])
+    },
+  )
 
   it.each([
     ['muted', 'textMuted'],
@@ -58,7 +67,11 @@ describe('<AppText />', () => {
   })
 
   it('forwards native props and merges caller styles', async () => {
-    await renderText({ numberOfLines: 2, selectable: true, style: { marginTop: 12, textAlign: 'center' } })
+    await renderText({
+      numberOfLines: 2,
+      selectable: true,
+      style: { marginTop: 12, textAlign: 'center' },
+    })
     const text = screen.getByText('测试文字')
     expect(text.props.numberOfLines).toBe(2)
     expect(text.props.selectable).toBe(true)
@@ -69,7 +82,9 @@ describe('<AppText />', () => {
   it('uses dark semantic colors and supports nested text', async () => {
     await render(
       <ThemeProvider colorScheme="dark">
-        <AppText><Text>嵌套内容</Text></AppText>
+        <AppText>
+          <Text>嵌套内容</Text>
+        </AppText>
       </ThemeProvider>,
     )
     expect(screen.getByText('嵌套内容')).toBeOnTheScreen()

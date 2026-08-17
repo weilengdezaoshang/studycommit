@@ -50,13 +50,7 @@ describe('<ThemeProvider />', () => {
     ['light', 'light theme'],
     ['dark', 'dark theme'],
   ] as const)('supports an explicit %s override', async (colorScheme, expected) => {
-    await render(
-      createElement(
-        ThemeProvider,
-        { colorScheme },
-        createElement(ThemeProbe),
-      ),
-    )
+    await render(createElement(ThemeProvider, { colorScheme }, createElement(ThemeProbe)))
 
     expect(screen.getByText(expected)).toBeOnTheScreen()
   })

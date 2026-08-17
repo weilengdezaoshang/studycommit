@@ -10,7 +10,7 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'studycommit-api',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   }
 

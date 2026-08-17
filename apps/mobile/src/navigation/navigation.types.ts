@@ -29,7 +29,10 @@ export type RootStackParamList = {
 }
 
 declare global {
+  // React Navigation 官方类型合并写法。
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace ReactNavigation {
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type
     interface RootParamList extends RootStackParamList {}
   }
 }

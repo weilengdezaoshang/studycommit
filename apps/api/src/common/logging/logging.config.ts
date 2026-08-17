@@ -14,7 +14,7 @@ const REDACTED_PATHS = [
   'req.body.token',
   'req.body.accessToken',
   'req.body.refreshToken',
-  'res.headers["set-cookie"]'
+  'res.headers["set-cookie"]',
 ]
 
 export function createLoggingConfig(environment: RuntimeEnvironment): LoggingConfig {
@@ -25,11 +25,11 @@ export function createLoggingConfig(environment: RuntimeEnvironment): LoggingCon
       level: environment === 'test' ? 'silent' : isDevelopment ? 'debug' : 'info',
       base: {
         service: 'studycommit-api',
-        environment
+        environment,
       },
       redact: {
         paths: REDACTED_PATHS,
-        censor: '[REDACTED]'
+        censor: '[REDACTED]',
       },
       ...(isDevelopment
         ? {
@@ -38,11 +38,11 @@ export function createLoggingConfig(environment: RuntimeEnvironment): LoggingCon
               options: {
                 colorize: true,
                 singleLine: false,
-                translateTime: 'SYS:standard'
-              }
-            }
+                translateTime: 'SYS:standard',
+              },
+            },
           }
-        : {})
-    }
+        : {}),
+    },
   }
 }

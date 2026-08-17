@@ -23,7 +23,9 @@ export function AppHeaderAvatar() {
         },
       ]}
     >
-      <AppText style={{ color: theme.colors.onPrimarySurface }} variant="label" weight="semibold">W</AppText>
+      <AppText style={{ color: theme.colors.onPrimarySurface }} variant="label" weight="semibold">
+        W
+      </AppText>
     </Pressable>
   )
 }

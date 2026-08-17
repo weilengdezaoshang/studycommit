@@ -6,7 +6,8 @@ import { LoadingState } from '../src/components/LoadingState'
 import { OfflineBanner } from '../src/components/OfflineBanner'
 import { ThemeProvider } from '../src/theme/ThemeProvider'
 
-const wrap = (child: React.ReactNode) => render(<ThemeProvider colorScheme="light">{child}</ThemeProvider>)
+const wrap = (child: React.ReactNode) =>
+  render(<ThemeProvider colorScheme="light">{child}</ThemeProvider>)
 
 describe('status patterns', () => {
   it('exposes a labelled busy loading state', async () => {
@@ -17,7 +18,14 @@ describe('status patterns', () => {
 
   it('renders and invokes an empty-state action', async () => {
     const onAction = jest.fn()
-    await wrap(<EmptyState actionLabel="创建专题" description="创建后即可开始学习" onAction={onAction} title="还没有专题" />)
+    await wrap(
+      <EmptyState
+        actionLabel="创建专题"
+        description="创建后即可开始学习"
+        onAction={onAction}
+        title="还没有专题"
+      />,
+    )
     await userEvent.setup().press(screen.getByRole('button', { name: '创建专题' }))
     expect(onAction).toHaveBeenCalledTimes(1)
   })
@@ -30,14 +38,24 @@ describe('status patterns', () => {
     expect(onRetry).not.toHaveBeenCalled()
   })
 
-  it.each([[0, '离线可继续使用'], [1, '1 条内容待同步'], [3, '3 条内容待同步'], [-1, '离线可继续使用']] as const)('formats pending count %s', async (count, text) => {
+  it.each([
+    [0, '离线可继续使用'],
+    [1, '1 条内容待同步'],
+    [3, '3 条内容待同步'],
+    [-1, '离线可继续使用'],
+  ] as const)('formats pending count %s', async (count, text) => {
     await wrap(<OfflineBanner pendingCount={count} />)
     expect(screen.getByText(text)).toBeOnTheScreen()
   })
 
   it('does not block surrounding actions', async () => {
     const onPress = jest.fn()
-    await wrap(<><OfflineBanner /><Button onPress={onPress}>继续学习</Button></>)
+    await wrap(
+      <>
+        <OfflineBanner />
+        <Button onPress={onPress}>继续学习</Button>
+      </>,
+    )
     await userEvent.setup().press(screen.getByRole('button', { name: '继续学习' }))
     expect(onPress).toHaveBeenCalledTimes(1)
   })

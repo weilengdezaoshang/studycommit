@@ -37,11 +37,7 @@ export function AppText({
   return (
     <Text
       accessibilityRole={accessibilityRole ?? inferredRole}
-      style={[
-        theme.typography[variant],
-        { color: colorToken, fontWeight: weights[weight] },
-        style,
-      ]}
+      style={[theme.typography[variant], { color: colorToken, fontWeight: weights[weight] }, style]}
       {...props}
     />
   )

@@ -5,9 +5,7 @@ describe('<App />', () => {
   it('renders the real app provider composition', async () => {
     await render(<App />)
 
-    expect(
-      screen.getByRole('header', { name: '今天，从一次专注开始' }),
-    ).toBeOnTheScreen()
+    expect(screen.getByRole('header', { name: '今天，从一次专注开始' })).toBeOnTheScreen()
     expect(screen.getByLabelText('今天，标签页').props.accessibilityState).toEqual({
       selected: true,
     })

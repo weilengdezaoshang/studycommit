@@ -6,7 +6,8 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --project unit"
   },
   "dependencies": {
     "@fastify/static": "^10.1.3",

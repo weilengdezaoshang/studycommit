@@ -1,0 +1,15 @@
+node_modules
+dist
+out
+coverage
+.expo
+.pnpm-store
+pnpm-lock.yaml
+apps/mobile/android
+apps/mobile/ios
+apps/desktop/test-results
+apps/desktop/playwright-report
+apps/api/drizzle
+docs/prototypes
+*.html
+**/.xgrok

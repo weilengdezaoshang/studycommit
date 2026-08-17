@@ -25,10 +25,24 @@ export function ErrorState({ description, onRetry, retrying, title }: ErrorState
         padding: theme.spacing.lg,
       }}
     >
-      <Ionicons accessibilityElementsHidden color={theme.colors.danger} importantForAccessibility="no-hide-descendants" name="alert-circle-outline" size={theme.sizes.iconXl} />
-      <AppText variant="heading" weight="semibold">{title}</AppText>
-      <AppText color="muted" style={{ textAlign: 'center' }}>{description}</AppText>
-      {onRetry ? <Button loading={retrying} onPress={onRetry} variant="secondary">重试</Button> : null}
+      <Ionicons
+        accessibilityElementsHidden
+        color={theme.colors.danger}
+        importantForAccessibility="no-hide-descendants"
+        name="alert-circle-outline"
+        size={theme.sizes.iconXl}
+      />
+      <AppText variant="heading" weight="semibold">
+        {title}
+      </AppText>
+      <AppText color="muted" style={{ textAlign: 'center' }}>
+        {description}
+      </AppText>
+      {onRetry ? (
+        <Button loading={retrying} onPress={onRetry} variant="secondary">
+          重试
+        </Button>
+      ) : null}
     </View>
   )
 }

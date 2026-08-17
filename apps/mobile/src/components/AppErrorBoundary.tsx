@@ -13,10 +13,7 @@ type AppErrorBoundaryState = {
   hasError: boolean
 }
 
-export class AppErrorBoundary extends Component<
-  AppErrorBoundaryProps,
-  AppErrorBoundaryState
-> {
+export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   state: AppErrorBoundaryState = { hasError: false }
 
   static getDerivedStateFromError(): AppErrorBoundaryState {
@@ -63,10 +60,7 @@ function AppCrashFallback({ onRetry }: AppCrashFallbackProps) {
             },
           ]}
         >
-          <Text
-            accessibilityRole="header"
-            style={[styles.title, { color: theme.colors.text }]}
-          >
+          <Text accessibilityRole="header" style={[styles.title, { color: theme.colors.text }]}>
             应用暂时无法显示
           </Text>
           <Text style={[styles.description, { color: theme.colors.textMuted }]}>

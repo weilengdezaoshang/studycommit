@@ -6,6 +6,10 @@ import { validateEnv } from '../config/env'
 async function main() {
   const env = validateEnv(process.env)
   const pool = new Pool({ connectionString: env.DATABASE_URL })
-  try { await migrate(drizzle(pool), { migrationsFolder: './drizzle' }) } finally { await pool.end() }
+  try {
+    await migrate(drizzle(pool), { migrationsFolder: './drizzle' })
+  } finally {
+    await pool.end()
+  }
 }
 void main()

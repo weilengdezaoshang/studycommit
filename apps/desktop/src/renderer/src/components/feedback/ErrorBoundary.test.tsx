@@ -12,7 +12,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <BrokenPage />
-      </ErrorBoundary>
+      </ErrorBoundary>,
     )
 
     expect(screen.getByRole('alert')).toBeInTheDocument()

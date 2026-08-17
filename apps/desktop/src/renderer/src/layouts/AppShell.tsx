@@ -6,7 +6,11 @@ import { NavigationPersistence } from '../app/NavigationPersistence'
 
 function PageOutlet(): React.JSX.Element {
   const location = useLocation()
-  return <ErrorBoundary key={location.pathname}><Outlet /></ErrorBoundary>
+  return (
+    <ErrorBoundary key={location.pathname}>
+      <Outlet />
+    </ErrorBoundary>
+  )
 }
 
 export function AppShell(): React.JSX.Element {

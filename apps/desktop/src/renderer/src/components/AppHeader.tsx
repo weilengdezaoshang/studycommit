@@ -19,7 +19,10 @@ export function AppHeader(): React.JSX.Element {
         <span className="app-header__eyebrow">StudyCommit 桌面端</span>
         <h1>{getPageTitle(pathname)}</h1>
       </div>
-      <span className="local-status"><i aria-hidden="true" />本地工作</span>
+      <span className="local-status">
+        <i aria-hidden="true" />
+        本地工作
+      </span>
     </header>
   )
 }

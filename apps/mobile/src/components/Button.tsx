@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from 'react'
+import type { ComponentProps } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
   ActivityIndicator,
@@ -35,10 +35,26 @@ export function Button({
   const theme = useAppTheme()
   const inactive = disabled || loading
   const palette = {
-    primary: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary, color: theme.colors.onPrimary },
-    secondary: { backgroundColor: theme.colors.surface, borderColor: theme.colors.borderStrong, color: theme.colors.text },
-    ghost: { backgroundColor: 'transparent', borderColor: 'transparent', color: theme.colors.primary },
-    danger: { backgroundColor: theme.colors.danger, borderColor: theme.colors.danger, color: theme.colors.onDanger },
+    primary: {
+      backgroundColor: theme.colors.primary,
+      borderColor: theme.colors.primary,
+      color: theme.colors.onPrimary,
+    },
+    secondary: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.borderStrong,
+      color: theme.colors.text,
+    },
+    ghost: {
+      backgroundColor: 'transparent',
+      borderColor: 'transparent',
+      color: theme.colors.primary,
+    },
+    danger: {
+      backgroundColor: theme.colors.danger,
+      borderColor: theme.colors.danger,
+      color: theme.colors.onDanger,
+    },
   }[variant]
 
   return (

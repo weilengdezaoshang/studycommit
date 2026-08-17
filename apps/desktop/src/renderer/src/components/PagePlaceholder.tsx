@@ -7,7 +7,7 @@ interface PagePlaceholderProps {
 export function PagePlaceholder({
   title,
   description,
-  nextTask
+  nextTask,
 }: PagePlaceholderProps): React.JSX.Element {
   return (
     <section className="placeholder" aria-labelledby="placeholder-title">

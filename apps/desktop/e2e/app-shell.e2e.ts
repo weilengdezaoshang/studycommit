@@ -1,4 +1,10 @@
-import { expect, test, _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import {
+  expect,
+  test,
+  _electron as electron,
+  type ElectronApplication,
+  type Page,
+} from '@playwright/test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,7 +12,7 @@ import { join } from 'node:path'
 async function launchApp(userDataDir: string): Promise<{ app: ElectronApplication; page: Page }> {
   const app = await electron.launch({
     args: ['.', `--user-data-dir=${userDataDir}`],
-    cwd: join(__dirname, '..')
+    cwd: join(__dirname, '..'),
   })
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -38,7 +44,7 @@ test.describe('StudyCommit desktop shell', () => {
       return {
         platform: api.platform,
         keys: Object.keys(api),
-        requireType: typeof browserWindow.require
+        requireType: typeof browserWindow.require,
       }
     })
 
