@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { run } from './lib/command.mjs'
 
 const suites = [
+  { prefix: 'common/', command: ['pnpm', ['--filter', '@studycommit/common', 'test:run']] },
   { prefix: 'apps/api/', command: ['pnpm', ['--filter', '@studycommit/api', 'test:unit']] },
   { prefix: 'apps/desktop/', command: ['pnpm', ['--filter', '@studycommit/desktop', 'test']] },
   { prefix: 'apps/mobile/', command: ['pnpm', ['--filter', '@studycommit/mobile', 'test:run']] },
