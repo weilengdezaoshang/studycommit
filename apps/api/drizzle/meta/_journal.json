@@ -8,6 +8,13 @@
       "when": 1786596890168,
       "tag": "0000_late_killer_shrike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786873460650,
+      "tag": "0001_faithful_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }
