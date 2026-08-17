@@ -3,7 +3,9 @@ import { routes } from '../app/routes'
 
 export function TopicLayout(): React.JSX.Element {
   const { topicId } = useParams()
-  if (!topicId) throw new Error('Topic route requires topicId')
+  if (!topicId) {
+    throw new Error('Topic route requires topicId')
+  }
 
   const decodedTopicId = decodeURIComponent(topicId)
   return (

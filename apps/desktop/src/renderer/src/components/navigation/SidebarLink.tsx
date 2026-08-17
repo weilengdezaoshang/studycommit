@@ -17,7 +17,9 @@ export function SidebarLink({ to, label, icon, end }: SidebarLinkProps): React.J
       end={end}
       className={({ isActive }) => `sidebar-link${isActive ? ' sidebar-link--active' : ''}`}
       onClick={(event) => {
-        if (location.pathname === to) event.preventDefault()
+        if (location.pathname === to) {
+          event.preventDefault()
+        }
       }}
     >
       <AppIcon name={icon} />

@@ -15,9 +15,13 @@ export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferencesV1 = {
 }
 
 function isNavigationPreferences(value: unknown): value is NavigationPreferencesV1 {
-  if (!value || typeof value !== 'object') return false
+  if (!value || typeof value !== 'object') {
+    return false
+  }
   const candidate = value as Record<string, unknown>
-  if (candidate.version !== 1 || !isTopLevelPath(candidate.lastTopLevelPath)) return false
+  if (candidate.version !== 1 || !isTopLevelPath(candidate.lastTopLevelPath)) {
+    return false
+  }
   if (!candidate.lastTopicSectionById || typeof candidate.lastTopicSectionById !== 'object') {
     return false
   }
@@ -30,7 +34,9 @@ function isNavigationPreferences(value: unknown): value is NavigationPreferences
 export function loadNavigationPreferences(storage: Storage): NavigationPreferencesV1 {
   try {
     const raw = storage.getItem(NAVIGATION_STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_NAVIGATION_PREFERENCES, lastTopicSectionById: {} }
+    if (!raw) {
+      return { ...DEFAULT_NAVIGATION_PREFERENCES, lastTopicSectionById: {} }
+    }
     const parsed: unknown = JSON.parse(raw)
     return isNavigationPreferences(parsed)
       ? parsed

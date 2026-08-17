@@ -13,7 +13,9 @@ export function run(command, args = [], options = {}) {
     stdio: options.quiet ? 'ignore' : 'inherit',
     shell: process.platform === 'win32',
   })
-  if (result.error) throw result.error
+  if (result.error) {
+    throw result.error
+  }
   if (result.status !== 0 && !options.allowFailure) {
     throw new Error(`${command} ${args.join(' ')} 执行失败（退出码 ${result.status}）`)
   }
@@ -32,7 +34,10 @@ export function runForeground(command, args = [], options = {}) {
     process.exitCode = 1
   })
   child.on('exit', (code, signal) => {
-    if (signal) process.kill(process.pid, signal)
-    else process.exitCode = code ?? 1
+    if (signal) {
+      process.kill(process.pid, signal)
+    } else {
+      process.exitCode = code ?? 1
+    }
   })
 }

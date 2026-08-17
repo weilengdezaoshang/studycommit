@@ -20,9 +20,13 @@ try {
       env,
       allowFailure: true,
     })
-    if (!started) restartMacDockerIfAvailable()
+    if (!started) {
+      restartMacDockerIfAvailable()
+    }
   }
-  if (!started) throw new Error('连续 3 次无法启动 PostgreSQL 和 Redis。')
+  if (!started) {
+    throw new Error('连续 3 次无法启动 PostgreSQL 和 Redis。')
+  }
   log('正在执行数据库迁移')
   run('pnpm', ['--filter', '@studycommit/api', 'db:migrate'], { cwd: projectRoot, env })
   log(`后端已就绪：http://localhost:${env.API_PORT ?? 3000}/api`)

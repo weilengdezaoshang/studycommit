@@ -19,7 +19,9 @@ describe('<AppErrorBoundary />', () => {
     const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
 
     function FlakyContent() {
-      if (shouldThrow) throw new Error('expected test error')
+      if (shouldThrow) {
+        throw new Error('expected test error')
+      }
       return <Text>恢复成功</Text>
     }
 

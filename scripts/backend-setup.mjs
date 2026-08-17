@@ -10,17 +10,26 @@ import {
 
 async function setupPlatform(env) {
   if (process.platform === 'darwin') {
-    if (!commandExists('brew'))
+    if (!commandExists('brew')) {
       throw new Error('macOS 未安装 Homebrew，请先访问 https://brew.sh 安装。')
+    }
     const packages = []
-    if (!commandExists('colima')) packages.push('colima')
-    if (!commandExists('docker')) packages.push('docker')
-    if (!run('brew', ['list', 'docker-compose'], { quiet: true, allowFailure: true }))
+    if (!commandExists('colima')) {
+      packages.push('colima')
+    }
+    if (!commandExists('docker')) {
+      packages.push('docker')
+    }
+    if (!run('brew', ['list', 'docker-compose'], { quiet: true, allowFailure: true })) {
       packages.push('docker-compose')
-    if (packages.length) run('brew', ['install', ...packages], { env })
+    }
+    if (packages.length) {
+      run('brew', ['install', ...packages], { env })
+    }
   } else if (process.platform === 'win32' && !commandExists('docker')) {
-    if (!commandExists('winget'))
+    if (!commandExists('winget')) {
       throw new Error('Windows 缺少 winget，请手动安装 Docker Desktop。')
+    }
     log('正在调用 winget 安装 Docker Desktop，系统可能要求管理员授权和重启')
     run('winget', ['install', '--id', 'Docker.DockerDesktop', '-e'])
     throw new Error(

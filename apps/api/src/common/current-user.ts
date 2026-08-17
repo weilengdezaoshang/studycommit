@@ -13,12 +13,13 @@ export class TestIdentityGuard implements CanActivate {
   canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<AuthRequest>()
     const result = z.uuid().safeParse(request.headers['x-user-id'])
-    if (!result.success)
+    if (!result.success) {
       throw new UnauthorizedException({
         code: 'UNAUTHENTICATED',
         message: '缺少有效身份',
         details: null,
       })
+    }
     request.userId = result.data
     return true
   }

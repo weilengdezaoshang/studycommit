@@ -1,4 +1,5 @@
 import eslint from '@eslint/js'
+import stylistic from '@stylistic/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
@@ -57,4 +58,14 @@ export default tseslint.config(
     },
   },
   prettier,
+  {
+    files: ['**/*.{js,mjs,cjs,ts,tsx}'],
+    plugins: {
+      '@stylistic': stylistic,
+    },
+    rules: {
+      curly: ['error', 'all'],
+      '@stylistic/brace-style': ['error', '1tbs', { allowSingleLine: false }],
+    },
+  },
 )

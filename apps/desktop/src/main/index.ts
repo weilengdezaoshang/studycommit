@@ -20,7 +20,9 @@ function createWindow(): void {
 
   window.once('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (isAllowedExternalUrl(url)) void shell.openExternal(url)
+    if (isAllowedExternalUrl(url)) {
+      void shell.openExternal(url)
+    }
     return { action: 'deny' }
   })
   window.webContents.on('will-navigate', (event, url) => {
@@ -30,7 +32,9 @@ function createWindow(): void {
       const current = new URL(currentUrl)
       const isSameDocument =
         target.origin === current.origin && target.pathname === current.pathname
-      if (!isSameDocument) event.preventDefault()
+      if (!isSameDocument) {
+        event.preventDefault()
+      }
     } catch {
       event.preventDefault()
     }
@@ -46,10 +50,14 @@ function createWindow(): void {
 app.whenReady().then(() => {
   createWindow()
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow()
+    }
   })
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
 })

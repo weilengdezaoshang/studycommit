@@ -52,7 +52,9 @@ export class ErrorFilter implements ExceptionFilter {
       )
     }
 
-    if (response.sent) return
+    if (response.sent) {
+      return
+    }
 
     const payload = this.getPublicPayload(exception, statusCode)
     response.status(statusCode).send({
@@ -64,8 +66,12 @@ export class ErrorFilter implements ExceptionFilter {
   }
 
   private getStatusCode(exception: unknown): number {
-    if (exception instanceof AppError) return exception.statusCode
-    if (exception instanceof HttpException) return exception.getStatus()
+    if (exception instanceof AppError) {
+      return exception.statusCode
+    }
+    if (exception instanceof HttpException) {
+      return exception.getStatus()
+    }
     return HttpStatus.INTERNAL_SERVER_ERROR
   }
 
@@ -108,14 +114,22 @@ export class ErrorFilter implements ExceptionFilter {
   }
 
   private getHttpMessage(message: unknown, fallback: string): string {
-    if (typeof message === 'string') return message
-    if (Array.isArray(message)) return message.map(String).join(', ')
+    if (typeof message === 'string') {
+      return message
+    }
+    if (Array.isArray(message)) {
+      return message.map(String).join(', ')
+    }
     return fallback
   }
 
   private toError(exception: unknown): Error {
-    if (exception instanceof Error) return exception
-    if (typeof exception === 'string') return new Error(exception)
+    if (exception instanceof Error) {
+      return exception
+    }
+    if (typeof exception === 'string') {
+      return new Error(exception)
+    }
     try {
       return new Error(JSON.stringify(exception))
     } catch {

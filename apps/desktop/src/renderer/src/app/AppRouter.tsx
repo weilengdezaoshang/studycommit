@@ -12,7 +12,9 @@ function LandingRedirect(): React.JSX.Element {
 
 function TopicRedirect(): React.JSX.Element {
   const { topicId } = useParams()
-  if (!topicId) return <Navigate to={routes.topics()} replace />
+  if (!topicId) {
+    return <Navigate to={routes.topics()} replace />
+  }
   const decoded = decodeURIComponent(topicId)
   const preferences = loadNavigationPreferences(window.localStorage)
   const section = preferences.lastTopicSectionById[decoded] ?? 'overview'

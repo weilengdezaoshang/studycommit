@@ -25,7 +25,9 @@ export class RedisService implements OnModuleDestroy {
   }
 
   onModuleDestroy(): Promise<void> {
-    if (this.closePromise) return this.closePromise
+    if (this.closePromise) {
+      return this.closePromise
+    }
 
     this.closePromise =
       this.client.status === 'ready'

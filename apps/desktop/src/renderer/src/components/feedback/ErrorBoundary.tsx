@@ -13,7 +13,9 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren, Erro
   }
 
   render(): React.ReactNode {
-    if (this.state.hasError) return <ErrorFallback />
+    if (this.state.hasError) {
+      return <ErrorFallback />
+    }
     return this.props.children
   }
 }
