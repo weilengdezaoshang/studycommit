@@ -49,7 +49,7 @@ test.describe('StudyCommit desktop shell', () => {
     })
 
     expect(typeof bridge.platform).toBe('string')
-    expect(bridge.keys).toEqual(['platform'])
+    expect(bridge.keys.sort()).toEqual(['platform', 'studySessions'])
     expect(bridge.requireType).toBe('undefined')
   })
 

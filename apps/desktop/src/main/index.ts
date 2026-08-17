@@ -1,6 +1,8 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
+import { createDesktopServices } from './composition/create-services'
+import { StudySessionIpcRegistrar } from './ipc/study-session-ipc'
 import { isAllowedExternalUrl } from './security/navigation-policy'
 
 function createWindow(): void {
@@ -48,6 +50,22 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  try {
+    const services = createDesktopServices()
+    const studySessionIpc = new StudySessionIpcRegistrar(services.studySessions, {
+      isDev: is.dev,
+      rendererDevOrigin: process.env.ELECTRON_RENDERER_URL,
+    })
+    studySessionIpc.register()
+    app.on('before-quit', () => {
+      studySessionIpc.dispose()
+    })
+  } catch (error) {
+    console.error(
+      '[studycommit] 请求层配置无效',
+      error instanceof Error ? error.message : 'CONFIGURATION_ERROR',
+    )
+  }
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

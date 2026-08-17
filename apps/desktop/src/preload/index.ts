@@ -1,5 +1,4 @@
 import { contextBridge } from 'electron'
+import { studyCommitPreloadApi } from './study-session-api'
 
-contextBridge.exposeInMainWorld('studyCommit', {
-  platform: process.platform,
-})
+contextBridge.exposeInMainWorld('studyCommit', studyCommitPreloadApi)
