@@ -3,8 +3,8 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  main: { plugins: [externalizeDepsPlugin()] },
-  preload: { plugins: [externalizeDepsPlugin()] },
+  main: { plugins: [externalizeDepsPlugin({ exclude: ['@studycommit/common'] })] },
+  preload: { plugins: [externalizeDepsPlugin({ exclude: ['@studycommit/common'] })] },
   renderer: {
     resolve: { alias: { '@renderer': resolve('src/renderer/src') } },
     plugins: [react()],
