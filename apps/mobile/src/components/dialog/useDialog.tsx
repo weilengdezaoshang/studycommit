@@ -1,0 +1,111 @@
+import { useCallback, useState } from 'react'
+import { View } from 'react-native'
+import { validateLocalDateTimeValue } from '@studycommit/common/study-session-runtime'
+import { useAppTheme } from '../../theme/ThemeProvider'
+import { AppText } from '../AppText'
+import { Button } from '../Button'
+import { TextField } from '../TextField'
+import { Dialog } from './Dialog'
+
+export interface DialogFieldOptions {
+  label: string
+  type?: 'text' | 'datetime-local'
+  defaultValue: string
+  min?: string
+  required?: boolean
+  helperText?: string
+}
+
+export interface DialogShowOptions {
+  title: string
+  description?: string
+  cancelLabel?: string
+  confirmLabel?: string
+  confirmBusyLabel?: string
+  field?: DialogFieldOptions
+  onConfirm?: (payload: { fieldValue?: string }) => void | Promise<void>
+}
+
+export function useDialog() {
+  const theme = useAppTheme()
+  const [options, setOptions] = useState<DialogShowOptions | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [fieldValue, setFieldValue] = useState('')
+  const [fieldError, setFieldError] = useState<string | null>(null)
+
+  const close = useCallback(() => {
+    if (busy) {
+      return
+    }
+    setOptions(null)
+    setFieldError(null)
+  }, [busy])
+
+  const show = useCallback((next: DialogShowOptions) => {
+    setFieldValue(next.field?.defaultValue ?? '')
+    setFieldError(null)
+    setBusy(false)
+    setOptions(next)
+  }, [])
+
+  const confirm = async () => {
+    if (!options) {
+      return
+    }
+    const nextFieldError = validateDialogField(options.field, fieldValue)
+    if (nextFieldError) {
+      setFieldError(nextFieldError)
+      return
+    }
+    setBusy(true)
+    try {
+      await options.onConfirm?.({ fieldValue })
+      setOptions(null)
+      setFieldError(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const dialog = (
+    <Dialog open={options !== null} title={options?.title ?? ''} busy={busy} onClose={close}>
+      {options?.description ? <AppText color="muted">{options.description}</AppText> : null}
+      {options?.field ? (
+        <TextField
+          error={fieldError ?? undefined}
+          helperText={options.field.helperText}
+          label={options.field.label}
+          onChangeText={(value) => {
+            setFieldValue(value)
+            setFieldError(null)
+          }}
+          placeholder={options.field.type === 'datetime-local' ? 'YYYY-MM-DDTHH:mm' : undefined}
+          value={fieldValue}
+        />
+      ) : null}
+      <View style={{ flexDirection: 'row', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
+        <Button disabled={busy} onPress={close} variant="secondary">
+          {options?.cancelLabel ?? '取消'}
+        </Button>
+        <Button loading={busy} onPress={() => void confirm()}>
+          {busy ? (options?.confirmBusyLabel ?? '处理中') : (options?.confirmLabel ?? '确认')}
+        </Button>
+      </View>
+    </Dialog>
+  )
+
+  return { show, close, dialog }
+}
+
+function validateDialogField(field: DialogFieldOptions | undefined, value: string): string | null {
+  if (!field) {
+    return null
+  }
+  if (field.type === 'datetime-local') {
+    return validateLocalDateTimeValue(value, field.min)
+  }
+  if (field.required && !value.trim()) {
+    return `请填写${field.label}`
+  }
+  return null
+}

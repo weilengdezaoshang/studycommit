@@ -2,6 +2,8 @@ import {
   AppText,
   Button,
   Card,
+  Dialog,
+  Dropdown,
   EmptyState,
   ErrorState,
   IconButton,
@@ -9,6 +11,7 @@ import {
   OfflineBanner,
   Screen,
   TextField,
+  useDialog,
 } from '../src/components'
 
 describe('component public exports', () => {
@@ -18,6 +21,8 @@ describe('component public exports', () => {
         AppText,
         Button,
         Card,
+        Dialog,
+        Dropdown,
         EmptyState,
         ErrorState,
         IconButton,
@@ -25,6 +30,7 @@ describe('component public exports', () => {
         OfflineBanner,
         Screen,
         TextField,
+        useDialog,
       ].every(Boolean),
     ).toBe(true)
   })

@@ -1,11 +1,35 @@
 import { render, screen, userEvent } from '@testing-library/react-native'
 import App from '../src/App'
 
+function jsonResponse(body: unknown, status = 200) {
+  return Promise.resolve(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    }),
+  )
+}
+
+beforeEach(() => {
+  process.env.EXPO_PUBLIC_STUDYCOMMIT_API_ORIGIN = 'http://127.0.0.1:3000'
+  globalThis.fetch = jest.fn(async (input: URL | RequestInfo) => {
+    const url = String(input)
+    if (url.includes('/study-sessions/active')) {
+      return jsonResponse({ session: null, serverNow: '2026-08-17T08:00:00.000Z' })
+    }
+    if (url.includes('/topics')) {
+      return jsonResponse({ items: [], pageInfo: { hasNextPage: false, nextCursor: null } })
+    }
+    return jsonResponse({ message: 'not found' }, 404)
+  })
+})
+
 describe('<App />', () => {
   it('renders the real app provider composition', async () => {
     await render(<App />)
 
-    expect(screen.getByRole('header', { name: '今天，从一次专注开始' })).toBeOnTheScreen()
+    expect(await screen.findByText('今天，从一次专注开始')).toBeOnTheScreen()
+    expect(screen.getByRole('button', { name: '开始学习' })).toBeOnTheScreen()
     expect(screen.getByLabelText('今天，标签页').props.accessibilityState).toEqual({
       selected: true,
     })
@@ -29,7 +53,7 @@ describe('<App />', () => {
     expect(screen.getByText('把学过的内容真正记住')).toBeOnTheScreen()
 
     await user.press(screen.getByLabelText('今天，标签页'))
-    expect(screen.getByText('今天，从一次专注开始')).toBeOnTheScreen()
+    expect(await screen.findByText('今天，从一次专注开始')).toBeOnTheScreen()
   })
 
   it('opens Profile from the header avatar', async () => {
