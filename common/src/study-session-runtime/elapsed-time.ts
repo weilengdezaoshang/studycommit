@@ -28,6 +28,20 @@ export function calculateElapsedSeconds(input: ElapsedTimeInput): number {
   return Math.max(0, rawSeconds)
 }
 
+export const LONG_SESSION_THRESHOLD_SECONDS = 4 * 60 * 60
+
+export function isLongSession(session: StudySession | null, serverNow: string | null): boolean {
+  if (!session || !serverNow || session.status === 'completed') {
+    return false
+  }
+  return (
+    calculateElapsedSeconds({
+      session,
+      estimatedServerNowMs: Date.parse(serverNow),
+    }) >= LONG_SESSION_THRESHOLD_SECONDS
+  )
+}
+
 export function formatElapsedClock(totalSeconds: number): string {
   const safe = Math.max(0, Math.floor(totalSeconds))
   const hours = Math.floor(safe / 3600)

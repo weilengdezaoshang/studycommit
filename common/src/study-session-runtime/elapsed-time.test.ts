@@ -4,7 +4,12 @@ import {
   pausedStudySessionFixture,
   runningStudySessionFixture,
 } from '../contracts/study-session'
-import { calculateElapsedSeconds, estimateServerNowMs, formatElapsedClock } from './elapsed-time'
+import {
+  calculateElapsedSeconds,
+  estimateServerNowMs,
+  formatElapsedClock,
+  isLongSession,
+} from './elapsed-time'
 
 describe('elapsed time', () => {
   it('computes running time from estimated server now and subtracts paused seconds', () => {
@@ -59,5 +64,11 @@ describe('elapsed time', () => {
     expect(formatElapsedClock(18 * 3600 + 32)).toBe('18:00:32')
     expect(formatElapsedClock(26 * 3600 + 5)).toBe('26:00:05')
     expect(formatElapsedClock(1.9)).toBe('00:00:01')
+  })
+
+  it('flags sessions at or beyond four hours', () => {
+    expect(isLongSession(runningStudySessionFixture, '2026-08-17T08:10:00.000Z')).toBe(false)
+    expect(isLongSession(runningStudySessionFixture, '2026-08-17T12:10:00.000Z')).toBe(true)
+    expect(isLongSession(completedStudySessionFixture, '2026-08-17T12:10:00.000Z')).toBe(false)
   })
 })
