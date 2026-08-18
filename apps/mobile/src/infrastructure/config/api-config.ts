@@ -1,7 +1,25 @@
+import Constants from 'expo-constants'
 import { createHttpError } from '@studycommit/common/http'
 
+type MobileExtra = {
+  studycommitApiOrigin?: unknown
+  studycommitApiPrefix?: unknown
+  studycommitDevUserId?: unknown
+}
+
+function readMobileExtra(): MobileExtra {
+  const extra = Constants.expoConfig?.extra
+  return extra && typeof extra === 'object' ? (extra as MobileExtra) : {}
+}
+
+function readExtraString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
 export function getMobileApiOrigin(): string {
-  const origin = process.env.EXPO_PUBLIC_STUDYCOMMIT_API_ORIGIN
+  const origin =
+    readExtraString(readMobileExtra().studycommitApiOrigin) ??
+    process.env.EXPO_PUBLIC_STUDYCOMMIT_API_ORIGIN
   if (!origin) {
     throw createHttpError({
       code: 'CONFIGURATION_ERROR',
@@ -12,7 +30,18 @@ export function getMobileApiOrigin(): string {
 }
 
 export function getMobileApiPrefix(): string {
-  return process.env.EXPO_PUBLIC_STUDYCOMMIT_API_PREFIX || '/api'
+  return (
+    readExtraString(readMobileExtra().studycommitApiPrefix) ??
+    process.env.EXPO_PUBLIC_STUDYCOMMIT_API_PREFIX ??
+    '/api'
+  )
+}
+
+export function getMobileDevelopmentUserId(): string | undefined {
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) {
+    return undefined
+  }
+  return readExtraString(readMobileExtra().studycommitDevUserId)
 }
 
 export function createDevelopmentHeaderProvider(

@@ -1,13 +1,17 @@
-import { StudySessionClient } from '@studycommit/common/study-session'
+import { HttpError, createHttpError } from '@studycommit/common/http'
+import { StudySessionClient, type StudySessionApi } from '@studycommit/common/study-session'
+import { TopicClient, type TopicQueryApi } from '@studycommit/common/topic'
 import {
   createDevelopmentHeaderProvider,
   getMobileApiOrigin,
   getMobileApiPrefix,
+  getMobileDevelopmentUserId,
 } from '../config/api-config'
 import { ReactNativeFetchTransport } from './react-native-fetch-transport'
 
 export interface MobileServices {
-  studySessions: StudySessionClient
+  studySessions: StudySessionApi
+  topics: TopicQueryApi
 }
 
 export function createMobileServices(options?: {
@@ -21,7 +25,48 @@ export function createMobileServices(options?: {
     fetchImpl: options?.fetchImpl,
     allowInsecureHttp: true,
     defaultTimeoutMs: 10_000,
-    getHeaders: options?.getHeaders ?? createDevelopmentHeaderProvider(options?.developmentUserId),
+    getHeaders:
+      options?.getHeaders ??
+      createDevelopmentHeaderProvider(options?.developmentUserId ?? getMobileDevelopmentUserId()),
   })
-  return { studySessions: new StudySessionClient(transport) }
+  return {
+    studySessions: new StudySessionClient(transport),
+    topics: new TopicClient(transport),
+  }
+}
+
+export function resolveMobileServices(
+  options?: Parameters<typeof createMobileServices>[0],
+): MobileServices {
+  try {
+    return createMobileServices(options)
+  } catch (error) {
+    const httpError =
+      error instanceof HttpError
+        ? error
+        : createHttpError({
+            code: 'CONFIGURATION_ERROR',
+            message: error instanceof Error ? error.message : '请求层配置无效',
+          })
+    return createUnavailableServices(httpError)
+  }
+}
+
+function createUnavailableServices(error: HttpError): MobileServices {
+  const reject = async (): Promise<never> => {
+    throw error
+  }
+  return {
+    studySessions: {
+      create: reject,
+      getActive: reject,
+      getById: reject,
+      pause: reject,
+      resume: reject,
+      complete: reject,
+    },
+    topics: {
+      listActive: reject,
+    },
+  }
 }
