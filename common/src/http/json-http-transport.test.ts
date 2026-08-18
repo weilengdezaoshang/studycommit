@@ -45,6 +45,8 @@ describe('JsonHttpTransport', () => {
   it('serializes POST JSON once', async () => {
     const fetchImpl = vi.fn(async (_url, init) => {
       expect(JSON.parse(String(init?.body))).toEqual({ version: 1 })
+      const headers = new Headers(init?.headers)
+      expect(headers.get('content-type')).toBe('application/json')
       return jsonResponse(200, runningStudySessionFixture)
     })
     await transport(fetchImpl).request({

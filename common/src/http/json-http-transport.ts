@@ -33,10 +33,17 @@ export class JsonHttpTransport implements HttpTransport {
     })
     const timeoutMs = request.timeoutMs ?? this.options.defaultTimeoutMs
     const { signal, didTimeout, cleanup } = mergeAbortSignals(request.signal, timeoutMs)
-    const headers = {
+    const headers: Record<string, string> = {
       accept: 'application/json',
       ...(await this.options.getHeaders()),
       ...request.headers,
+    }
+    if (
+      request.method !== 'GET' &&
+      request.body !== undefined &&
+      !hasHeader(headers, 'content-type')
+    ) {
+      headers['content-type'] = 'application/json'
     }
 
     try {
@@ -191,6 +198,11 @@ function parseJsonBody(
   } catch {
     return { kind: 'invalid', preview: summarizeErrorBody(text) }
   }
+}
+
+function hasHeader(headers: Readonly<Record<string, string>>, name: string): boolean {
+  const target = name.toLowerCase()
+  return Object.keys(headers).some((key) => key.toLowerCase() === target)
 }
 
 function isAbortError(error: unknown): boolean {
