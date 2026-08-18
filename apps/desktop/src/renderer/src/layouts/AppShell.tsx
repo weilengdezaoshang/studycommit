@@ -3,7 +3,9 @@ import { AppHeader } from '../components/AppHeader'
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary'
 import { Sidebar } from '../components/navigation/Sidebar'
 import { NavigationPersistence } from '../app/NavigationPersistence'
-import { useStudySessionController } from '../features/study-session/hooks/useStudySessionController'
+import { useStudySessionController } from '@studycommit/common/study-session-react'
+import { useDesktopServices } from '../features/study-session/api/DesktopServicesProvider'
+import { subscribeWindowFocus } from '../features/study-session/subscribe-window-focus'
 import { TodayPage } from '../features/study-session/pages/TodayPage'
 
 function PageOutlet(): React.JSX.Element {
@@ -16,7 +18,12 @@ function PageOutlet(): React.JSX.Element {
 }
 
 export function AppShell(): React.JSX.Element {
-  const study = useStudySessionController()
+  const { studySessions, topics } = useDesktopServices()
+  const study = useStudySessionController({
+    studySessions,
+    topics,
+    subscribeForeground: subscribeWindowFocus,
+  })
   const { pathname } = useLocation()
   const showToday = pathname === '/today'
 

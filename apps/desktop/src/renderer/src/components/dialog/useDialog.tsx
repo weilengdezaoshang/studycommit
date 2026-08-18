@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { validateLocalDateTimeValue } from '@studycommit/common/study-session-runtime'
 import { Dialog } from './Dialog'
 
 export interface DialogShowOptions {
@@ -20,16 +21,19 @@ export function useDialog() {
   const [options, setOptions] = useState<DialogShowOptions | null>(null)
   const [busy, setBusy] = useState(false)
   const [fieldValue, setFieldValue] = useState('')
+  const [fieldError, setFieldError] = useState<string | null>(null)
 
   const close = useCallback(() => {
     if (busy) {
       return
     }
     setOptions(null)
+    setFieldError(null)
   }, [busy])
 
   const show = useCallback((next: DialogShowOptions) => {
     setFieldValue(next.field?.defaultValue ?? '')
+    setFieldError(null)
     setBusy(false)
     setOptions(next)
   }, [])
@@ -38,10 +42,18 @@ export function useDialog() {
     if (!options) {
       return
     }
+    if (options.field?.type === 'datetime-local') {
+      const nextFieldError = validateLocalDateTimeValue(fieldValue, options.field.min)
+      if (nextFieldError) {
+        setFieldError(nextFieldError)
+        return
+      }
+    }
     setBusy(true)
     try {
       await options.onConfirm?.({ fieldValue })
       setOptions(null)
+      setFieldError(null)
     } finally {
       setBusy(false)
     }
@@ -57,9 +69,13 @@ export function useDialog() {
             type={options.field.type}
             value={fieldValue}
             min={options.field.min}
-            onChange={(event) => setFieldValue(event.target.value)}
+            onChange={(event) => {
+              setFieldValue(event.target.value)
+              setFieldError(null)
+            }}
             required
           />
+          {fieldError ? <span className="field__hint">{fieldError}</span> : null}
         </label>
       ) : null}
       <div className="dialog__actions">

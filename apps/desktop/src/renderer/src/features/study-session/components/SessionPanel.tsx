@@ -4,8 +4,16 @@ import { useDialog } from '../../../components/dialog/useDialog'
 import { LongSessionBanner } from './LongSessionBanner'
 import { SessionStatusBadge } from './SessionStatusBadge'
 import { SessionTimer } from './SessionTimer'
-import { isLongSession, useSessionClock } from '../hooks/useSessionClock'
-import type { SessionCommand, StudySessionController } from '../hooks/useStudySessionController'
+import {
+  formatLocalDateTimeValue,
+  isLongSession,
+  parseLocalDateTimeValue,
+} from '@studycommit/common/study-session-runtime'
+import {
+  useSessionClock,
+  type SessionCommand,
+  type StudySessionController,
+} from '@studycommit/common/study-session-react'
 
 export function SessionPanel({
   session,
@@ -118,30 +126,18 @@ export function SessionPanel({
       field: {
         label: '结束时间',
         type: 'datetime-local',
-        defaultValue: toLocalDateTimeValue(new Date()),
-        min: toLocalDateTimeValue(new Date(session.startedAt)),
+        defaultValue: formatLocalDateTimeValue(new Date()),
+        min: formatLocalDateTimeValue(new Date(session.startedAt)),
       },
       onConfirm: ({ fieldValue }) => {
-        const endedAt = fieldValue ? fromLocalDateTimeValue(fieldValue) : null
-        if (endedAt) {
-          return onComplete({ endedAt, completionSource: 'offline_sync' })
+        const endedAt = fieldValue ? parseLocalDateTimeValue(fieldValue) : null
+        if (!endedAt) {
+          throw new Error('结束时间无效')
         }
+        return onComplete({ endedAt: endedAt.toISOString(), completionSource: 'offline_sync' })
       },
     })
   }
-}
-
-function toLocalDateTimeValue(date: Date): string {
-  const pad = (value: number) => String(value).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
-}
-
-function fromLocalDateTimeValue(value: string): string | null {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return null
-  }
-  return date.toISOString()
 }
 
 const CompleteStudyButton = memo(function CompleteStudyButton({

@@ -5,15 +5,34 @@ import { activeTopicFixture, runningStudySessionFixture } from '@studycommit/com
 import { HttpError } from '@studycommit/common/http'
 import { createStudySessionGateway, createTopicGateway, renderStudyApp } from '../test/render-study'
 
+const secondTopic = {
+  ...activeTopicFixture,
+  id: '44444444-4444-4444-8444-444444444444',
+  name: 'React Native',
+}
+
 describe('StartStudyPanel', () => {
-  it('loads topics, keeps labels visible, and blocks submit without a topic', async () => {
-    renderStudyApp('/today')
+  it('keeps the topic unselected and blocks submit until topic and goal are filled', async () => {
+    renderStudyApp('/today', {
+      topics: createTopicGateway({
+        listActive: async () => ({
+          items: [activeTopicFixture, secondTopic],
+          pageInfo: { hasNextPage: false, nextCursor: null },
+        }),
+      }),
+    })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
-    expect(await screen.findByLabelText('专题')).toBeInTheDocument()
+    expect(await screen.findByLabelText('专题')).toHaveValue('')
     expect(screen.getByRole('link', { name: '今天' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByLabelText('学习目标')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
     expect(screen.getByText('请选择一个专题后再开始。')).toBeInTheDocument()
+    expect(screen.getByText('请填写学习目标后再开始。')).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('专题'), activeTopicFixture.id)
+    expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
+    expect(screen.getByRole('button', { name: '开始学习' })).toBeEnabled()
   })
 
   it('shows a path to topics when none exist', async () => {
@@ -61,6 +80,7 @@ describe('StartStudyPanel', () => {
     })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
     await userEvent.selectOptions(await screen.findByLabelText('专题'), activeTopicFixture.id)
+    await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
     await userEvent.click(screen.getByRole('button', { name: '开始学习' }))
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()
   })

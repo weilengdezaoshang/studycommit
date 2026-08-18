@@ -1,19 +1,26 @@
 import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { routes } from '../../../app/routes'
+import { Select } from '../../../components/select/Select'
 import { useDesktopServices } from '../api/DesktopServicesProvider'
-import type { StudySessionController } from '../hooks/useStudySessionController'
-import { initialStartStudyState, startStudyReducer } from '../state/start-study.reducer'
-import { toUiError, type UiError } from '../state/ui-error'
+import type { StudySessionController } from '@studycommit/common/study-session-react'
+import {
+  canStartStudy,
+  createIdempotencyKey,
+  initialStartStudyState,
+  startStudyReducer,
+  toUiError,
+  type UiError,
+} from '@studycommit/common/study-session-runtime'
 
 const GOAL_MAX = 500
 
 export function StartStudyPanel({
-  study,
   onCancel,
+  study,
 }: {
-  study: Pick<StudySessionController, 'create'>
   onCancel: () => void
+  study: Pick<StudySessionController, 'create'>
 }): React.JSX.Element {
   const { topics } = useDesktopServices()
   const [state, dispatch] = useReducer(startStudyReducer, initialStartStudyState)
@@ -43,13 +50,13 @@ export function StartStudyPanel({
 
   async function submit(event?: FormEvent) {
     event?.preventDefault()
-    if (state.status === 'submitting' || !topicId) {
+    if (state.status === 'submitting' || !canStartStudy(topicId, goal)) {
       return
     }
     const idempotencyKey =
       (state.status === 'error' && state.idempotencyKey) ||
       pendingKey.current ||
-      crypto.randomUUID()
+      createIdempotencyKey()
     pendingKey.current = idempotencyKey
     dispatch({ type: 'submit-started', idempotencyKey })
     try {
@@ -88,28 +95,27 @@ export function StartStudyPanel({
 
   const submitting = state.status === 'submitting'
   const formError = state.status === 'error' ? state.error : null
+  const readyToStart = canStartStudy(topicId, goal)
 
   return (
     <section className="study-page">
       <form className="study-form" onSubmit={(event) => void submit(event)}>
-        <div className="field">
-          <label htmlFor="start-topic">专题</label>
-          <select
-            id="start-topic"
-            value={topicId}
-            onChange={(event) => setTopicId(event.target.value)}
-            required
-            disabled={submitting}
-          >
-            <option value="">请选择专题</option>
-            {state.topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
-          {!topicId ? <span className="field__hint">请选择一个专题后再开始。</span> : null}
-        </div>
+        <Select
+          disabled={submitting}
+          hint={topicId ? undefined : '请选择一个专题后再开始。'}
+          id="start-topic"
+          label="专题"
+          onChange={(event) => setTopicId(event.target.value)}
+          placeholder="请选择专题"
+          required
+          value={topicId}
+        >
+          {state.topics.map((topic) => (
+            <option key={topic.id} value={topic.id}>
+              {topic.name}
+            </option>
+          ))}
+        </Select>
         <div className="field">
           <label htmlFor="start-goal">学习目标</label>
           <textarea
@@ -119,10 +125,11 @@ export function StartStudyPanel({
             rows={4}
             disabled={submitting}
             onChange={(event) => setGoal(event.target.value)}
-            placeholder="可选，最多 500 字"
+            placeholder="请填写学习目标，最多 500 字"
+            required
           />
           <span className="field__hint">
-            {goal.length}/{GOAL_MAX}
+            {goal.trim() ? `${goal.length}/${GOAL_MAX}` : '请填写学习目标后再开始。'}
           </span>
         </div>
         {formError ? (
@@ -140,7 +147,7 @@ export function StartStudyPanel({
           >
             取消
           </button>
-          <button type="submit" className="button" disabled={submitting || !topicId}>
+          <button type="submit" className="button" disabled={submitting || !readyToStart}>
             {submitting ? '正在开始' : '开始学习'}
           </button>
         </div>

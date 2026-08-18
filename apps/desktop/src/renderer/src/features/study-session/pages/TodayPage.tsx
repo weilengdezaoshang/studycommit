@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { StartStudyPanel } from '../components/StartStudyPanel'
 import { SessionPanel } from '../components/SessionPanel'
-import type { StudySessionController } from '../hooks/useStudySessionController'
+import type { StudySessionController } from '@studycommit/common/study-session-react'
 
 export function TodayPage({ study }: { study: StudySessionController }): React.JSX.Element {
   const [starting, setStarting] = useState(false)
@@ -47,7 +47,7 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
   }
 
   if (starting) {
-    return <StartStudyPanel study={study} onCancel={() => setStarting(false)} />
+    return <StartStudyPanel onCancel={() => setStarting(false)} study={study} />
   }
 
   return (
