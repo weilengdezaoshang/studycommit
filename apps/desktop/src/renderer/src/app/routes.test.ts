@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isTopicSection, routes } from './routes'
+import { isTodayNavActive, isTopicSection, routes } from './routes'
 
 describe('routes', () => {
   it('generates top-level paths', () => {
@@ -18,6 +18,11 @@ describe('routes', () => {
     expect(routes.topicMap('topic-1')).toBe('/topics/topic-1/map')
     expect(routes.topicLogs('topic-1')).toBe('/topics/topic-1/logs')
     expect(routes.note('topic/1', 'note/1')).toBe('/topics/topic%2F1/notes/note%2F1')
+  })
+
+  it('highlights Today only on the today route', () => {
+    expect(isTodayNavActive('/today')).toBe(true)
+    expect(isTodayNavActive('/drafts')).toBe(false)
   })
 
   it('accepts only known topic sections', () => {

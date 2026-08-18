@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { AppIcon } from './AppIcon'
 
 interface SidebarLinkProps {
@@ -6,16 +6,28 @@ interface SidebarLinkProps {
   label: string
   icon: React.ComponentProps<typeof AppIcon>['name']
   end?: boolean
+  isActive?: (pathname: string) => boolean
 }
 
-export function SidebarLink({ to, label, icon, end }: SidebarLinkProps): React.JSX.Element {
+export function SidebarLink({
+  to,
+  label,
+  icon,
+  end,
+  isActive,
+}: SidebarLinkProps): React.JSX.Element {
   const location = useLocation()
+  const highlighted = isActive
+    ? isActive(location.pathname)
+    : end
+      ? location.pathname === to
+      : location.pathname === to || location.pathname.startsWith(`${to}/`)
 
   return (
-    <NavLink
+    <Link
       to={to}
-      end={end}
-      className={({ isActive }) => `sidebar-link${isActive ? ' sidebar-link--active' : ''}`}
+      className={`sidebar-link${highlighted ? ' sidebar-link--active' : ''}`}
+      aria-current={highlighted ? 'page' : undefined}
       onClick={(event) => {
         if (location.pathname === to) {
           event.preventDefault()
@@ -24,6 +36,6 @@ export function SidebarLink({ to, label, icon, end }: SidebarLinkProps): React.J
     >
       <AppIcon name={icon} />
       <span>{label}</span>
-    </NavLink>
+    </Link>
   )
 }

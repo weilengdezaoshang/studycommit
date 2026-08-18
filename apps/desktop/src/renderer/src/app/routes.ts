@@ -34,3 +34,7 @@ export type TopLevelPath = (typeof TOP_LEVEL_PATHS)[number]
 export function isTopLevelPath(value: unknown): boolean {
   return typeof value === 'string' && TOP_LEVEL_PATHS.includes(value as TopLevelPath)
 }
+
+export function isTodayNavActive(pathname: string): boolean {
+  return pathname === routes.today() || pathname === '/'
+}
