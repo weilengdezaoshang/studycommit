@@ -9,17 +9,23 @@
     "./http": "./src/http/index.ts",
     "./study-session": "./src/clients/study-session/index.ts",
     "./topic": "./src/clients/topic/index.ts",
-    "./study-session-runtime": "./src/study-session-runtime/index.ts"
+    "./study-session-runtime": "./src/study-session-runtime/index.ts",
+    "./study-session-react": "./src/study-session-react/index.ts"
   },
   "scripts": {
     "test": "vitest",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "19.2.3",
     "typescript": "^5.9.0",
     "vitest": "^4.1.10"
   }
