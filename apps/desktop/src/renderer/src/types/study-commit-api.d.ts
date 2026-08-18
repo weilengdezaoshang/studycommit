@@ -2,8 +2,10 @@ import type {
   ActiveStudySessionResponse,
   CompleteStudySessionInput,
   CreateStudySessionInput,
+  ListActiveTopicsInput,
   SessionCommandInput,
   StudySession,
+  TopicPage,
 } from '@studycommit/common/contracts'
 import type { IpcResult } from '../../../main/ipc/ipc-result'
 
@@ -16,9 +18,14 @@ export interface StudyCommitStudySessionsApi {
   complete: (input: CompleteStudySessionInput) => Promise<IpcResult<StudySession>>
 }
 
+export interface StudyCommitTopicsApi {
+  listActive: (input?: ListActiveTopicsInput) => Promise<IpcResult<TopicPage>>
+}
+
 export interface StudyCommitApi {
   platform: NodeJS.Platform
   studySessions: StudyCommitStudySessionsApi
+  topics: StudyCommitTopicsApi
 }
 
 declare global {

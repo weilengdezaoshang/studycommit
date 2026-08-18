@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron'
 import { studySessionIpcChannels } from '../shared/study-session-channels'
+import { topicIpcChannels } from '../shared/topic-channels'
 
 export const studySessionPreloadApi = {
   create: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.create, input),
@@ -10,7 +11,12 @@ export const studySessionPreloadApi = {
   complete: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.complete, input),
 }
 
+export const topicPreloadApi = {
+  listActive: (input?: unknown) => ipcRenderer.invoke(topicIpcChannels.listActive, input),
+}
+
 export const studyCommitPreloadApi = {
   platform: process.platform,
   studySessions: studySessionPreloadApi,
+  topics: topicPreloadApi,
 }
