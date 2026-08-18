@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./contracts": "./src/contracts/index.ts",
     "./http": "./src/http/index.ts",
-    "./study-session": "./src/clients/study-session/index.ts"
+    "./study-session": "./src/clients/study-session/index.ts",
+    "./topic": "./src/clients/topic/index.ts"
   },
   "scripts": {
     "test": "vitest",
