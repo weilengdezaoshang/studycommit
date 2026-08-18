@@ -114,3 +114,22 @@ fix(logging): 修复请求令牌未脱敏的问题.
 4. 不得仅因为数值暂时相同就抽离，必须确认设计语义相同；
 5. 公共 Token 不得依赖 React、React Native、Electron、DOM 或业务模块；
 6. 修改公共 Token 时，必须验证桌面端和移动端的受影响范围。
+
+# 跨端 Hook 抽离规范
+
+桌面端和移动端业务逻辑一致的 Hook，必须抽到 `@studycommit/common`，不得在 `apps/desktop` 和 `apps/mobile` 各写一份。
+
+分层：
+
+- 无 React 的纯函数（计时、校验、reducer、错误文案、幂等键）放 `@studycommit/common/study-session-runtime`。
+- 依赖 React 但两端逻辑相同的 Hook 放 `@studycommit/common/study-session-react`。
+- 不得把 Hook 写进 `study-session-runtime`，也不得把 React 组件、CSS、React Native 视图放进 `common`。
+
+平台差异（请求客户端、回到前台、是否轮询）通过 Hook 参数传入，例如 `studySessions`、`topics`、`subscribeForeground`、`enablePoll`。各端 `AppShell` 只负责取本端服务并调用公共 Hook。
+
+判断：
+
+1. 两端状态机、命令、冲突处理和返回值相同，就必须抽公共 Hook。
+2. 仅订阅方式或客户端不同，仍抽公共 Hook，差异用参数注入。
+3. 只有一端需要，或交互语义不同，才留在对应应用内。
+4. 新增学习会话 Hook 前，先检查 `@studycommit/common/study-session-react` 是否已有同语义实现。
