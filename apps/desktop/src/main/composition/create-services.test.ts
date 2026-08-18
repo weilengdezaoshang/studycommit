@@ -6,7 +6,7 @@ vi.mock('electron', () => ({
   net: { fetch: vi.fn() },
 }))
 
-import { createDesktopServices } from './create-services'
+import { createDesktopServices, resolveDesktopServices } from './create-services'
 
 describe('createDesktopServices', () => {
   it('maps missing origin to CONFIGURATION_ERROR', () => {
@@ -16,5 +16,12 @@ describe('createDesktopServices', () => {
     } catch (error) {
       expect(error).toMatchObject({ serialized: { code: 'CONFIGURATION_ERROR' } })
     }
+  })
+
+  it('still exposes session handlers when configuration is missing', async () => {
+    const services = resolveDesktopServices({ NODE_ENV: 'development' })
+    await expect(services.studySessions.getActive()).rejects.toMatchObject({
+      serialized: { code: 'CONFIGURATION_ERROR' },
+    })
   })
 })

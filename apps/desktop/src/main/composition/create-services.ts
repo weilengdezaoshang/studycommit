@@ -1,9 +1,11 @@
-import { StudySessionClient } from '@studycommit/common/study-session'
-import { createHttpError } from '@studycommit/common/http'
+import { HttpError, createHttpError } from '@studycommit/common/http'
+import { StudySessionClient, type StudySessionApi } from '@studycommit/common/study-session'
+import { TopicClient, type TopicQueryApi } from '@studycommit/common/topic'
 import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
-  studySessions: StudySessionClient
+  studySessions: StudySessionApi
+  topics: TopicQueryApi
 }
 
 export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): DesktopServices {
@@ -22,7 +24,45 @@ export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): Des
     defaultTimeoutMs: 10_000,
     getHeaders: async () => createDesktopHeaders(env),
   })
-  return { studySessions: new StudySessionClient(transport) }
+  return {
+    studySessions: new StudySessionClient(transport),
+    topics: new TopicClient(transport),
+  }
+}
+
+export function resolveDesktopServices(env: NodeJS.ProcessEnv = process.env): DesktopServices {
+  try {
+    return createDesktopServices(env)
+  } catch (error) {
+    const httpError =
+      error instanceof HttpError
+        ? error
+        : createHttpError({
+            code: 'CONFIGURATION_ERROR',
+            message: error instanceof Error ? error.message : '请求层配置无效',
+          })
+    console.error('[studycommit] 请求层配置无效', httpError.message)
+    return createUnavailableServices(httpError)
+  }
+}
+
+function createUnavailableServices(error: HttpError): DesktopServices {
+  const reject = async (): Promise<never> => {
+    throw error
+  }
+  return {
+    studySessions: {
+      create: reject,
+      getActive: reject,
+      getById: reject,
+      pause: reject,
+      resume: reject,
+      complete: reject,
+    },
+    topics: {
+      listActive: reject,
+    },
+  }
 }
 
 function createDesktopHeaders(env: NodeJS.ProcessEnv): Readonly<Record<string, string>> {
