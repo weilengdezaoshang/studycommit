@@ -1,3 +1,4 @@
+export * from './clients/learning-log'
 export * from './clients/study-session'
 export * from './clients/topic'
 export * from './contracts'

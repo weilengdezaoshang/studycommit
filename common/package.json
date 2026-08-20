@@ -9,6 +9,7 @@
     "./http": "./src/http/index.ts",
     "./study-session": "./src/clients/study-session/index.ts",
     "./topic": "./src/clients/topic/index.ts",
+    "./learning-log": "./src/clients/learning-log/index.ts",
     "./study-session-runtime": "./src/study-session-runtime/index.ts",
     "./study-session-react": "./src/study-session-react/index.ts",
     "./toast-react": "./src/toast-react/index.ts"
