@@ -21,13 +21,33 @@ export const sessionCommandSchema = z
   })
   .strict()
 
+function optionalSummary(max: number) {
+  return z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => {
+      if (value == null) {
+        return null
+      }
+      const trimmed = value.trim()
+      return trimmed.length === 0 ? null : trimmed
+    })
+    .refine((value) => value === null || value.length <= max, {
+      message: `最多 ${max} 字符`,
+    })
+}
+
 export const completeStudySessionSchema = z
   .object({
     version: z.number().int().min(1),
-    endedAt: z.iso.datetime({ offset: true }).optional(),
+    endedAt: z.iso.datetime({ offset: true }).nullable().optional(),
     completionSource: z
       .enum([SESSION_COMPLETION_SOURCE.online, SESSION_COMPLETION_SOURCE.offlineSync])
       .default(SESSION_COMPLETION_SOURCE.online),
+    gains: optionalSummary(10_000),
+    problems: optionalSummary(10_000),
+    nextStep: optionalSummary(5_000),
   })
   .strict()
   .superRefine((value, context) => {

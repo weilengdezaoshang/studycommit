@@ -15,6 +15,13 @@
       "when": 1786873460650,
       "tag": "0001_faithful_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787126093418,
+      "tag": "0002_furry_marauders",
+      "breakpoints": true
     }
   ]
 }

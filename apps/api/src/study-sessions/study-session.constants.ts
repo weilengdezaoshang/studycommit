@@ -6,6 +6,7 @@ export const SESSION_KIND = {
   topicMissing: 'topic_missing',
   activeExists: 'active_exists',
   invalidTime: 'invalid_time',
+  inconsistent: 'inconsistent',
 } as const
 
 export type SessionKind = (typeof SESSION_KIND)[keyof typeof SESSION_KIND]
@@ -34,4 +35,8 @@ export const SESSION_ERROR = {
     message: '结束时间不能早于开始或暂停时间',
   },
   topicMissing: { code: 'TOPIC_NOT_FOUND', message: '专题不存在或不可用于学习' },
+  learningLogInconsistent: {
+    code: 'LEARNING_LOG_INCONSISTENT',
+    message: '已完成的学习会话缺少学习记录',
+  },
 } as const

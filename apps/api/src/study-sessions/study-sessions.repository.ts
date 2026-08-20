@@ -4,17 +4,34 @@ import { DatabaseService } from '../database/database.service'
 import type { NodePgTransaction } from 'drizzle-orm/node-postgres'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import * as schema from '../database/schema'
-import { idempotencyRecords, studySessions, topics } from '../database/schema'
+import { idempotencyRecords, learningLogs, studySessions, topics } from '../database/schema'
 import { SESSION_KIND, SESSION_RESOURCE_TYPE, SESSION_STATUS } from './study-session.constants'
 import type { CreateStudySessionInput } from './study-session.schemas'
 import { TOPIC_STATUS } from '../topics/topic.constants'
 
 export type StudySession = typeof studySessions.$inferSelect
+export type LearningLog = typeof learningLogs.$inferSelect
 export type SessionCommandResult =
   | { kind: typeof SESSION_KIND.ok; session: StudySession; replayed: boolean }
   | { kind: typeof SESSION_KIND.missing }
   | { kind: typeof SESSION_KIND.versionConflict; session: StudySession }
   | { kind: typeof SESSION_KIND.idempotencyConflict }
+export type CompleteCommandResult =
+  | {
+      kind: typeof SESSION_KIND.ok
+      session: StudySession
+      learningLog: LearningLog
+      replayed: boolean
+    }
+  | { kind: typeof SESSION_KIND.missing }
+  | { kind: typeof SESSION_KIND.versionConflict; session: StudySession }
+  | { kind: typeof SESSION_KIND.idempotencyConflict }
+  | { kind: typeof SESSION_KIND.inconsistent }
+export type LearningLogSummary = {
+  gains: string | null
+  problems: string | null
+  nextStep: string | null
+}
 
 const activeCondition = or(
   eq(studySessions.status, SESSION_STATUS.running),
@@ -229,8 +246,9 @@ export class StudySessionsRepository {
     version: number,
     completionTime: Date,
     source: 'online' | 'offline_sync',
+    summary: LearningLogSummary,
     idempotency: { key: string; hash: string },
-  ): Promise<SessionCommandResult | { kind: typeof SESSION_KIND.invalidTime }> {
+  ): Promise<CompleteCommandResult | { kind: typeof SESSION_KIND.invalidTime }> {
     return this.database.db.transaction(async (tx) => {
       const [session] = await tx
         .select()
@@ -242,12 +260,12 @@ export class StudySessionsRepository {
         return { kind: SESSION_KIND.missing }
       }
 
-      const replay = await this.findCommandReplay(tx, userId, idempotency)
+      const replay = await this.findCompleteReplay(tx, userId, idempotency)
       if (replay) {
         return replay
       }
       if (session.status === SESSION_STATUS.completed) {
-        return this.saveNoop(tx, userId, session, idempotency)
+        return this.completeAlreadyDone(tx, userId, session, idempotency)
       }
       if (session.version !== version) {
         return { kind: SESSION_KIND.versionConflict, session }
@@ -286,8 +304,27 @@ export class StudySessionsRepository {
         })
         .where(eq(studySessions.id, id))
         .returning()
-      await this.saveIdempotency(tx, userId, updated, idempotency)
-      return { kind: SESSION_KIND.ok, session: updated, replayed: false }
+      const [learningLog] = await tx
+        .insert(learningLogs)
+        .values({
+          userId,
+          sessionId: updated.id,
+          topicId: updated.topicId,
+          gains: summary.gains,
+          problems: summary.problems,
+          nextStep: summary.nextStep,
+          effectiveDurationSeconds: durationSeconds,
+        })
+        .returning()
+      await tx
+        .update(topics)
+        .set({
+          totalDurationSeconds: sql`${topics.totalDurationSeconds} + ${durationSeconds}`,
+          updatedAt: now,
+        })
+        .where(eq(topics.id, updated.topicId))
+      await this.saveCompleteIdempotency(tx, userId, updated, learningLog, idempotency)
+      return { kind: SESSION_KIND.ok, session: updated, learningLog, replayed: false }
     })
   }
 
@@ -343,4 +380,87 @@ export class StudySessionsRepository {
     await this.saveIdempotency(tx, userId, session, idempotency)
     return { kind: SESSION_KIND.ok, session, replayed: false }
   }
+
+  private async findCompleteReplay(
+    tx: Transaction,
+    userId: string,
+    idempotency: { key: string; hash: string },
+  ): Promise<CompleteCommandResult | null> {
+    const [record] = await tx
+      .select()
+      .from(idempotencyRecords)
+      .where(
+        and(eq(idempotencyRecords.userId, userId), eq(idempotencyRecords.key, idempotency.key)),
+      )
+      .limit(1)
+    if (!record) {
+      return null
+    }
+    if (record.requestHash !== idempotency.hash || record.resourceType !== SESSION_RESOURCE_TYPE) {
+      return { kind: SESSION_KIND.idempotencyConflict }
+    }
+    const stored = record.response
+    if (isCompleteResponse(stored)) {
+      return { kind: SESSION_KIND.ok, ...stored, replayed: true }
+    }
+    const session = stored as StudySession
+    const learningLog = await this.findLearningLog(tx, userId, session.id)
+    if (!learningLog) {
+      return { kind: SESSION_KIND.inconsistent }
+    }
+    return { kind: SESSION_KIND.ok, session, learningLog, replayed: true }
+  }
+
+  private async completeAlreadyDone(
+    tx: Transaction,
+    userId: string,
+    session: StudySession,
+    idempotency: { key: string; hash: string },
+  ): Promise<CompleteCommandResult> {
+    const learningLog = await this.findLearningLog(tx, userId, session.id)
+    if (!learningLog) {
+      return { kind: SESSION_KIND.inconsistent }
+    }
+    await this.saveCompleteIdempotency(tx, userId, session, learningLog, idempotency)
+    return { kind: SESSION_KIND.ok, session, learningLog, replayed: false }
+  }
+
+  private async findLearningLog(tx: Transaction, userId: string, sessionId: string) {
+    const [learningLog] = await tx
+      .select()
+      .from(learningLogs)
+      .where(and(eq(learningLogs.userId, userId), eq(learningLogs.sessionId, sessionId)))
+      .limit(1)
+    return learningLog ?? null
+  }
+
+  private async saveCompleteIdempotency(
+    tx: Transaction,
+    userId: string,
+    session: StudySession,
+    learningLog: LearningLog,
+    idempotency: { key: string; hash: string },
+  ) {
+    await tx.insert(idempotencyRecords).values({
+      userId,
+      key: idempotency.key,
+      requestHash: idempotency.hash,
+      resourceType: SESSION_RESOURCE_TYPE,
+      resourceId: session.id,
+      response: { session, learningLog },
+    })
+  }
+}
+
+function isCompleteResponse(
+  value: unknown,
+): value is { session: StudySession; learningLog: LearningLog } {
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    'session' in value &&
+    'learningLog' in value &&
+    !!(value as { session?: unknown }).session &&
+    !!(value as { learningLog?: unknown }).learningLog
+  )
 }

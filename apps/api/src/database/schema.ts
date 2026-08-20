@@ -6,6 +6,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  text,
   timestamp,
   uniqueIndex,
   uuid,
@@ -108,5 +109,50 @@ export const studySessions = pgTable(
     index('study_sessions_topic_completed_idx')
       .on(table.userId, table.topicId, table.completedAt)
       .where(sql`${table.status} = 'completed'`),
+  ],
+)
+
+export const learningLogs = pgTable(
+  'learning_logs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => studySessions.id, { onDelete: 'restrict' }),
+    topicId: uuid('topic_id')
+      .notNull()
+      .references(() => topics.id, { onDelete: 'restrict' }),
+    gains: text('gains'),
+    problems: text('problems'),
+    nextStep: text('next_step'),
+    effectiveDurationSeconds: integer('effective_duration_seconds').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check('learning_logs_duration_nonnegative', sql`${table.effectiveDurationSeconds} >= 0`),
+    check('learning_logs_version_positive', sql`${table.version} >= 1`),
+    check(
+      'learning_logs_gains_length',
+      sql`${table.gains} IS NULL OR length(${table.gains}) <= 10000`,
+    ),
+    check(
+      'learning_logs_problems_length',
+      sql`${table.problems} IS NULL OR length(${table.problems}) <= 10000`,
+    ),
+    check(
+      'learning_logs_next_step_length',
+      sql`${table.nextStep} IS NULL OR length(${table.nextStep}) <= 5000`,
+    ),
+    uniqueIndex('learning_logs_session_unique_idx').on(table.sessionId),
+    index('learning_logs_user_created_idx').on(table.userId, table.createdAt, table.id),
+    index('learning_logs_user_topic_created_idx').on(
+      table.userId,
+      table.topicId,
+      table.createdAt,
+      table.id,
+    ),
   ],
 )

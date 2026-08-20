@@ -85,6 +85,6 @@ export class StudySessionsController {
     if (result.replayed) {
       reply.header(IDEMPOTENCY_REPLAYED_HEADER, 'true')
     }
-    return result.session
+    return { session: result.session, learningLog: result.learningLog }
   }
 }

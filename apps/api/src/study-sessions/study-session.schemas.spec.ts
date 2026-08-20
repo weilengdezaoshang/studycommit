@@ -27,4 +27,26 @@ describe('study session schemas', () => {
     ).toBe(false)
     expect(completeStudySessionSchema.safeParse({ version: 1 }).success).toBe(true)
   })
+
+  it('normalizes empty summaries and rejects oversized or unknown fields', () => {
+    expect(
+      completeStudySessionSchema.parse({
+        version: 1,
+        gains: '  ',
+        problems: null,
+      }),
+    ).toMatchObject({ gains: null, problems: null, nextStep: null })
+    expect(
+      completeStudySessionSchema.safeParse({ version: 1, gains: 'a'.repeat(10_001) }).success,
+    ).toBe(false)
+    expect(
+      completeStudySessionSchema.safeParse({ version: 1, nextStep: 'a'.repeat(5_001) }).success,
+    ).toBe(false)
+    expect(
+      completeStudySessionSchema.safeParse({
+        version: 1,
+        topicId: crypto.randomUUID(),
+      }).success,
+    ).toBe(false)
+  })
 })

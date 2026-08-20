@@ -57,7 +57,14 @@ describe('StudySessionsService', () => {
       service.complete(
         userId,
         sessionId,
-        { version: 1, endedAt, completionSource: SESSION_COMPLETION_SOURCE.offlineSync },
+        {
+          version: 1,
+          endedAt,
+          completionSource: SESSION_COMPLETION_SOURCE.offlineSync,
+          gains: null,
+          problems: null,
+          nextStep: null,
+        },
         'key',
       ),
     ).rejects.toMatchObject({ response: { code: SESSION_ERROR.invalidEndTime.code } })

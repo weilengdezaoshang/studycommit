@@ -22,7 +22,7 @@ describe('StudySessions API', () => {
     app = await module.createApp()
   })
   beforeEach(async () => {
-    await pool.query('truncate study_sessions, idempotency_records, topics')
+    await pool.query('truncate learning_logs, study_sessions, idempotency_records, topics')
   })
   afterAll(async () => {
     await app.close()
@@ -88,11 +88,21 @@ describe('StudySessions API', () => {
       })
     ).json()
     expect(completed).toMatchObject({
-      status: 'completed',
-      version: 4,
-      completionSource: 'online',
+      session: {
+        status: 'completed',
+        version: 4,
+        completionSource: 'online',
+      },
+      learningLog: {
+        sessionId: session.id,
+        topicId: topic.id,
+        gains: null,
+        problems: null,
+        nextStep: null,
+      },
     })
-    expect(completed.durationSeconds).toBeGreaterThanOrEqual(0)
+    expect(completed.session.durationSeconds).toBeGreaterThanOrEqual(0)
+    expect(completed.learningLog.effectiveDurationSeconds).toBe(completed.session.durationSeconds)
     expect(
       (
         await app.inject({
@@ -195,9 +205,10 @@ describe('StudySessions API', () => {
         payload: { version: 2 },
       })
     ).json()
-    expect(completed.status).toBe('completed')
-    expect(completed.durationSeconds).toBeGreaterThanOrEqual(3599)
-    expect(completed.durationSeconds).toBeLessThanOrEqual(3601)
+    expect(completed.session.status).toBe('completed')
+    expect(completed.session.durationSeconds).toBeGreaterThanOrEqual(3599)
+    expect(completed.session.durationSeconds).toBeLessThanOrEqual(3601)
+    expect(completed.learningLog.effectiveDurationSeconds).toBe(completed.session.durationSeconds)
   })
 
   it('isolates sessions and rejects unusable topics', async () => {
@@ -344,8 +355,55 @@ describe('StudySessions API', () => {
     })
     expect(completed.statusCode).toBe(201)
     expect(completed.json()).toMatchObject({
-      status: 'completed',
-      completionSource: 'offline_sync',
+      session: {
+        status: 'completed',
+        completionSource: 'offline_sync',
+      },
     })
+  })
+
+  it('creates one learning log, adds topic duration, and replays the same log', async () => {
+    const topic = await createTopic()
+    const session = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/study-sessions',
+        headers: headers(),
+        payload: { topicId: topic.id },
+      })
+    ).json()
+    await pool.query(
+      "update study_sessions set started_at = now() - interval '10 minutes' where id = $1",
+      [session.id],
+    )
+    const first = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/complete`,
+      headers: headers('complete-once'),
+      payload: { version: 1 },
+    })
+    expect(first.statusCode).toBe(201)
+    const created = first.json()
+    expect(created.learningLog.sessionId).toBe(session.id)
+    expect(created.learningLog.effectiveDurationSeconds).toBe(created.session.durationSeconds)
+
+    const replay = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/complete`,
+      headers: headers('complete-once'),
+      payload: { version: 1 },
+    })
+    expect(replay.statusCode).toBe(201)
+    expect(replay.headers['idempotency-replayed']).toBe('true')
+    expect(replay.json().learningLog.id).toBe(created.learningLog.id)
+
+    const latestTopic = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/topics/${topic.id}`,
+        headers: { 'x-user-id': user },
+      })
+    ).json()
+    expect(latestTopic.totalDurationSeconds).toBe(created.session.durationSeconds)
   })
 })

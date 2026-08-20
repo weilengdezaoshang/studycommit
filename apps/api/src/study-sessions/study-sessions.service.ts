@@ -18,7 +18,11 @@ import type {
   CreateStudySessionInput,
   SessionCommandInput,
 } from './study-session.schemas'
-import { StudySessionsRepository, type SessionCommandResult } from './study-sessions.repository'
+import {
+  StudySessionsRepository,
+  type CompleteCommandResult,
+  type SessionCommandResult,
+} from './study-sessions.repository'
 
 const requestHash = (operation: string, id: string | null, value: unknown) =>
   createHash('sha256').update(JSON.stringify({ operation, id, value })).digest('hex')
@@ -75,12 +79,49 @@ export class StudySessionsService {
       throw new BadRequestException(SESSION_ERROR.invalidEndTime)
     }
     const hash = requestHash('complete', id, input)
-    return this.handleCommand(
-      this.repository.complete(userId, id, input.version, completionTime, input.completionSource, {
-        key,
-        hash,
-      }),
+    return this.handleComplete(
+      this.repository.complete(
+        userId,
+        id,
+        input.version,
+        completionTime,
+        input.completionSource,
+        {
+          gains: input.gains ?? null,
+          problems: input.problems ?? null,
+          nextStep: input.nextStep ?? null,
+        },
+        { key, hash },
+      ),
     )
+  }
+
+  private async handleComplete(
+    promise: Promise<CompleteCommandResult | { kind: typeof SESSION_KIND.invalidTime }>,
+  ) {
+    const result = await promise
+    if (result.kind === SESSION_KIND.ok) {
+      return result
+    }
+    if (result.kind === SESSION_KIND.missing) {
+      throw new NotFoundException(SESSION_ERROR.notFound)
+    }
+    if (result.kind === SESSION_KIND.idempotencyConflict) {
+      throw idempotencyConflict()
+    }
+    if (result.kind === SESSION_KIND.versionConflict) {
+      throw new ConflictException({
+        ...SESSION_ERROR.versionConflict,
+        details: { session: result.session },
+      })
+    }
+    if (result.kind === SESSION_KIND.invalidTime) {
+      throw new BadRequestException(SESSION_ERROR.invalidEndTimeOrder)
+    }
+    if (result.kind === SESSION_KIND.inconsistent) {
+      throw new ConflictException(SESSION_ERROR.learningLogInconsistent)
+    }
+    throw new Error(`Unexpected complete result: ${(result as { kind: string }).kind}`)
   }
 
   private async handleCommand(
