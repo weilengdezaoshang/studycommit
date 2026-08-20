@@ -8,6 +8,7 @@ import { DatabaseModule } from './database/database.module'
 import { TopicsModule } from './topics/topics.module'
 import { LoggerModule } from 'nestjs-pino'
 import { createLoggingConfig, type RuntimeEnvironment } from './common/logging/logging.config'
+import { LearningLogsModule } from './learning-logs/learning-logs.module'
 import { StudySessionsModule } from './study-sessions/study-sessions.module'
 
 @Module({
@@ -25,6 +26,7 @@ import { StudySessionsModule } from './study-sessions/study-sessions.module'
     InfrastructureModule,
     TopicsModule,
     StudySessionsModule,
+    LearningLogsModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
