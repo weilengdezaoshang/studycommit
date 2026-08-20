@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { completeStudySessionResultFixture } from '../../contracts/learning-log'
 import { runningStudySessionFixture } from '../../contracts/study-session'
 import { FakeHttpTransport } from '../../http'
 import { StudySessionClient } from './study-session-client'
@@ -58,7 +59,7 @@ describe('StudySessionClient', () => {
   })
 
   it('sends only backend complete fields in the body', async () => {
-    const transport = new FakeHttpTransport(() => runningStudySessionFixture)
+    const transport = new FakeHttpTransport(() => completeStudySessionResultFixture)
     await new StudySessionClient(transport).complete({
       sessionId: runningStudySessionFixture.id,
       version: 1,
@@ -69,7 +70,7 @@ describe('StudySessionClient', () => {
       method: 'POST',
       path: `/study-sessions/${runningStudySessionFixture.id}/complete`,
       headers: { 'idempotency-key': 'complete-1' },
-      body: { version: 1, completionSource: 'online' },
+      body: { version: 1, completionSource: 'online', gains: null, problems: null, nextStep: null },
     })
   })
 

@@ -105,6 +105,10 @@ export class JsonHttpTransport implements HttpTransport {
           code: 'INVALID_RESPONSE',
           message: '响应内容与契约不符',
           status: response.status,
+          details: checked.error.issues.map((issue) => ({
+            path: issue.path.join('.'),
+            message: issue.message,
+          })),
         })
       }
       return checked.data

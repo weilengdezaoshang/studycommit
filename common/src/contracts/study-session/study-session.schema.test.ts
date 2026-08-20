@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import { completeStudySessionResultFixture } from '../learning-log/learning-log.fixture'
 import {
   activeStudySessionResponseSchema,
   completeStudySessionInputSchema,
+  completeStudySessionResultSchema,
   createStudySessionInputSchema,
   studySessionSchema,
 } from './study-session.schema'
@@ -87,5 +89,51 @@ describe('study session contracts', () => {
         endedAt: '2026-08-17T08:30:00.000Z',
       }).success,
     ).toBe(false)
+    expect(
+      completeStudySessionInputSchema.safeParse({
+        ...base,
+        completionSource: 'online',
+        endedAt: null,
+      }).success,
+    ).toBe(true)
+  })
+
+  it('normalizes empty summary fields and rejects oversized text', () => {
+    const base = {
+      sessionId: runningStudySessionFixture.id,
+      version: 1,
+      idempotencyKey: 'complete-session-1',
+    }
+    expect(
+      completeStudySessionInputSchema.parse({
+        ...base,
+        gains: '  ',
+        problems: null,
+      }),
+    ).toMatchObject({ gains: null, problems: null, nextStep: null })
+    expect(
+      completeStudySessionInputSchema.safeParse({
+        ...base,
+        gains: 'a'.repeat(10_001),
+      }).success,
+    ).toBe(false)
+    expect(
+      completeStudySessionInputSchema.safeParse({
+        ...base,
+        nextStep: 'a'.repeat(5_001),
+      }).success,
+    ).toBe(false)
+    expect(
+      completeStudySessionInputSchema.safeParse({
+        ...base,
+        topicId: runningStudySessionFixture.topicId,
+      }).success,
+    ).toBe(false)
+  })
+
+  it('accepts a combined complete result', () => {
+    expect(completeStudySessionResultSchema.parse(completeStudySessionResultFixture)).toEqual(
+      completeStudySessionResultFixture,
+    )
   })
 })

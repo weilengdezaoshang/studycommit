@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { learningLogSchema } from '../learning-log/learning-log.schema'
 
 export const studySessionStatusSchema = z.enum(['running', 'paused', 'completed'])
 export const studySessionCompletionSourceSchema = z.enum(['online', 'offline_sync'])
@@ -49,10 +50,30 @@ export const sessionCommandInputSchema = z
   })
   .strict()
 
+function optionalSummary(max: number) {
+  return z
+    .string()
+    .nullable()
+    .optional()
+    .transform((value) => {
+      if (value == null) {
+        return null
+      }
+      const trimmed = value.trim()
+      return trimmed.length === 0 ? null : trimmed
+    })
+    .refine((value) => value === null || value.length <= max, {
+      message: `最多 ${max} 字符`,
+    })
+}
+
 export const completeStudySessionInputSchema = sessionCommandInputSchema
   .extend({
-    endedAt: z.iso.datetime({ offset: true }).optional(),
+    endedAt: z.iso.datetime({ offset: true }).nullable().optional(),
     completionSource: studySessionCompletionSourceSchema.default('online'),
+    gains: optionalSummary(10_000),
+    problems: optionalSummary(10_000),
+    nextStep: optionalSummary(5_000),
   })
   .superRefine((value, context) => {
     if (value.completionSource === 'offline_sync' && !value.endedAt) {
@@ -71,8 +92,14 @@ export const completeStudySessionInputSchema = sessionCommandInputSchema
     }
   })
 
+export const completeStudySessionResultSchema = z.object({
+  session: studySessionSchema,
+  learningLog: learningLogSchema,
+})
+
 export type StudySession = z.infer<typeof studySessionSchema>
 export type ActiveStudySessionResponse = z.infer<typeof activeStudySessionResponseSchema>
 export type CreateStudySessionInput = z.infer<typeof createStudySessionInputSchema>
 export type SessionCommandInput = z.infer<typeof sessionCommandInputSchema>
-export type CompleteStudySessionInput = z.infer<typeof completeStudySessionInputSchema>
+export type CompleteStudySessionInput = z.input<typeof completeStudySessionInputSchema>
+export type CompleteStudySessionResult = z.infer<typeof completeStudySessionResultSchema>

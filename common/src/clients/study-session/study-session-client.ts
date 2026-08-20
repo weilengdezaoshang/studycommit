@@ -1,17 +1,19 @@
 import {
   activeStudySessionResponseSchema,
   completeStudySessionInputSchema,
+  completeStudySessionResultSchema,
   createStudySessionInputSchema,
   sessionCommandInputSchema,
   sessionIdSchema,
   studySessionSchema,
   type ActiveStudySessionResponse,
   type CompleteStudySessionInput,
+  type CompleteStudySessionResult,
   type CreateStudySessionInput,
   type SessionCommandInput,
   type StudySession,
 } from '../../contracts/study-session'
-import type { HttpTransport } from '../../http'
+import { createHttpError, type HttpTransport } from '../../http'
 
 export interface StudySessionApi {
   create(input: CreateStudySessionInput): Promise<StudySession>
@@ -19,7 +21,7 @@ export interface StudySessionApi {
   getById(sessionId: string): Promise<StudySession>
   pause(input: SessionCommandInput): Promise<StudySession>
   resume(input: SessionCommandInput): Promise<StudySession>
-  complete(input: CompleteStudySessionInput): Promise<StudySession>
+  complete(input: CompleteStudySessionInput): Promise<CompleteStudySessionResult>
 }
 
 export class StudySessionClient implements StudySessionApi {
@@ -61,14 +63,18 @@ export class StudySessionClient implements StudySessionApi {
     return this.command('resume', sessionCommandInputSchema.parse(input))
   }
 
-  complete(rawInput: CompleteStudySessionInput): Promise<StudySession> {
-    const { sessionId, idempotencyKey, ...body } = completeStudySessionInputSchema.parse(rawInput)
+  complete(rawInput: CompleteStudySessionInput): Promise<CompleteStudySessionResult> {
+    const parsed = completeStudySessionInputSchema.safeParse(rawInput)
+    if (!parsed.success) {
+      throw createHttpError({ code: 'INVALID_RESPONSE', message: '请求参数无效' })
+    }
+    const { sessionId, idempotencyKey, ...body } = parsed.data
     return this.http.request({
       method: 'POST',
       path: `/study-sessions/${encodeURIComponent(sessionId)}/complete`,
       headers: { 'idempotency-key': idempotencyKey },
       body,
-      responseSchema: studySessionSchema,
+      responseSchema: completeStudySessionResultSchema,
     })
   }
 
