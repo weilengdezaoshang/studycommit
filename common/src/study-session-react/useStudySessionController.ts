@@ -12,6 +12,7 @@ import {
   toUiError,
   type UiError,
 } from '../study-session-runtime'
+import { useToast } from '../toast-react/useToast'
 
 export type SessionCommand = 'pause' | 'resume' | 'complete'
 
@@ -56,6 +57,7 @@ export function useStudySessionController({
   subscribeForeground,
   enablePoll = true,
 }: StudySessionControllerDeps): StudySessionController {
+  const toast = useToast()
   const [session, setSession] = useState<StudySession | null>(null)
   const [serverNow, setServerNow] = useState<string | null>(null)
   const [topicName, setTopicName] = useState('当前专题')
@@ -191,17 +193,20 @@ export function useStudySessionController({
             pendingKeys.current[command] = undefined
             applySession(retried, retried.updatedAt)
           } catch (confirmError) {
-            setLoadError(toUiError(confirmError))
+            const confirmUiError = toUiError(confirmError)
+            setLoadError(confirmUiError)
             setPendingCommand(null)
             setConfirmingRemote(false)
+            toast.show(confirmUiError.message)
           }
           return
         }
         setLoadError(uiError)
         setPendingCommand(null)
+        toast.show(uiError.message)
       }
     },
-    [applySession, pendingCommand, session, studySessions],
+    [applySession, pendingCommand, session, studySessions, toast],
   )
 
   const create = useCallback(
@@ -294,13 +299,14 @@ async function sendCommand(
       idempotencyKey,
     })
   }
-  return studySessions.complete({
+  const result = await studySessions.complete({
     sessionId: session.id,
     version: session.version,
     idempotencyKey,
     completionSource: extra?.completionSource ?? 'online',
     endedAt: extra?.endedAt,
   })
+  return result.session
 }
 
 function commandTookEffect(command: SessionCommand, latest: StudySession): boolean {
