@@ -48,11 +48,12 @@ export function SessionPanel({
           <SessionStatusBadge status="completed" />
           <p className="study-card__title">{topicName}</p>
           <SessionTimer value={elapsed} />
-          <p>本次学习已结束。本阶段不会自动生成学习记录。</p>
+          <p>本次学习已结束，学习记录已保存。</p>
           <button type="button" className="button" onClick={onBackToStart}>
             返回今天
           </button>
         </article>
+        {dialog.dialog}
       </section>
     )
   }
@@ -108,7 +109,7 @@ export function SessionPanel({
   function showCompleteDialog() {
     dialog.show({
       title: '结束本次学习？',
-      description: `完成后计时将停止，本阶段不会自动生成学习记录。预计有效时长 ${elapsed}。`,
+      description: `完成后计时将停止，并保存一条学习记录。预计有效时长 ${elapsed}。`,
       cancelLabel: '继续学习',
       confirmLabel: '确认完成',
       confirmBusyLabel: '正在完成',
@@ -128,6 +129,8 @@ export function SessionPanel({
         type: 'datetime-local',
         defaultValue: formatLocalDateTimeValue(new Date()),
         min: formatLocalDateTimeValue(new Date(session.startedAt)),
+        required: true,
+        helperText: '格式 YYYY-MM-DDTHH:mm，不能早于开始时间',
       },
       onConfirm: ({ fieldValue }) => {
         const endedAt = fieldValue ? parseLocalDateTimeValue(fieldValue) : null

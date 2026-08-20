@@ -13,6 +13,8 @@ export interface DialogShowOptions {
     type: 'datetime-local'
     defaultValue: string
     min?: string
+    required?: boolean
+    helperText?: string
   }
   onConfirm?: (payload: { fieldValue?: string }) => void | Promise<void>
 }
@@ -54,6 +56,8 @@ export function useDialog() {
       await options.onConfirm?.({ fieldValue })
       setOptions(null)
       setFieldError(null)
+    } catch (error) {
+      setFieldError(error instanceof Error ? error.message : '操作失败')
     } finally {
       setBusy(false)
     }
@@ -73,10 +77,20 @@ export function useDialog() {
               setFieldValue(event.target.value)
               setFieldError(null)
             }}
-            required
+            required={options.field.required}
           />
-          {fieldError ? <span className="field__hint">{fieldError}</span> : null}
+          {fieldError ? (
+            <span className="field__hint" role="alert">
+              {fieldError}
+            </span>
+          ) : options.field.helperText ? (
+            <span className="field__hint">{options.field.helperText}</span>
+          ) : null}
         </label>
+      ) : fieldError ? (
+        <p className="field__hint" role="alert">
+          {fieldError}
+        </p>
       ) : null}
       <div className="dialog__actions">
         <button type="button" className="button button--secondary" onClick={close} disabled={busy}>

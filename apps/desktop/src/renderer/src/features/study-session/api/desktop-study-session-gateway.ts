@@ -1,6 +1,7 @@
 import type {
   ActiveStudySessionResponse,
   CompleteStudySessionInput,
+  CompleteStudySessionResult,
   CreateStudySessionInput,
   ListActiveTopicsInput,
   SessionCommandInput,
@@ -17,7 +18,7 @@ export interface StudySessionGateway {
   create(input: CreateStudySessionInput): Promise<StudySession>
   pause(input: SessionCommandInput): Promise<StudySession>
   resume(input: SessionCommandInput): Promise<StudySession>
-  complete(input: CompleteStudySessionInput): Promise<StudySession>
+  complete(input: CompleteStudySessionInput): Promise<CompleteStudySessionResult>
 }
 
 export interface TopicGateway {

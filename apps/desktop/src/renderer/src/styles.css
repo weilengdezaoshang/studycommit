@@ -404,6 +404,28 @@ button:focus-visible {
   border-radius: 16px;
   background: var(--color-surface);
 }
+.toast {
+  position: fixed;
+  top: 48px;
+  left: 50%;
+  z-index: 40;
+  max-width: min(360px, calc(100% - 48px));
+  transform: translateX(-50%);
+}
+.toast__message {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-body-small);
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 8px 25px color-mix(in srgb, var(--color-scrim) 35%, transparent);
+}
 
 .topic-layout {
   min-width: 0;

@@ -23,6 +23,7 @@ export function AppShell(): React.JSX.Element {
     studySessions,
     topics,
     subscribeForeground: subscribeWindowFocus,
+    enablePoll: import.meta.env.MODE !== 'test',
   })
   const { pathname } = useLocation()
   const showToday = pathname === '/today'

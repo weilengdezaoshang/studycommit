@@ -40,6 +40,16 @@ describe('useDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  it('keeps the dialog open and shows the error when confirm fails', async () => {
+    const user = userEvent.setup()
+    const onConfirm = vi.fn().mockRejectedValue(new Error('服务返回了无法识别的数据。'))
+    render(<Example onConfirm={onConfirm} />)
+    await user.click(screen.getByRole('button', { name: '打开' }))
+    await user.click(screen.getByRole('button', { name: '确定' }))
+    expect(screen.getByRole('dialog', { name: '确认操作' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('服务返回了无法识别的数据。')
+  })
+
   it('closes with Escape before confirm', async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()

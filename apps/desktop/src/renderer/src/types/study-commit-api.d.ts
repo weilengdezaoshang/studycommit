@@ -1,6 +1,7 @@
 import type {
   ActiveStudySessionResponse,
   CompleteStudySessionInput,
+  CompleteStudySessionResult,
   CreateStudySessionInput,
   ListActiveTopicsInput,
   SessionCommandInput,
@@ -15,7 +16,7 @@ export interface StudyCommitStudySessionsApi {
   getById: (sessionId: string) => Promise<IpcResult<StudySession>>
   pause: (input: SessionCommandInput) => Promise<IpcResult<StudySession>>
   resume: (input: SessionCommandInput) => Promise<IpcResult<StudySession>>
-  complete: (input: CompleteStudySessionInput) => Promise<IpcResult<StudySession>>
+  complete: (input: CompleteStudySessionInput) => Promise<IpcResult<CompleteStudySessionResult>>
 }
 
 export interface StudyCommitTopicsApi {
