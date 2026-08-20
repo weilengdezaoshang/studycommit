@@ -62,6 +62,8 @@ export function useDialog() {
       await options.onConfirm?.({ fieldValue })
       setOptions(null)
       setFieldError(null)
+    } catch (error) {
+      setFieldError(error instanceof Error ? error.message : '操作失败')
     } finally {
       setBusy(false)
     }
@@ -83,6 +85,7 @@ export function useDialog() {
           value={fieldValue}
         />
       ) : null}
+      {fieldError && !options?.field ? <AppText color="danger">{fieldError}</AppText> : null}
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
         <Button disabled={busy} onPress={close} variant="secondary">
           {options?.cancelLabel ?? '取消'}

@@ -1,6 +1,6 @@
 import { screen, userEvent } from '@testing-library/react-native'
 import {
-  completedStudySessionFixture,
+  completeStudySessionResultFixture,
   pausedStudySessionFixture,
   runningStudySessionFixture,
 } from '@studycommit/common/contracts'
@@ -50,9 +50,9 @@ describe('SessionPanel on today', () => {
     expect(screen.getByText('已暂停')).toBeOnTheScreen()
   })
 
-  it('requires confirmation before complete and does not mention a saved learning log', async () => {
+  it('requires confirmation before complete and then shows the saved learning log', async () => {
     const user = userEvent.setup()
-    const complete = jest.fn().mockResolvedValue(completedStudySessionFixture)
+    const complete = jest.fn().mockResolvedValue(completeStudySessionResultFixture)
     await renderStudyApp({
       studySessions: createStudySessionGateway({
         getActive: async () => ({
@@ -67,10 +67,35 @@ describe('SessionPanel on today', () => {
     expect(complete).not.toHaveBeenCalled()
     await user.press(screen.getByRole('button', { name: '确认完成' }))
     expect(complete).toHaveBeenCalledTimes(1)
-    expect(
-      await screen.findByText('本次学习已结束。本阶段不会自动生成学习记录。'),
-    ).toBeOnTheScreen()
-    expect(screen.queryByText(/学习记录已保存/)).not.toBeOnTheScreen()
+    expect(await screen.findByText('本次学习已结束，学习记录已保存。')).toBeOnTheScreen()
+  })
+
+  it('shows a global toast when complete fails', async () => {
+    const user = userEvent.setup()
+    const complete = jest.fn().mockRejectedValue(
+      new HttpError({
+        code: 'INVALID_RESPONSE',
+        message: '响应内容与契约不符',
+        status: 201,
+        backendCode: null,
+        requestId: null,
+        details: null,
+      }),
+    )
+    await renderStudyApp({
+      studySessions: createStudySessionGateway({
+        getActive: async () => ({
+          session: runningStudySessionFixture,
+          serverNow: runningStudySessionFixture.updatedAt,
+        }),
+        complete,
+      }),
+    })
+    await user.press(await screen.findByRole('button', { name: '完成学习' }))
+    await user.press(screen.getByRole('button', { name: '确认完成' }))
+    expect(complete).toHaveBeenCalledTimes(1)
+    expect(await screen.findByText('服务返回了无法识别的数据。')).toBeOnTheScreen()
+    expect(screen.getByRole('button', { name: '暂停' })).toBeOnTheScreen()
   })
 
   it('refreshes from a version conflict without retrying the original command', async () => {

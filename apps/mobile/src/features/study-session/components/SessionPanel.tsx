@@ -50,7 +50,7 @@ export function SessionPanel({
   function showCompleteDialog() {
     dialog.show({
       title: '结束本次学习？',
-      description: `完成后计时将停止，本阶段不会自动生成学习记录。预计有效时长 ${elapsed}。`,
+      description: `完成后计时将停止，并保存一条学习记录。预计有效时长 ${elapsed}。`,
       cancelLabel: '继续学习',
       confirmLabel: '确认完成',
       confirmBusyLabel: '正在完成',
@@ -93,10 +93,11 @@ export function SessionPanel({
               {topicName}
             </AppText>
             <SessionTimer value={elapsed} />
-            <AppText color="muted">本次学习已结束。本阶段不会自动生成学习记录。</AppText>
+            <AppText color="muted">本次学习已结束，学习记录已保存。</AppText>
             <Button onPress={onBackToStart}>返回今天</Button>
           </View>
         </Card>
+        {dialog.dialog}
       </ScrollView>
     )
   }

@@ -78,6 +78,41 @@ describe('useDialog', () => {
     expect(await screen.findByText('已确认')).toBeOnTheScreen()
   })
 
+  it('keeps the dialog open and shows the error when confirm fails', async () => {
+    function FailHost() {
+      const dialog = useDialog()
+      return (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              dialog.show({
+                title: '结束本次学习？',
+                confirmLabel: '确认完成',
+                onConfirm: async () => {
+                  throw new Error('服务返回了无法识别的数据。')
+                },
+              })
+            }
+          >
+            <Text>打开失败</Text>
+          </Pressable>
+          {dialog.dialog}
+        </>
+      )
+    }
+    const user = userEvent.setup()
+    await render(
+      <ThemeProvider colorScheme="light">
+        <FailHost />
+      </ThemeProvider>,
+    )
+    await user.press(screen.getByRole('button', { name: '打开失败' }))
+    await user.press(screen.getByRole('button', { name: '确认完成' }))
+    expect(screen.getByLabelText('结束本次学习？')).toBeOnTheScreen()
+    expect(await screen.findByText('服务返回了无法识别的数据。')).toBeOnTheScreen()
+  })
+
   it('keeps the dialog open when the datetime field is invalid', async () => {
     const user = userEvent.setup()
     await render(

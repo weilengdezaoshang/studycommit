@@ -1,5 +1,7 @@
 import type { PropsWithChildren } from 'react'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { ToastProvider } from '@studycommit/common/toast-react'
+import { Toast } from '../components/toast/Toast'
 import type { MobileServices } from '../infrastructure/http/create-mobile-services'
 import { ThemeProvider } from '../theme/ThemeProvider'
 import { MobileServicesProvider } from './MobileServicesProvider'
@@ -12,7 +14,9 @@ export function AppProviders({
   return (
     <SafeAreaProvider initialMetrics={appInitialWindowMetrics}>
       <ThemeProvider>
-        <MobileServicesProvider services={services}>{children}</MobileServicesProvider>
+        <ToastProvider renderToast={(toast) => <Toast {...toast} />}>
+          <MobileServicesProvider services={services}>{children}</MobileServicesProvider>
+        </ToastProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   )
