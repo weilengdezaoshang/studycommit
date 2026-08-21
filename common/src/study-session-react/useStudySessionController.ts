@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { LearningLog } from '../contracts/learning-log'
+import { learningLogSchema } from '../contracts/learning-log'
 import type { StudySession } from '../contracts/study-session'
 import { studySessionSchema } from '../contracts/study-session'
+import type { LearningLogApi } from '../clients/learning-log/learning-log-client'
 import type { StudySessionApi } from '../clients/study-session/study-session-client'
 import type { TopicQueryApi } from '../clients/topic/topic-client'
 import {
@@ -8,6 +11,7 @@ import {
   createIdempotencyKey,
   existingSessionIdFromConflict,
   isUnknownCommandOutcome,
+  learningLogFromConflict,
   sessionFromConflict,
   toUiError,
   type UiError,
@@ -24,7 +28,6 @@ export interface StudySessionController {
   serverNow: string | null
   topicName: string
   pendingCommand: SessionCommand | null
-  confirmingRemote: boolean
   error: UiError | null
   reload: () => void
   create: (input: {
@@ -38,14 +41,33 @@ export interface StudySessionController {
   complete: (extra?: {
     endedAt?: string
     completionSource?: 'online' | 'offline_sync'
+    gains?: string | null
+    problems?: string | null
+    nextStep?: string | null
+  }) => Promise<void>
+  learningLog: LearningLog | null
+  savingLog: boolean
+  updateLearningLog: (input: {
+    gains?: string | null
+    problems?: string | null
+    nextStep?: string | null
   }) => Promise<void>
 }
 
 export type StudySessionControllerDeps = {
   studySessions: StudySessionApi
   topics: TopicQueryApi
+  learningLogs: LearningLogApi
   subscribeForeground: (onForeground: () => void) => () => void
   enablePoll?: boolean
+}
+
+type CommandExtra = {
+  endedAt?: string
+  completionSource?: 'online' | 'offline_sync'
+  gains?: string | null
+  problems?: string | null
+  nextStep?: string | null
 }
 
 const FOCUS_REFRESH_MS = 10_000
@@ -54,6 +76,7 @@ const POLL_MS = 30_000
 export function useStudySessionController({
   studySessions,
   topics,
+  learningLogs,
   subscribeForeground,
   enablePoll = true,
 }: StudySessionControllerDeps): StudySessionController {
@@ -61,10 +84,11 @@ export function useStudySessionController({
   const [session, setSession] = useState<StudySession | null>(null)
   const [serverNow, setServerNow] = useState<string | null>(null)
   const [topicName, setTopicName] = useState('当前专题')
+  const [learningLog, setLearningLog] = useState<LearningLog | null>(null)
+  const [savingLog, setSavingLog] = useState(false)
   const [loadError, setLoadError] = useState<UiError | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [pendingCommand, setPendingCommand] = useState<SessionCommand | null>(null)
-  const [confirmingRemote, setConfirmingRemote] = useState(false)
   const pendingKeys = useRef<Partial<Record<SessionCommand | 'create', string>>>({})
 
   const applySession = useCallback((next: StudySession | null, nextServerNow: string) => {
@@ -73,7 +97,9 @@ export function useStudySessionController({
     setHasLoaded(true)
     setLoadError(null)
     setPendingCommand(null)
-    setConfirmingRemote(false)
+    if (!next || next.status !== 'completed') {
+      setLearningLog(null)
+    }
     if (!next) {
       setTopicName('当前专题')
     }
@@ -150,11 +176,31 @@ export function useStudySessionController({
     }
   }, [session?.id, session?.topicId, topics])
 
+  const applyCommandResult = useCallback(
+    (result: { session: StudySession; learningLog?: LearningLog }) => {
+      applySession(result.session, result.session.updatedAt)
+      if (result.learningLog) {
+        setLearningLog(result.learningLog)
+      }
+    },
+    [applySession],
+  )
+
+  const applyConflictSession = useCallback(
+    async (error: UiError, sessionId: string) => {
+      const details = parseSession(sessionFromConflict(error))
+      if (details) {
+        applySession(details, details.updatedAt)
+        return
+      }
+      const latest = await studySessions.getById(sessionId)
+      applySession(latest, latest.updatedAt)
+    },
+    [applySession, studySessions],
+  )
+
   const runCommand = useCallback(
-    async (
-      command: SessionCommand,
-      extra?: { endedAt?: string; completionSource?: 'online' | 'offline_sync' },
-    ) => {
+    async (command: SessionCommand, extra?: CommandExtra) => {
       if (!session || pendingCommand) {
         return
       }
@@ -165,48 +211,77 @@ export function useStudySessionController({
       pendingKeys.current[command] = idempotencyKey
       setPendingCommand(command)
       try {
-        const next = await sendCommand(studySessions, command, session, idempotencyKey, extra)
+        const result = await sendCommand(studySessions, command, session, idempotencyKey, extra)
         pendingKeys.current[command] = undefined
-        applySession(next, next.updatedAt)
+        applyCommandResult(result)
       } catch (error) {
         const uiError = toUiError(error)
         if (uiError.backendCode === 'SESSION_VERSION_CONFLICT') {
-          const details = parseSession(sessionFromConflict(uiError))
-          if (details) {
-            applySession(details, details.updatedAt)
-            return
-          }
-          const latest = await studySessions.getById(session.id)
-          applySession(latest, latest.updatedAt)
+          pendingKeys.current[command] = undefined
+          await applyConflictSession(uiError, session.id)
           return
         }
         if (isUnknownCommandOutcome(uiError)) {
-          setConfirmingRemote(true)
           try {
-            const latest = await studySessions.getById(session.id)
-            if (commandTookEffect(command, latest)) {
+            const retried = await sendCommand(
+              studySessions,
+              command,
+              session,
+              idempotencyKey,
+              extra,
+            )
+            pendingKeys.current[command] = undefined
+            applyCommandResult(retried)
+          } catch (retryError) {
+            const retryUiError = toUiError(retryError)
+            if (retryUiError.backendCode === 'SESSION_VERSION_CONFLICT') {
               pendingKeys.current[command] = undefined
-              applySession(latest, latest.updatedAt)
+              await applyConflictSession(retryUiError, session.id)
               return
             }
-            const retried = await sendCommand(studySessions, command, latest, idempotencyKey, extra)
             pendingKeys.current[command] = undefined
-            applySession(retried, retried.updatedAt)
-          } catch (confirmError) {
-            const confirmUiError = toUiError(confirmError)
-            setLoadError(confirmUiError)
             setPendingCommand(null)
-            setConfirmingRemote(false)
-            toast.show(confirmUiError.message)
+            toast.show(retryUiError.message)
           }
           return
         }
-        setLoadError(uiError)
+        pendingKeys.current[command] = undefined
         setPendingCommand(null)
         toast.show(uiError.message)
       }
     },
-    [applySession, pendingCommand, session, studySessions, toast],
+    [applyCommandResult, applyConflictSession, pendingCommand, session, studySessions, toast],
+  )
+
+  const updateLearningLog = useCallback(
+    async (input: {
+      gains?: string | null
+      problems?: string | null
+      nextStep?: string | null
+    }) => {
+      if (!learningLog || savingLog) {
+        return
+      }
+      setSavingLog(true)
+      try {
+        const next = await learningLogs.update({
+          id: learningLog.id,
+          version: learningLog.version,
+          ...input,
+        })
+        setLearningLog(next)
+      } catch (error) {
+        const uiError = toUiError(error)
+        const conflict = parseLearningLog(learningLogFromConflict(uiError))
+        if (conflict) {
+          setLearningLog(conflict)
+        }
+        toast.show(uiError.message)
+      } finally {
+        setSavingLog(false)
+      }
+    },
+    [learningLog, learningLogs, savingLog, toast],
   )
 
   const create = useCallback(
@@ -246,7 +321,6 @@ export function useStudySessionController({
     serverNow,
     topicName,
     pendingCommand,
-    confirmingRemote,
     error: loadError,
     reload: () => {
       void reload()
@@ -255,6 +329,9 @@ export function useStudySessionController({
     pause: () => runCommand('pause'),
     resume: () => runCommand('resume'),
     complete: (extra) => runCommand('complete', extra),
+    learningLog,
+    savingLog,
+    updateLearningLog,
   }
 }
 
@@ -283,43 +360,44 @@ async function sendCommand(
   command: SessionCommand,
   session: StudySession,
   idempotencyKey: string,
-  extra?: { endedAt?: string; completionSource?: 'online' | 'offline_sync' },
-): Promise<StudySession> {
+  extra?: CommandExtra,
+): Promise<{ session: StudySession; learningLog?: LearningLog }> {
   if (command === 'pause') {
-    return studySessions.pause({
-      sessionId: session.id,
-      version: session.version,
-      idempotencyKey,
-    })
+    return {
+      session: await studySessions.pause({
+        sessionId: session.id,
+        version: session.version,
+        idempotencyKey,
+      }),
+    }
   }
   if (command === 'resume') {
-    return studySessions.resume({
-      sessionId: session.id,
-      version: session.version,
-      idempotencyKey,
-    })
+    return {
+      session: await studySessions.resume({
+        sessionId: session.id,
+        version: session.version,
+        idempotencyKey,
+      }),
+    }
   }
-  const result = await studySessions.complete({
+  return studySessions.complete({
     sessionId: session.id,
     version: session.version,
     idempotencyKey,
     completionSource: extra?.completionSource ?? 'online',
     endedAt: extra?.endedAt,
+    gains: extra?.gains,
+    problems: extra?.problems,
+    nextStep: extra?.nextStep,
   })
-  return result.session
-}
-
-function commandTookEffect(command: SessionCommand, latest: StudySession): boolean {
-  if (command === 'pause') {
-    return latest.status === 'paused' || latest.status === 'completed'
-  }
-  if (command === 'resume') {
-    return latest.status === 'running' || latest.status === 'completed'
-  }
-  return latest.status === 'completed'
 }
 
 function parseSession(value: unknown): StudySession | null {
   const parsed = studySessionSchema.safeParse(value)
+  return parsed.success ? parsed.data : null
+}
+
+function parseLearningLog(value: unknown): LearningLog | null {
+  const parsed = learningLogSchema.safeParse(value)
   return parsed.success ? parsed.data : null
 }

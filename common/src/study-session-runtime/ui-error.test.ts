@@ -44,6 +44,30 @@ describe('toUiError', () => {
     expect(
       toUiError(
         new HttpError({
+          code: 'NOT_FOUND',
+          message: 'not found',
+          status: 404,
+          backendCode: 'LEARNING_LOG_NOT_FOUND',
+          requestId: null,
+          details: null,
+        }),
+      ).message,
+    ).toBe('学习记录不存在')
+    expect(
+      toUiError(
+        new HttpError({
+          code: 'NOT_FOUND',
+          message: 'not found',
+          status: 404,
+          backendCode: null,
+          requestId: null,
+          details: null,
+        }),
+      ).message,
+    ).toBe('会话不存在或已无法访问。')
+    expect(
+      toUiError(
+        new HttpError({
           code: 'CONFIGURATION_ERROR',
           message: '缺少 EXPO_PUBLIC_STUDYCOMMIT_API_ORIGIN',
           status: null,

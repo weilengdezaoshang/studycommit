@@ -1,4 +1,5 @@
 export * from './can-start-study'
+export * from './completion-notes'
 export * from './create-idempotency-key'
 export * from './elapsed-time'
 export * from './local-date-time'
