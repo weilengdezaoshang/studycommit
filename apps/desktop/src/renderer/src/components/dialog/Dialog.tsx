@@ -4,12 +4,14 @@ export function Dialog({
   open,
   title,
   busy = false,
+  className,
   onClose,
   children,
 }: {
   open: boolean
   title: string
   busy?: boolean
+  className?: string
   onClose: () => void
   children: ReactNode
 }): React.JSX.Element | null {
@@ -49,7 +51,7 @@ export function Dialog({
     <div className="dialog-backdrop" role="presentation">
       <div
         ref={panelRef}
-        className="dialog"
+        className={className ? `dialog ${className}` : 'dialog'}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

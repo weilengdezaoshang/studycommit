@@ -18,12 +18,13 @@ function PageOutlet(): React.JSX.Element {
 }
 
 export function AppShell(): React.JSX.Element {
-  const { studySessions, topics } = useDesktopServices()
+  const { studySessions, topics, learningLogs } = useDesktopServices()
   const study = useStudySessionController({
     studySessions,
     topics,
+    learningLogs,
     subscribeForeground: subscribeWindowFocus,
-    enablePoll: import.meta.env.MODE !== 'test',
+    enablePoll: process.env.NODE_ENV !== 'test',
   })
   const { pathname } = useLocation()
   const showToday = pathname === '/today'

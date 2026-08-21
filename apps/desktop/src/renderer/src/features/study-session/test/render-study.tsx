@@ -6,7 +6,11 @@ import {
   DesktopServicesProvider,
   type DesktopRendererServices,
 } from '../api/DesktopServicesProvider'
-import type { StudySessionGateway, TopicGateway } from '../api/desktop-study-session-gateway'
+import type {
+  LearningLogGateway,
+  StudySessionGateway,
+  TopicGateway,
+} from '../api/desktop-study-session-gateway'
 import { AppRoutes } from '../../../app/AppRouter'
 
 export function createStudySessionGateway(
@@ -40,6 +44,20 @@ export function createTopicGateway(overrides: Partial<TopicGateway> = {}): Topic
   }
 }
 
+export function createLearningLogGateway(
+  overrides: Partial<LearningLogGateway> = {},
+): LearningLogGateway {
+  return {
+    getBySession: async () => {
+      throw new Error('getBySession not stubbed')
+    },
+    update: async () => {
+      throw new Error('update not stubbed')
+    },
+    ...overrides,
+  }
+}
+
 export function renderStudyApp(
   path: string,
   services?: Partial<DesktopRendererServices>,
@@ -48,6 +66,7 @@ export function renderStudyApp(
   const value: DesktopRendererServices = {
     studySessions: createStudySessionGateway(),
     topics: createTopicGateway(),
+    learningLogs: createLearningLogGateway(),
     ...services,
   }
   return render(

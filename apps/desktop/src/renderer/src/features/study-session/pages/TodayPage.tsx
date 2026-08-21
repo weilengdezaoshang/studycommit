@@ -37,10 +37,12 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
         serverNow={study.serverNow}
         topicName={study.topicName}
         pendingCommand={study.pendingCommand}
-        confirmingRemote={study.confirmingRemote}
+        learningLog={study.learningLog}
+        savingLog={study.savingLog}
         onPause={study.pause}
         onResume={study.resume}
         onComplete={study.complete}
+        onUpdateLearningLog={study.updateLearningLog}
         onBackToStart={study.reload}
       />
     )

@@ -1,13 +1,15 @@
-import { memo } from 'react'
-import type { StudySession } from '@studycommit/common/contracts'
+import { memo, useState } from 'react'
+import type { LearningLog, StudySession } from '@studycommit/common/contracts'
 import { useDialog } from '../../../components/dialog/useDialog'
 import { LongSessionBanner } from './LongSessionBanner'
 import { SessionStatusBadge } from './SessionStatusBadge'
 import { SessionTimer } from './SessionTimer'
 import {
+  COMPLETION_NOTE_FIELDS,
   formatLocalDateTimeValue,
   isLongSession,
   parseLocalDateTimeValue,
+  trimToNull,
 } from '@studycommit/common/study-session-runtime'
 import {
   useSessionClock,
@@ -20,35 +22,52 @@ export function SessionPanel({
   serverNow,
   topicName,
   pendingCommand,
-  confirmingRemote,
+  learningLog,
+  savingLog,
   onPause,
   onResume,
   onComplete,
+  onUpdateLearningLog,
   onBackToStart,
 }: {
   session: StudySession
   serverNow: string | null
   topicName: string
   pendingCommand: SessionCommand | null
-  confirmingRemote: boolean
+  learningLog: LearningLog | null
+  savingLog: boolean
   onPause: StudySessionController['pause']
   onResume: StudySessionController['resume']
   onComplete: StudySessionController['complete']
+  onUpdateLearningLog: StudySessionController['updateLearningLog']
   onBackToStart?: () => void
 }): React.JSX.Element {
   const dialog = useDialog()
   const elapsed = useSessionClock(session, serverNow)
-  const toggleBusy = pendingCommand === 'pause' || pendingCommand === 'resume' || confirmingRemote
+  const toggleBusy = pendingCommand === 'pause' || pendingCommand === 'resume'
   const completing = pendingCommand === 'complete'
 
   if (session.status === 'completed') {
     return (
-      <section className="study-page">
+      <section className="study-page study-page--session">
         <article className="study-card">
-          <SessionStatusBadge status="completed" />
-          <p className="study-card__title">{topicName}</p>
-          <SessionTimer value={elapsed} />
-          <p>本次学习已结束，学习记录已保存。</p>
+          <div className="study-card__header">
+            <p className="study-card__title">{topicName}</p>
+            <SessionStatusBadge status="completed" />
+          </div>
+          <div className="study-card__elapsed">
+            <span className="study-card__label">已学习</span>
+            <SessionTimer value={elapsed} />
+          </div>
+          <p className="study-card__goal">本次学习已结束。可以补充收获、问题和下一步。</p>
+          {learningLog ? (
+            <LearningLogEditor
+              key={`${learningLog.id}:${learningLog.version}`}
+              learningLog={learningLog}
+              saving={savingLog}
+              onSave={onUpdateLearningLog}
+            />
+          ) : null}
           <button type="button" className="button" onClick={onBackToStart}>
             返回今天
           </button>
@@ -141,6 +160,68 @@ export function SessionPanel({
       },
     })
   }
+}
+
+function LearningLogEditor({
+  learningLog,
+  saving,
+  onSave,
+}: {
+  learningLog: LearningLog
+  saving: boolean
+  onSave: StudySessionController['updateLearningLog']
+}): React.JSX.Element {
+  const [values, setValues] = useState({
+    gains: learningLog.gains ?? '',
+    problems: learningLog.problems ?? '',
+    nextStep: learningLog.nextStep ?? '',
+  })
+  const dirty = COMPLETION_NOTE_FIELDS.some(
+    (field) => trimToNull(values[field.key]) !== (learningLog[field.key] ?? null),
+  )
+
+  return (
+    <form
+      className="study-log"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!dirty || saving) {
+          return
+        }
+        void onSave({
+          gains: trimToNull(values.gains),
+          problems: trimToNull(values.problems),
+          nextStep: trimToNull(values.nextStep),
+        })
+      }}
+    >
+      {COMPLETION_NOTE_FIELDS.map((field) => (
+        <div className="field" key={field.key}>
+          <label htmlFor={`log-${field.key}`}>{field.label}</label>
+          <textarea
+            id={`log-${field.key}`}
+            value={values[field.key]}
+            maxLength={field.maxLength}
+            rows={3}
+            disabled={saving}
+            placeholder="选填"
+            onChange={(event) => {
+              const value = event.target.value.slice(0, field.maxLength)
+              setValues((current) => ({ ...current, [field.key]: value }))
+            }}
+          />
+          <span className="field__hint">
+            {values[field.key].trim() ? `${values[field.key].length}/${field.maxLength}` : '选填'}
+          </span>
+        </div>
+      ))}
+      <div className="study-form__actions">
+        <button type="submit" className="button" disabled={!dirty || saving}>
+          {saving ? '正在保存' : '保存学习记录'}
+        </button>
+      </div>
+    </form>
+  )
 }
 
 const CompleteStudyButton = memo(function CompleteStudyButton({
