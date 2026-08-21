@@ -6,7 +6,13 @@
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.studycommit.app" },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.studycommit.app",
+      "infoPlist": {
+        "UIApplicationSupportsIndirectInputEvents": true
+      }
+    },
     "android": { "package": "com.studycommit.app" }
   }
 }

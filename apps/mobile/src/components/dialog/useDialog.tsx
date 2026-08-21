@@ -110,6 +110,8 @@ export function useDialog() {
             setNotes((current) => ({ ...current, [note.key]: value }))
           }}
           placeholder={note.placeholder}
+          scrollEnabled
+          style={{ height: 96, maxHeight: 96 }}
           value={notes[note.key] ?? ''}
         />
       ))}
