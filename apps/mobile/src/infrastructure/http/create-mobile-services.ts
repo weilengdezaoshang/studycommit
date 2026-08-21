@@ -72,6 +72,7 @@ function createUnavailableServices(error: HttpError): MobileServices {
       listActive: reject,
     },
     learningLogs: {
+      list: reject,
       getBySession: reject,
       update: reject,
     },

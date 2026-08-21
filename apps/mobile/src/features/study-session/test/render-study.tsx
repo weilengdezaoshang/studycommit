@@ -41,6 +41,9 @@ export function createTopicGateway(overrides: Partial<TopicQueryApi> = {}): Topi
 
 export function createLearningLogGateway(overrides: Partial<LearningLogApi> = {}): LearningLogApi {
   return {
+    list: async () => {
+      throw new Error('list not stubbed')
+    },
     getBySession: async () => {
       throw new Error('getBySession not stubbed')
     },
