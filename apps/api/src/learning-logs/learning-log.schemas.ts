@@ -19,6 +19,21 @@ function patchSummary(max: number) {
 export const learningLogIdSchema = z.uuid()
 export const sessionIdSchema = z.uuid()
 
+export const listLearningLogsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).max(10_000).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+    topicId: z.uuid().optional(),
+    from: z.iso.datetime({ offset: true }).optional(),
+    to: z.iso.datetime({ offset: true }).optional(),
+  })
+  .refine((value) => !value.from || !value.to || value.from <= value.to, {
+    message: '开始时间不能晚于结束时间',
+    path: ['from'],
+  })
+
+export type ListLearningLogsQuery = z.infer<typeof listLearningLogsQuerySchema>
+
 export const updateLearningLogSchema = z
   .object({
     version: z.number().int().min(1),

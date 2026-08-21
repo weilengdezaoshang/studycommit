@@ -1,11 +1,13 @@
-import { Body, Controller, Get, Inject, Param, Patch, UseGuards } from '@nestjs/common'
+import { Body, Controller, Get, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common'
 import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
 import { ZodPipe } from '../common/zod.pipe'
 import {
   learningLogIdSchema,
+  listLearningLogsQuerySchema,
   sessionIdSchema,
   updateLearningLogSchema,
   type UpdateLearningLogInput,
+  type ListLearningLogsQuery,
 } from './learning-log.schemas'
 import { LearningLogsService } from './learning-logs.service'
 
@@ -13,6 +15,14 @@ import { LearningLogsService } from './learning-logs.service'
 @UseGuards(TestIdentityGuard)
 export class LearningLogsController {
   constructor(@Inject(LearningLogsService) private readonly logs: LearningLogsService) {}
+
+  @Get('learning-logs')
+  list(
+    @CurrentUserId() userId: string,
+    @Query(new ZodPipe(listLearningLogsQuerySchema)) query: ListLearningLogsQuery,
+  ) {
+    return this.logs.list(userId, query)
+  }
 
   @Get('study-sessions/:sessionId/learning-log')
   getBySession(

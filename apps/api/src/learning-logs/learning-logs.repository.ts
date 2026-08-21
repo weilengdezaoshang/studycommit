@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm'
 import { DatabaseService } from '../database/database.service'
-import { learningLogs } from '../database/schema'
+import { learningLogs, studySessions, topics } from '../database/schema'
 import { LEARNING_LOG_KIND } from './learning-log.constants'
-import type { UpdateLearningLogInput } from './learning-log.schemas'
+import type { ListLearningLogsQuery, UpdateLearningLogInput } from './learning-log.schemas'
 
 export type LearningLog = typeof learningLogs.$inferSelect
 export type LearningLogUpdateResult =
@@ -31,6 +31,42 @@ export class LearningLogsRepository {
       .where(and(eq(learningLogs.userId, userId), eq(learningLogs.id, id)))
       .limit(1)
     return learningLog ?? null
+  }
+
+  async list(userId: string, query: ListLearningLogsQuery) {
+    const filters = [
+      eq(learningLogs.userId, userId),
+      eq(studySessions.userId, userId),
+      eq(topics.userId, userId),
+      eq(studySessions.status, 'completed' as const),
+    ]
+    if (query.topicId) {
+filters.push(eq(studySessions.topicId, query.topicId))
+}
+    if (query.from) {
+filters.push(gte(studySessions.completedAt, new Date(query.from)))
+}
+    if (query.to) {
+filters.push(lte(studySessions.completedAt, new Date(query.to)))
+}
+    const offset = (query.page - 1) * query.pageSize
+    const [items, [{ total }]] = await Promise.all([
+      this.database.db
+        .select({ learningLog: learningLogs, session: studySessions, topic: topics })
+        .from(learningLogs)
+        .innerJoin(studySessions, eq(studySessions.id, learningLogs.sessionId))
+        .innerJoin(topics, eq(topics.id, studySessions.topicId))
+        .where(and(...filters))
+        .orderBy(desc(studySessions.completedAt), desc(learningLogs.id))
+        .limit(query.pageSize)
+        .offset(offset),
+      this.database.db
+        .select({ total: count() })
+        .from(learningLogs)
+        .innerJoin(studySessions, eq(studySessions.id, learningLogs.sessionId))
+        .where(and(...filters)),
+    ])
+    return { items, page: query.page, pageSize: query.pageSize, total: Number(total) }
   }
 
   async update(

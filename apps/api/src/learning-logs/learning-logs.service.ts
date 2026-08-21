@@ -1,6 +1,6 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common'
 import { LEARNING_LOG_ERROR, LEARNING_LOG_KIND } from './learning-log.constants'
-import type { UpdateLearningLogInput } from './learning-log.schemas'
+import type { ListLearningLogsQuery, UpdateLearningLogInput } from './learning-log.schemas'
 import { LearningLogsRepository } from './learning-logs.repository'
 
 @Injectable()
@@ -15,6 +15,10 @@ export class LearningLogsService {
       throw new NotFoundException(LEARNING_LOG_ERROR.notFound)
     }
     return learningLog
+  }
+
+  list(userId: string, query: ListLearningLogsQuery) {
+    return this.repository.list(userId, query)
   }
 
   async update(userId: string, id: string, input: UpdateLearningLogInput) {
