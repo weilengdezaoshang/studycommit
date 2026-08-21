@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo } from 'react'
 import type { LearningLog, StudySession } from '@studycommit/common/contracts'
 import { useDialog } from '../../../components/dialog/useDialog'
 import { LongSessionBanner } from './LongSessionBanner'
@@ -23,11 +23,9 @@ export function SessionPanel({
   topicName,
   pendingCommand,
   learningLog,
-  savingLog,
   onPause,
   onResume,
   onComplete,
-  onUpdateLearningLog,
   onBackToStart,
 }: {
   session: StudySession
@@ -35,11 +33,9 @@ export function SessionPanel({
   topicName: string
   pendingCommand: SessionCommand | null
   learningLog: LearningLog | null
-  savingLog: boolean
   onPause: StudySessionController['pause']
   onResume: StudySessionController['resume']
   onComplete: StudySessionController['complete']
-  onUpdateLearningLog: StudySessionController['updateLearningLog']
   onBackToStart?: () => void
 }): React.JSX.Element {
   const dialog = useDialog()
@@ -59,15 +55,8 @@ export function SessionPanel({
             <span className="study-card__label">已学习</span>
             <SessionTimer value={elapsed} />
           </div>
-          <p className="study-card__goal">本次学习已结束。可以补充收获、问题和下一步。</p>
-          {learningLog ? (
-            <LearningLogEditor
-              key={`${learningLog.id}:${learningLog.version}`}
-              learningLog={learningLog}
-              saving={savingLog}
-              onSave={onUpdateLearningLog}
-            />
-          ) : null}
+          <p className="study-card__goal">本次学习已完成，学习记录已保存。</p>
+          {learningLog ? <LearningLogSummary learningLog={learningLog} /> : null}
           <button type="button" className="button" onClick={onBackToStart}>
             返回今天
           </button>
@@ -127,12 +116,18 @@ export function SessionPanel({
 
   function showCompleteDialog() {
     dialog.show({
-      title: '结束本次学习？',
-      description: `完成后计时将停止，并保存一条学习记录。预计有效时长 ${elapsed}。`,
+      title: '完成本次学习',
+      description: `计时将停止并保存学习记录。预计有效时长 ${elapsed}。以下内容均可选填。`,
       cancelLabel: '继续学习',
-      confirmLabel: '确认完成',
-      confirmBusyLabel: '正在完成',
-      onConfirm: () => onComplete(),
+      confirmLabel: '完成并保存',
+      confirmBusyLabel: '正在保存',
+      notes: COMPLETION_NOTE_FIELDS,
+      onConfirm: ({ notes }) =>
+        onComplete({
+          gains: trimToNull(notes.gains),
+          problems: trimToNull(notes.problems),
+          nextStep: trimToNull(notes.nextStep),
+        }),
     })
   }
 
@@ -141,8 +136,9 @@ export function SessionPanel({
       title: '修正结束时间',
       description: '选择真实结束时间后，将作为一次明确的结束命令提交。',
       cancelLabel: '取消',
-      confirmLabel: '确认结束',
-      confirmBusyLabel: '正在完成',
+      confirmLabel: '完成并保存',
+      confirmBusyLabel: '正在保存',
+      notes: COMPLETION_NOTE_FIELDS,
       field: {
         label: '结束时间',
         type: 'datetime-local',
@@ -151,76 +147,33 @@ export function SessionPanel({
         required: true,
         helperText: '格式 YYYY-MM-DDTHH:mm，不能早于开始时间',
       },
-      onConfirm: ({ fieldValue }) => {
+      onConfirm: ({ fieldValue, notes }) => {
         const endedAt = fieldValue ? parseLocalDateTimeValue(fieldValue) : null
         if (!endedAt) {
           throw new Error('结束时间无效')
         }
-        return onComplete({ endedAt: endedAt.toISOString(), completionSource: 'offline_sync' })
+        return onComplete({
+          endedAt: endedAt.toISOString(),
+          completionSource: 'offline_sync',
+          gains: trimToNull(notes.gains),
+          problems: trimToNull(notes.problems),
+          nextStep: trimToNull(notes.nextStep),
+        })
       },
     })
   }
 }
 
-function LearningLogEditor({
-  learningLog,
-  saving,
-  onSave,
-}: {
-  learningLog: LearningLog
-  saving: boolean
-  onSave: StudySessionController['updateLearningLog']
-}): React.JSX.Element {
-  const [values, setValues] = useState({
-    gains: learningLog.gains ?? '',
-    problems: learningLog.problems ?? '',
-    nextStep: learningLog.nextStep ?? '',
-  })
-  const dirty = COMPLETION_NOTE_FIELDS.some(
-    (field) => trimToNull(values[field.key]) !== (learningLog[field.key] ?? null),
-  )
-
+function LearningLogSummary({ learningLog }: { learningLog: LearningLog }): React.JSX.Element {
   return (
-    <form
-      className="study-log"
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (!dirty || saving) {
-          return
-        }
-        void onSave({
-          gains: trimToNull(values.gains),
-          problems: trimToNull(values.problems),
-          nextStep: trimToNull(values.nextStep),
-        })
-      }}
-    >
+    <div className="study-log study-log--summary">
       {COMPLETION_NOTE_FIELDS.map((field) => (
         <div className="field" key={field.key}>
-          <label htmlFor={`log-${field.key}`}>{field.label}</label>
-          <textarea
-            id={`log-${field.key}`}
-            value={values[field.key]}
-            maxLength={field.maxLength}
-            rows={3}
-            disabled={saving}
-            placeholder="选填"
-            onChange={(event) => {
-              const value = event.target.value.slice(0, field.maxLength)
-              setValues((current) => ({ ...current, [field.key]: value }))
-            }}
-          />
-          <span className="field__hint">
-            {values[field.key].trim() ? `${values[field.key].length}/${field.maxLength}` : '选填'}
-          </span>
+          <span className="field__label">{field.label}</span>
+          <p>{learningLog[field.key] ?? '未填写'}</p>
         </div>
       ))}
-      <div className="study-form__actions">
-        <button type="submit" className="button" disabled={!dirty || saving}>
-          {saving ? '正在保存' : '保存学习记录'}
-        </button>
-      </div>
-    </form>
+    </div>
   )
 }
 

@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import {
   completeStudySessionResultFixture,
-  emptyLearningLogFixture,
   pausedStudySessionFixture,
   runningStudySessionFixture,
 } from '@studycommit/common/contracts'
@@ -54,13 +53,8 @@ describe('SessionPanel on today', () => {
     expect(screen.getByText('已暂停')).toBeInTheDocument()
   })
 
-  it('confirms complete without notes then edits the learning log', async () => {
+  it('collects the learning reflection before completing once', async () => {
     const complete = vi.fn().mockResolvedValue(completeStudySessionResultFixture)
-    const update = vi.fn().mockResolvedValue({
-      ...emptyLearningLogFixture,
-      gains: '理解了事务',
-      version: 2,
-    })
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({
         getActive: async () => ({
@@ -69,30 +63,25 @@ describe('SessionPanel on today', () => {
         }),
         complete,
       }),
-      learningLogs: createLearningLogGateway({ update }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '完成学习' }))
-    expect(screen.getByRole('dialog', { name: '结束本次学习？' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('学习收获')).not.toBeInTheDocument()
-    expect(complete).not.toHaveBeenCalled()
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
-    expect(complete).toHaveBeenCalledOnce()
-    expect(
-      await screen.findByText('本次学习已结束。可以补充收获、问题和下一步。'),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '完成本次学习' })).toBeInTheDocument()
     expect(screen.getByLabelText('学习收获')).toBeInTheDocument()
+    expect(complete).not.toHaveBeenCalled()
     await userEvent.type(screen.getByLabelText('学习收获'), '理解了事务')
-    await userEvent.click(screen.getByRole('button', { name: '保存学习记录' }))
-    expect(update).toHaveBeenCalledOnce()
-    expect(update.mock.calls[0]?.[0]).toMatchObject({
-      id: emptyLearningLogFixture.id,
-      version: 1,
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
+    expect(complete).toHaveBeenCalledOnce()
+    expect(complete.mock.calls[0]?.[0]).toMatchObject({
       gains: '理解了事务',
+      problems: null,
+      nextStep: null,
     })
+    expect(await screen.findByText('本次学习已完成，学习记录已保存。')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('学习收获')).not.toBeInTheDocument()
   })
 
-  it('shows character counts and ignores whitespace-only learning log edits', async () => {
+  it('completes with one submit when optional reflections are empty', async () => {
     const complete = vi.fn().mockResolvedValue(completeStudySessionResultFixture)
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({
@@ -104,14 +93,14 @@ describe('SessionPanel on today', () => {
       }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '完成学习' }))
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
-    expect(await screen.findByRole('button', { name: '保存学习记录' })).toBeDisabled()
-    await userEvent.type(screen.getByLabelText('学习收获'), '   ')
-    expect(screen.getByRole('button', { name: '保存学习记录' })).toBeDisabled()
-    await userEvent.clear(screen.getByLabelText('学习收获'))
-    await userEvent.type(screen.getByLabelText('学习收获'), '理解了事务')
-    expect(screen.getByText('5/10000')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '保存学习记录' })).toBeEnabled()
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
+    expect(complete).toHaveBeenCalledOnce()
+    expect(complete.mock.calls[0]?.[0]).toMatchObject({
+      gains: null,
+      problems: null,
+      nextStep: null,
+    })
+    expect(screen.queryByLabelText('学习收获')).not.toBeInTheDocument()
   })
 
   it('retries complete after a timeout and uses the returned learning log', async () => {
@@ -133,10 +122,8 @@ describe('SessionPanel on today', () => {
       learningLogs: createLearningLogGateway({ getBySession }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '完成学习' }))
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
-    expect(
-      await screen.findByText('本次学习已结束。可以补充收获、问题和下一步。'),
-    ).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
+    expect(await screen.findByText('本次学习已完成，学习记录已保存。')).toBeInTheDocument()
     expect(complete).toHaveBeenCalledTimes(2)
     expect(complete.mock.calls[0]?.[0].idempotencyKey).toBe(
       complete.mock.calls[1]?.[0].idempotencyKey,
@@ -166,7 +153,7 @@ describe('SessionPanel on today', () => {
       }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '完成学习' }))
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
     expect(complete).toHaveBeenCalledOnce()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('服务返回了无法识别的数据。')
@@ -197,10 +184,10 @@ describe('SessionPanel on today', () => {
       }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '完成学习' }))
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
     expect(await screen.findByRole('status')).toHaveTextContent('服务返回了无法识别的数据。')
     await userEvent.click(screen.getByRole('button', { name: '完成学习' }))
-    await userEvent.click(screen.getByRole('button', { name: '确认完成' }))
+    await userEvent.click(screen.getByRole('button', { name: '完成并保存' }))
     expect(complete).toHaveBeenCalledTimes(2)
     expect(complete.mock.calls[0]?.[0].idempotencyKey).not.toBe(
       complete.mock.calls[1]?.[0].idempotencyKey,

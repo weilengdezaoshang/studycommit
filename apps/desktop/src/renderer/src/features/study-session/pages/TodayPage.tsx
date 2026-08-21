@@ -38,11 +38,9 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
         topicName={study.topicName}
         pendingCommand={study.pendingCommand}
         learningLog={study.learningLog}
-        savingLog={study.savingLog}
         onPause={study.pause}
         onResume={study.resume}
         onComplete={study.complete}
-        onUpdateLearningLog={study.updateLearningLog}
         onBackToStart={study.reload}
       />
     )
