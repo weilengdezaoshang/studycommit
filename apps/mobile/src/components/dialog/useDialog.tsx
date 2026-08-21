@@ -16,6 +16,14 @@ export interface DialogFieldOptions {
   helperText?: string
 }
 
+export interface DialogNoteField {
+  key: string
+  label: string
+  placeholder?: string
+  maxLength?: number
+  defaultValue?: string
+}
+
 export interface DialogShowOptions {
   title: string
   description?: string
@@ -23,7 +31,11 @@ export interface DialogShowOptions {
   confirmLabel?: string
   confirmBusyLabel?: string
   field?: DialogFieldOptions
-  onConfirm?: (payload: { fieldValue?: string }) => void | Promise<void>
+  notes?: ReadonlyArray<DialogNoteField>
+  onConfirm?: (payload: {
+    fieldValue?: string
+    notes: Record<string, string>
+  }) => void | Promise<void>
 }
 
 export function useDialog() {
@@ -31,6 +43,7 @@ export function useDialog() {
   const [options, setOptions] = useState<DialogShowOptions | null>(null)
   const [busy, setBusy] = useState(false)
   const [fieldValue, setFieldValue] = useState('')
+  const [notes, setNotes] = useState<Record<string, string>>({})
   const [fieldError, setFieldError] = useState<string | null>(null)
 
   const close = useCallback(() => {
@@ -43,6 +56,7 @@ export function useDialog() {
 
   const show = useCallback((next: DialogShowOptions) => {
     setFieldValue(next.field?.defaultValue ?? '')
+    setNotes(notesRecord(next.notes))
     setFieldError(null)
     setBusy(false)
     setOptions(next)
@@ -59,7 +73,7 @@ export function useDialog() {
     }
     setBusy(true)
     try {
-      await options.onConfirm?.({ fieldValue })
+      await options.onConfirm?.({ fieldValue, notes })
       setOptions(null)
       setFieldError(null)
     } catch (error) {
@@ -86,6 +100,19 @@ export function useDialog() {
         />
       ) : null}
       {fieldError && !options?.field ? <AppText color="danger">{fieldError}</AppText> : null}
+      {options?.notes?.map((note) => (
+        <TextField
+          key={note.key}
+          label={note.label}
+          maxLength={note.maxLength}
+          multiline
+          onChangeText={(value) => {
+            setNotes((current) => ({ ...current, [note.key]: value }))
+          }}
+          placeholder={note.placeholder}
+          value={notes[note.key] ?? ''}
+        />
+      ))}
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
         <Button disabled={busy} onPress={close} variant="secondary">
           {options?.cancelLabel ?? '取消'}
@@ -98,6 +125,14 @@ export function useDialog() {
   )
 
   return { show, close, dialog }
+}
+
+function notesRecord(notes: DialogShowOptions['notes']): Record<string, string> {
+  const record: Record<string, string> = {}
+  for (const note of notes ?? []) {
+    record[note.key] = note.defaultValue ?? ''
+  }
+  return record
 }
 
 function validateDialogField(field: DialogFieldOptions | undefined, value: string): string | null {

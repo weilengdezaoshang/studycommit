@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { render, type RenderOptions } from '@testing-library/react-native'
 import { activeTopicPageFixture } from '@studycommit/common/contracts'
+import type { LearningLogApi } from '@studycommit/common/learning-log'
 import type { StudySessionApi } from '@studycommit/common/study-session'
 import type { TopicQueryApi } from '@studycommit/common/topic'
 import { AppProviders } from '../../../core/AppProviders'
@@ -38,6 +39,18 @@ export function createTopicGateway(overrides: Partial<TopicQueryApi> = {}): Topi
   }
 }
 
+export function createLearningLogGateway(overrides: Partial<LearningLogApi> = {}): LearningLogApi {
+  return {
+    getBySession: async () => {
+      throw new Error('getBySession not stubbed')
+    },
+    update: async () => {
+      throw new Error('update not stubbed')
+    },
+    ...overrides,
+  }
+}
+
 export async function renderStudyApp(
   services?: Partial<MobileServices>,
   options?: Omit<RenderOptions, 'wrapper'>,
@@ -45,6 +58,7 @@ export async function renderStudyApp(
   const value: MobileServices = {
     studySessions: createStudySessionGateway(),
     topics: createTopicGateway(),
+    learningLogs: createLearningLogGateway(),
     ...services,
   }
   return render(
@@ -59,6 +73,7 @@ export async function renderStudyTree(ui: ReactElement, services?: Partial<Mobil
   const value: MobileServices = {
     studySessions: createStudySessionGateway(),
     topics: createTopicGateway(),
+    learningLogs: createLearningLogGateway(),
     ...services,
   }
   return render(<AppProviders services={value}>{ui}</AppProviders>)

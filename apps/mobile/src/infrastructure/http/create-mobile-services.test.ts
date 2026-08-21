@@ -22,5 +22,10 @@ describe('createMobileServices', () => {
     await expect(services.topics.listActive()).rejects.toMatchObject({
       serialized: { code: 'CONFIGURATION_ERROR' },
     })
+    await expect(
+      services.learningLogs.getBySession('11111111-1111-4111-8111-111111111111'),
+    ).rejects.toMatchObject({
+      serialized: { code: 'CONFIGURATION_ERROR' },
+    })
   })
 })

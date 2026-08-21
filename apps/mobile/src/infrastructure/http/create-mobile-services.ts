@@ -1,4 +1,5 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
+import { LearningLogClient, type LearningLogApi } from '@studycommit/common/learning-log'
 import { StudySessionClient, type StudySessionApi } from '@studycommit/common/study-session'
 import { TopicClient, type TopicQueryApi } from '@studycommit/common/topic'
 import {
@@ -12,6 +13,7 @@ import { ReactNativeFetchTransport } from './react-native-fetch-transport'
 export interface MobileServices {
   studySessions: StudySessionApi
   topics: TopicQueryApi
+  learningLogs: LearningLogApi
 }
 
 export function createMobileServices(options?: {
@@ -32,6 +34,7 @@ export function createMobileServices(options?: {
   return {
     studySessions: new StudySessionClient(transport),
     topics: new TopicClient(transport),
+    learningLogs: new LearningLogClient(transport),
   }
 }
 
@@ -67,6 +70,10 @@ function createUnavailableServices(error: HttpError): MobileServices {
     },
     topics: {
       listActive: reject,
+    },
+    learningLogs: {
+      getBySession: reject,
+      update: reject,
     },
   }
 }

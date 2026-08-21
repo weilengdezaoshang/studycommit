@@ -7,10 +7,11 @@ import { useMobileServices } from './MobileServicesProvider'
 
 export function AppShell() {
   const theme = useAppTheme()
-  const { studySessions, topics } = useMobileServices()
+  const { studySessions, topics, learningLogs } = useMobileServices()
   const study = useStudySessionController({
     studySessions,
     topics,
+    learningLogs,
     subscribeForeground: subscribeAppForeground,
     enablePoll: process.env.JEST_WORKER_ID === undefined,
   })

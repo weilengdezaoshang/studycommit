@@ -45,5 +45,7 @@ describe('ReactNativeFetchTransport', () => {
     const services = createMobileServices({ fetchImpl: jest.fn() })
     expect(services.studySessions.create).toEqual(expect.any(Function))
     expect(services.studySessions.getActive).toEqual(expect.any(Function))
+    expect(services.learningLogs.getBySession).toEqual(expect.any(Function))
+    expect(services.learningLogs.update).toEqual(expect.any(Function))
   })
 })

@@ -57,7 +57,7 @@ export function TodayScreen({ study }: { study: StudySessionController }) {
   if ((study.phase === 'active' || study.phase === 'completed') && study.session) {
     return (
       <SessionPanel
-        confirmingRemote={study.confirmingRemote}
+        learningLog={study.learningLog}
         onBackToStart={study.reload}
         onComplete={study.complete}
         onPause={study.pause}
