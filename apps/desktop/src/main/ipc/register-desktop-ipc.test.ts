@@ -15,6 +15,7 @@ vi.mock('electron', () => ({
   },
 }))
 
+import { learningLogIpcChannels } from '../../shared/learning-log-channels'
 import { registerDesktopIpc } from './register-desktop-ipc'
 import { studySessionIpcChannels } from './study-session-ipc'
 import { topicIpcChannels } from './topic-ipc'
@@ -39,6 +40,10 @@ describe('registerDesktopIpc', () => {
     topics: {
       listActive: vi.fn(),
     },
+    learningLogs: {
+      getBySession: vi.fn(),
+      update: vi.fn(),
+    },
   }
 
   beforeEach(() => {
@@ -59,7 +64,11 @@ describe('registerDesktopIpc', () => {
     })
 
     expect([...handlers.keys()].sort()).toEqual(
-      [...Object.values(studySessionIpcChannels), ...Object.values(topicIpcChannels)].sort(),
+      [
+        ...Object.values(studySessionIpcChannels),
+        ...Object.values(topicIpcChannels),
+        ...Object.values(learningLogIpcChannels),
+      ].sort(),
     )
 
     const active = await handlers.get(studySessionIpcChannels.getActive)?.(trustedEvent())

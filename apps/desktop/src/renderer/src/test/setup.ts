@@ -24,6 +24,10 @@ function createDefaultStudyCommit() {
         data: { items: [], pageInfo: { hasNextPage: false, nextCursor: null } },
       }),
     },
+    learningLogs: {
+      getBySession: async () => ({ ok: false as const, error: configurationError() }),
+      update: async () => ({ ok: false as const, error: configurationError() }),
+    },
   }
 }
 

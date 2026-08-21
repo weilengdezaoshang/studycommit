@@ -10,7 +10,12 @@ import { studyCommitPreloadApi, studySessionPreloadApi } from './study-session-a
 
 describe('study session preload api', () => {
   it('exposes only the six session methods and fixed channels', async () => {
-    expect(Object.keys(studyCommitPreloadApi)).toEqual(['platform', 'studySessions', 'topics'])
+    expect(Object.keys(studyCommitPreloadApi)).toEqual([
+      'platform',
+      'studySessions',
+      'topics',
+      'learningLogs',
+    ])
     expect(Object.keys(studySessionPreloadApi)).toEqual([
       'create',
       'getActive',
@@ -29,5 +34,11 @@ describe('study session preload api', () => {
     await studyCommitPreloadApi.topics.listActive()
     expect(invoke).toHaveBeenCalledWith('topics:list-active', undefined)
     expect(Object.keys(studyCommitPreloadApi.topics)).toEqual(['listActive'])
+    expect(Object.keys(studyCommitPreloadApi.learningLogs)).toEqual(['getBySession', 'update'])
+    await studyCommitPreloadApi.learningLogs.getBySession('11111111-1111-4111-8111-111111111111')
+    expect(invoke).toHaveBeenCalledWith(
+      'learning-logs:get-by-session',
+      '11111111-1111-4111-8111-111111111111',
+    )
   })
 })

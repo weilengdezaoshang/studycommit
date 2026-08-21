@@ -1,7 +1,9 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react'
 import {
+  createDesktopLearningLogGateway,
   createDesktopStudySessionGateway,
   createDesktopTopicGateway,
+  type LearningLogGateway,
   type StudySessionGateway,
   type TopicGateway,
 } from './desktop-study-session-gateway'
@@ -9,6 +11,7 @@ import {
 export interface DesktopRendererServices {
   studySessions: StudySessionGateway
   topics: TopicGateway
+  learningLogs: LearningLogGateway
 }
 
 const DesktopServicesContext = createContext<DesktopRendererServices | null>(null)
@@ -24,6 +27,7 @@ export function DesktopServicesProvider({
       parent ?? {
         studySessions: createDesktopStudySessionGateway(),
         topics: createDesktopTopicGateway(),
+        learningLogs: createDesktopLearningLogGateway(),
       },
     [parent, services],
   )

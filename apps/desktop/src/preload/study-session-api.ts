@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { learningLogIpcChannels } from '../shared/learning-log-channels'
 import { studySessionIpcChannels } from '../shared/study-session-channels'
 import { topicIpcChannels } from '../shared/topic-channels'
 
@@ -15,8 +16,15 @@ export const topicPreloadApi = {
   listActive: (input?: unknown) => ipcRenderer.invoke(topicIpcChannels.listActive, input),
 }
 
+export const learningLogPreloadApi = {
+  getBySession: (sessionId: string) =>
+    ipcRenderer.invoke(learningLogIpcChannels.getBySession, sessionId),
+  update: (input: unknown) => ipcRenderer.invoke(learningLogIpcChannels.update, input),
+}
+
 export const studyCommitPreloadApi = {
   platform: process.platform,
   studySessions: studySessionPreloadApi,
   topics: topicPreloadApi,
+  learningLogs: learningLogPreloadApi,
 }

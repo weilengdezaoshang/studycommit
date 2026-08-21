@@ -3,10 +3,12 @@ import type {
   CompleteStudySessionInput,
   CompleteStudySessionResult,
   CreateStudySessionInput,
+  LearningLog,
   ListActiveTopicsInput,
   SessionCommandInput,
   StudySession,
   TopicPage,
+  UpdateLearningLogInput,
 } from '@studycommit/common/contracts'
 import { createHttpError, HttpError, type SerializedHttpError } from '@studycommit/common/http'
 
@@ -23,6 +25,11 @@ export interface StudySessionGateway {
 
 export interface TopicGateway {
   listActive(input?: ListActiveTopicsInput): Promise<TopicPage>
+}
+
+export interface LearningLogGateway {
+  getBySession(sessionId: string): Promise<LearningLog>
+  update(input: UpdateLearningLogInput): Promise<LearningLog>
 }
 
 export function unwrapIpcResult<T>(result: IpcResult<T>): T {
@@ -61,5 +68,14 @@ export function createDesktopTopicGateway(
 ): TopicGateway {
   return {
     listActive: (input) => invokeIpc(() => api.listActive(input)),
+  }
+}
+
+export function createDesktopLearningLogGateway(
+  api: Window['studyCommit']['learningLogs'] = window.studyCommit.learningLogs,
+): LearningLogGateway {
+  return {
+    getBySession: (sessionId) => invokeIpc(() => api.getBySession(sessionId)),
+    update: (input) => invokeIpc(() => api.update(input)),
   }
 }

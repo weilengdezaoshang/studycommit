@@ -23,5 +23,10 @@ describe('createDesktopServices', () => {
     await expect(services.studySessions.getActive()).rejects.toMatchObject({
       serialized: { code: 'CONFIGURATION_ERROR' },
     })
+    await expect(
+      services.learningLogs.getBySession('11111111-1111-4111-8111-111111111111'),
+    ).rejects.toMatchObject({
+      serialized: { code: 'CONFIGURATION_ERROR' },
+    })
   })
 })

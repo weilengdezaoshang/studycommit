@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
-import { activeTopicPageFixture, runningStudySessionFixture } from '@studycommit/common/contracts'
+import {
+  activeTopicPageFixture,
+  emptyLearningLogFixture,
+  runningStudySessionFixture,
+} from '@studycommit/common/contracts'
 import { HttpError } from '@studycommit/common/http'
 import {
+  createDesktopLearningLogGateway,
   createDesktopStudySessionGateway,
   createDesktopTopicGateway,
   unwrapIpcResult,
@@ -45,9 +50,17 @@ describe('desktop study session gateway', () => {
     const topics = {
       listActive: vi.fn().mockResolvedValue({ ok: true, data: activeTopicPageFixture }),
     }
+    const learningLogs = {
+      getBySession: vi.fn().mockResolvedValue({ ok: true, data: emptyLearningLogFixture }),
+      update: vi.fn(),
+    }
     await createDesktopStudySessionGateway(studySessions).getActive()
     await createDesktopTopicGateway(topics).listActive()
+    await createDesktopLearningLogGateway(learningLogs).getBySession(
+      emptyLearningLogFixture.sessionId,
+    )
     expect(studySessions.getActive).toHaveBeenCalledOnce()
     expect(topics.listActive).toHaveBeenCalledOnce()
+    expect(learningLogs.getBySession).toHaveBeenCalledWith(emptyLearningLogFixture.sessionId)
   })
 })
