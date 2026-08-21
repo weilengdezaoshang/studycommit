@@ -7,11 +7,13 @@ export function Dialog({
   busy = false,
   children,
   onClose,
+  onDismiss,
   open,
   title,
 }: PropsWithChildren<{
   busy?: boolean
   onClose: () => void
+  onDismiss?: () => void
   open: boolean
   title: string
 }>) {
@@ -20,6 +22,7 @@ export function Dialog({
     <Modal
       accessibilityViewIsModal
       animationType="fade"
+      onDismiss={onDismiss}
       onRequestClose={() => {
         if (!busy) {
           onClose()

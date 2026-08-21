@@ -41,6 +41,7 @@ export interface DialogShowOptions {
 export function useDialog() {
   const theme = useAppTheme()
   const [options, setOptions] = useState<DialogShowOptions | null>(null)
+  const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
   const [fieldValue, setFieldValue] = useState('')
   const [notes, setNotes] = useState<Record<string, string>>({})
@@ -50,7 +51,7 @@ export function useDialog() {
     if (busy) {
       return
     }
-    setOptions(null)
+    setVisible(false)
     setFieldError(null)
   }, [busy])
 
@@ -60,6 +61,7 @@ export function useDialog() {
     setFieldError(null)
     setBusy(false)
     setOptions(next)
+    setVisible(true)
   }, [])
 
   const confirm = async () => {
@@ -74,7 +76,7 @@ export function useDialog() {
     setBusy(true)
     try {
       await options.onConfirm?.({ fieldValue, notes })
-      setOptions(null)
+      setVisible(false)
       setFieldError(null)
     } catch (error) {
       setFieldError(error instanceof Error ? error.message : '操作失败')
@@ -84,7 +86,13 @@ export function useDialog() {
   }
 
   const dialog = (
-    <Dialog open={options !== null} title={options?.title ?? ''} busy={busy} onClose={close}>
+    <Dialog
+      busy={busy}
+      onClose={close}
+      onDismiss={() => setOptions(null)}
+      open={visible}
+      title={options?.title ?? ''}
+    >
       {options?.description ? <AppText color="muted">{options.description}</AppText> : null}
       {options?.field ? (
         <TextField
