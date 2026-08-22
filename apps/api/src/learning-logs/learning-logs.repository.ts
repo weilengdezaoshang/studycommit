@@ -41,14 +41,14 @@ export class LearningLogsRepository {
       eq(studySessions.status, 'completed' as const),
     ]
     if (query.topicId) {
-filters.push(eq(studySessions.topicId, query.topicId))
-}
+      filters.push(eq(studySessions.topicId, query.topicId))
+    }
     if (query.from) {
-filters.push(gte(studySessions.completedAt, new Date(query.from)))
-}
+      filters.push(gte(studySessions.completedAt, new Date(query.from)))
+    }
     if (query.to) {
-filters.push(lte(studySessions.completedAt, new Date(query.to)))
-}
+      filters.push(lte(studySessions.completedAt, new Date(query.to)))
+    }
     const offset = (query.page - 1) * query.pageSize
     const [items, [{ total }]] = await Promise.all([
       this.database.db
@@ -64,6 +64,7 @@ filters.push(lte(studySessions.completedAt, new Date(query.to)))
         .select({ total: count() })
         .from(learningLogs)
         .innerJoin(studySessions, eq(studySessions.id, learningLogs.sessionId))
+        .innerJoin(topics, eq(topics.id, studySessions.topicId))
         .where(and(...filters)),
     ])
     return { items, page: query.page, pageSize: query.pageSize, total: Number(total) }

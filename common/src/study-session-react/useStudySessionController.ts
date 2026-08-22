@@ -28,6 +28,7 @@ export interface StudySessionController {
   serverNow: string | null
   topicName: string
   pendingCommand: SessionCommand | null
+  commandError: UiError | null
   error: UiError | null
   reload: () => void
   create: (input: {
@@ -89,6 +90,7 @@ export function useStudySessionController({
   const [loadError, setLoadError] = useState<UiError | null>(null)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [pendingCommand, setPendingCommand] = useState<SessionCommand | null>(null)
+  const [commandError, setCommandError] = useState<UiError | null>(null)
   const pendingKeys = useRef<Partial<Record<SessionCommand | 'create', string>>>({})
 
   const applySession = useCallback((next: StudySession | null, nextServerNow: string) => {
@@ -97,6 +99,7 @@ export function useStudySessionController({
     setHasLoaded(true)
     setLoadError(null)
     setPendingCommand(null)
+    setCommandError(null)
     if (!next || next.status !== 'completed') {
       setLearningLog(null)
     }
@@ -116,8 +119,9 @@ export function useStudySessionController({
       }
       setHasLoaded(true)
       setLoadError(uiError)
+      toast.show({ message: uiError.message, type: 'error' })
     }
-  }, [applySession, studySessions])
+  }, [applySession, studySessions, toast])
 
   useEffect(() => {
     void reload()
@@ -241,13 +245,15 @@ export function useStudySessionController({
             }
             pendingKeys.current[command] = undefined
             setPendingCommand(null)
-            toast.show(retryUiError.message)
+            setCommandError(retryUiError)
+            toast.show({ message: retryUiError.message, type: 'error' })
           }
           return
         }
         pendingKeys.current[command] = undefined
         setPendingCommand(null)
-        toast.show(uiError.message)
+        setCommandError(uiError)
+        toast.show({ message: uiError.message, type: 'error' })
       }
     },
     [applyCommandResult, applyConflictSession, pendingCommand, session, studySessions, toast],
@@ -276,7 +282,7 @@ export function useStudySessionController({
         if (conflict) {
           setLearningLog(conflict)
         }
-        toast.show(uiError.message)
+        toast.show({ message: uiError.message, type: 'error' })
       } finally {
         setSavingLog(false)
       }
@@ -321,6 +327,7 @@ export function useStudySessionController({
     serverNow,
     topicName,
     pendingCommand,
+    commandError,
     error: loadError,
     reload: () => {
       void reload()

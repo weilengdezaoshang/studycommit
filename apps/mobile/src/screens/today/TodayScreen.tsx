@@ -42,11 +42,7 @@ export function TodayScreen({ study }: { study: StudySessionController }) {
     return (
       <View style={{ padding: theme.spacing.lg }}>
         <ErrorState
-          description={
-            study.error?.requestId
-              ? `${study.error.message} 请求 ${study.error.requestId}`
-              : (study.error?.message ?? '无法读取当前学习')
-          }
+          description="暂时无法读取当前学习，请稍后重试。"
           onRetry={study.reload}
           title="无法读取当前学习"
         />
@@ -63,6 +59,7 @@ export function TodayScreen({ study }: { study: StudySessionController }) {
         onPause={study.pause}
         onResume={study.resume}
         pendingCommand={study.pendingCommand}
+        commandError={study.commandError}
         serverNow={study.serverNow}
         session={study.session}
         topicName={study.topicName}

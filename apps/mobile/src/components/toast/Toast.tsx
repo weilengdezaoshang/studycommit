@@ -1,9 +1,18 @@
+import Ionicons from '@expo/vector-icons/Ionicons'
 import { Pressable, StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAppTheme } from '../../theme/ThemeProvider'
 import { AppText } from '../AppText'
 
-export function Toast({ message, onClose }: { message: string | null; onClose: () => void }) {
+export function Toast({
+  message,
+  onClose,
+  type = 'default',
+}: {
+  message: string | null
+  onClose: () => void
+  type?: 'default' | 'error'
+}) {
   const theme = useAppTheme()
   const insets = useSafeAreaInsets()
   if (!message) {
@@ -18,17 +27,33 @@ export function Toast({ message, onClose }: { message: string | null; onClose: (
         style={[
           styles.toast,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.border,
+            backgroundColor: type === 'error' ? theme.colors.dangerSurface : theme.colors.surface,
+            borderColor: type === 'error' ? theme.colors.danger : theme.colors.border,
             borderRadius: theme.radii.md,
             paddingHorizontal: theme.spacing.md,
             paddingVertical: theme.spacing.sm,
           },
         ]}
       >
-        <AppText accessibilityRole="text" style={{ textAlign: 'center' }}>
-          {message}
-        </AppText>
+        <View style={styles.content}>
+          {type === 'error' ? (
+            <Ionicons
+              accessibilityElementsHidden
+              color={theme.colors.danger}
+              importantForAccessibility="no-hide-descendants"
+              name="alert-circle-outline"
+              size={theme.sizes.iconMd}
+            />
+          ) : null}
+          <AppText
+            accessibilityRole="text"
+            color={type === 'error' ? 'danger' : 'default'}
+            style={styles.message}
+            weight={type === 'error' ? 'medium' : 'regular'}
+          >
+            {message}
+          </AppText>
+        </View>
       </Pressable>
     </View>
   )
@@ -43,7 +68,17 @@ const styles = StyleSheet.create({
     zIndex: 40,
   },
   toast: {
+    alignItems: 'center',
     borderWidth: 1,
     maxWidth: 360,
+  },
+  content: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  message: {
+    flexShrink: 1,
+    textAlign: 'center',
   },
 })

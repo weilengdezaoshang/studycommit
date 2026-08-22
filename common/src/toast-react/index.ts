@@ -1,5 +1,6 @@
 export {
   ToastProvider,
+  useOptionalToast,
   useToast,
   type ToastApi,
   type ToastShowOptions,

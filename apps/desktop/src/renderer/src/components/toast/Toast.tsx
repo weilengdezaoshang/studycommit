@@ -1,9 +1,11 @@
 export function Toast({
   message,
   onClose,
+  type: _type,
 }: {
   message: string | null
   onClose: () => void
+  type?: 'default' | 'error'
 }): React.JSX.Element | null {
   if (!message) {
     return null

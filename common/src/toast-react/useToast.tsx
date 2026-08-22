@@ -11,6 +11,7 @@ import {
 
 export type ToastShowOptions = {
   message: string
+  type?: 'default' | 'error'
   durationMs?: number
 }
 
@@ -21,6 +22,7 @@ export type ToastApi = {
 
 export type ToastViewState = {
   message: string | null
+  type: 'default' | 'error'
   onClose: () => void
 }
 
@@ -35,6 +37,7 @@ export function ToastProvider({
   renderToast: (state: ToastViewState) => ReactNode
 }): React.JSX.Element {
   const [message, setMessage] = useState<string | null>(null)
+  const [type, setType] = useState<ToastViewState['type']>('default')
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const close = useCallback(() => {
@@ -43,16 +46,19 @@ export function ToastProvider({
       timer.current = null
     }
     setMessage(null)
+    setType('default')
   }, [])
 
   const show = useCallback((input: string | ToastShowOptions) => {
     const next = typeof input === 'string' ? input : input.message
+    const nextType = typeof input === 'string' ? 'default' : (input.type ?? 'default')
     const durationMs =
       typeof input === 'string' ? DEFAULT_DURATION_MS : (input.durationMs ?? DEFAULT_DURATION_MS)
     if (timer.current !== null) {
       clearTimeout(timer.current)
     }
     setMessage(next)
+    setType(nextType)
     timer.current = setTimeout(() => {
       timer.current = null
       setMessage(null)
@@ -72,7 +78,7 @@ export function ToastProvider({
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {renderToast({ message, onClose: close })}
+      {renderToast({ message, onClose: close, type })}
     </ToastContext.Provider>
   )
 }
@@ -83,4 +89,8 @@ export function useToast(): ToastApi {
     throw new Error('ToastProvider 未就绪')
   }
   return toast
+}
+
+export function useOptionalToast(): ToastApi | null {
+  return useContext(ToastContext)
 }

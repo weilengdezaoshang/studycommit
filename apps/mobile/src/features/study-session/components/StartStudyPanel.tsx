@@ -6,8 +6,8 @@ import {
   initialStartStudyState,
   startStudyReducer,
   toUiError,
-  type UiError,
 } from '@studycommit/common/study-session-runtime'
+import { useToast } from '@studycommit/common/toast-react'
 import { Button } from '../../../components/Button'
 import { Dropdown } from '../../../components/Dropdown'
 import { EmptyState } from '../../../components/EmptyState'
@@ -30,6 +30,7 @@ export function StartStudyPanel({
   study: Pick<StudySessionController, 'create'>
 }) {
   const theme = useAppTheme()
+  const toast = useToast()
   const { topics } = useMobileServices()
   const [state, dispatch] = useReducer(startStudyReducer, initialStartStudyState)
   const [topicId, setTopicId] = useState('')
@@ -47,14 +48,16 @@ export function StartStudyPanel({
       },
       (error) => {
         if (!cancelled) {
-          dispatch({ type: 'topics-failed', error: toUiError(error) })
+          const uiError = toUiError(error)
+          dispatch({ type: 'topics-failed', error: uiError })
+          toast.show({ message: uiError.message, type: 'error' })
         }
       },
     )
     return () => {
       cancelled = true
     }
-  }, [topics])
+  }, [toast, topics])
 
   async function submit() {
     if (state.status === 'submitting' || !canStartStudy(topicId, goal)) {
@@ -76,7 +79,9 @@ export function StartStudyPanel({
       })
       pendingKey.current = null
     } catch (error) {
-      dispatch({ type: 'submit-failed', error: error as UiError })
+      const uiError = toUiError(error)
+      dispatch({ type: 'submit-failed', error: uiError })
+      toast.show({ message: uiError.message, type: 'error' })
     }
   }
 
@@ -135,14 +140,7 @@ export function StartStudyPanel({
           value={goal}
         />
         {formError ? (
-          <ErrorState
-            description={
-              formError.requestId
-                ? `${formError.message}（${formError.requestId}）`
-                : formError.message
-            }
-            title="无法开始学习"
-          />
+          <ErrorState description="暂时无法开始学习，请稍后重试。" title="无法开始学习" />
         ) : null}
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
           <View style={{ flex: 1 }}>

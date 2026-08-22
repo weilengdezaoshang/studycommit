@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { View } from 'react-native'
 import { validateLocalDateTimeValue } from '@studycommit/common/study-session-runtime'
+import { useOptionalToast } from '@studycommit/common/toast-react'
 import { useAppTheme } from '../../theme/ThemeProvider'
 import { AppText } from '../AppText'
 import { Button } from '../Button'
@@ -40,6 +41,7 @@ export interface DialogShowOptions {
 
 export function useDialog() {
   const theme = useAppTheme()
+  const toast = useOptionalToast()
   const [options, setOptions] = useState<DialogShowOptions | null>(null)
   const [visible, setVisible] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -77,9 +79,16 @@ export function useDialog() {
     try {
       await options.onConfirm?.({ fieldValue, notes })
       setVisible(false)
+      setOptions(null)
       setFieldError(null)
     } catch (error) {
-      setFieldError(error instanceof Error ? error.message : '操作失败')
+      setVisible(false)
+      setOptions(null)
+      setFieldError(null)
+      toast?.show({
+        message: error instanceof Error ? error.message : '操作失败，请稍后重试。',
+        type: 'error',
+      })
     } finally {
       setBusy(false)
     }

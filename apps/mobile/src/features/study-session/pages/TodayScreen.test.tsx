@@ -80,7 +80,8 @@ describe('TodayScreen', () => {
         },
       }),
     })
-    expect(await screen.findByRole('alert')).toHaveTextContent(/当前网络不可用/)
+    expect(await screen.findByText('无法读取当前学习')).toBeOnTheScreen()
+    expect(screen.queryByText('当前网络不可用')).not.toBeOnTheScreen()
     shouldFail = false
     await user.press(screen.getByRole('button', { name: '重试' }))
     expect(await screen.findByText('今天，从一次专注开始')).toBeOnTheScreen()

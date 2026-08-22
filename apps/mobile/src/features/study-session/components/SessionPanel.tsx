@@ -4,6 +4,7 @@ import type { LearningLog, StudySession } from '@studycommit/common/contracts'
 import { AppText } from '../../../components/AppText'
 import { Button } from '../../../components/Button'
 import { Card } from '../../../components/Card'
+import { ErrorState } from '../../../components/ErrorState'
 import { useDialog } from '../../../components/dialog/useDialog'
 import { useAppTheme } from '../../../theme/ThemeProvider'
 import {
@@ -29,6 +30,7 @@ export function SessionPanel({
   onPause,
   onResume,
   pendingCommand,
+  commandError,
   serverNow,
   session,
   topicName,
@@ -39,6 +41,7 @@ export function SessionPanel({
   onPause: StudySessionController['pause']
   onResume: StudySessionController['resume']
   pendingCommand: SessionCommand | null
+  commandError: { message: string } | null
   serverNow: string | null
   session: StudySession
   topicName: string
@@ -190,6 +193,9 @@ export function SessionPanel({
           </View>
         </View>
       </Card>
+      {commandError ? (
+        <ErrorState description="本次操作未完成，请稍后重试。" title="操作失败" />
+      ) : null}
       {dialog.dialog}
     </ScrollView>
   )
