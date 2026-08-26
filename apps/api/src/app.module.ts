@@ -10,9 +10,11 @@ import { LoggerModule } from 'nestjs-pino'
 import { createLoggingConfig, type RuntimeEnvironment } from './common/logging/logging.config'
 import { LearningLogsModule } from './learning-logs/learning-logs.module'
 import { StudySessionsModule } from './study-sessions/study-sessions.module'
+import { ORPCModule } from '@orpc/nest'
 
 @Module({
   imports: [
+    ORPCModule.forRoot({}),
     LoggerModule.forRoot(
       createLoggingConfig((process.env.NODE_ENV ?? 'development') as RuntimeEnvironment),
     ),

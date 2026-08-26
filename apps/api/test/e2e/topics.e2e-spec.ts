@@ -13,7 +13,7 @@ describe('Topics API', () => {
   beforeAll(async () => {
     applyTestEnv()
     await migrate(drizzle(pool), { migrationsFolder: './drizzle' })
-    const module = await import('../../src/app.factory')
+    const module = await import('../../src/app.factory.js')
     app = await module.createApp()
   })
   beforeEach(async () => {

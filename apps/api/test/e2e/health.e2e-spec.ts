@@ -5,7 +5,7 @@ describe('Health API', () => {
   let app: NestFastifyApplication
   beforeAll(async () => {
     applyTestEnv()
-    app = await (await import('../../src/app.factory')).createApp()
+    app = await (await import('../../src/app.factory.js')).createApp()
   })
   afterAll(async () => app.close())
   it('reports liveness and readiness', async () => {
