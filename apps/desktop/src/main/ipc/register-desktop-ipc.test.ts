@@ -41,6 +41,7 @@ describe('registerDesktopIpc', () => {
       listActive: vi.fn(),
     },
     learningLogs: {
+      list: vi.fn(),
       getBySession: vi.fn(),
       update: vi.fn(),
     },

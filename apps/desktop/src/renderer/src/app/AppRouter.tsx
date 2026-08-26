@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
 import { loadNavigationPreferences } from './navigation-preferences'
 import { routes } from './routes'
@@ -7,6 +8,10 @@ import { PagePlaceholder } from '../components/PagePlaceholder'
 import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
+
+const DeskDemoPage = lazy(() =>
+  import('../features/desk/DeskDemoPage').then((module) => ({ default: module.DeskDemoPage })),
+)
 
 function LandingRedirect(): React.JSX.Element {
   const preferences = loadNavigationPreferences(window.localStorage)
@@ -143,6 +148,20 @@ export function AppRoutes(): React.JSX.Element {
                   description="复习卡片和评分流程将在 EL-203 实现。"
                   nextTask="EL-203"
                 />
+              }
+            />
+            <Route
+              path="desk"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="desk-route-loading" role="status">
+                      正在打开三维书桌…
+                    </div>
+                  }
+                >
+                  <DeskDemoPage />
+                </Suspense>
               }
             />
             <Route

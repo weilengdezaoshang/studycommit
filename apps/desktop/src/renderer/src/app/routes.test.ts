@@ -7,6 +7,7 @@ describe('routes', () => {
     expect(routes.drafts()).toBe('/drafts')
     expect(routes.topics()).toBe('/topics')
     expect(routes.review()).toBe('/review')
+    expect(routes.desk()).toBe('/desk')
     expect(routes.settings()).toBe('/settings')
   })
 

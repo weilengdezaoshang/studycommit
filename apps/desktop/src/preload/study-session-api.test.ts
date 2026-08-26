@@ -34,7 +34,11 @@ describe('study session preload api', () => {
     await studyCommitPreloadApi.topics.listActive()
     expect(invoke).toHaveBeenCalledWith('topics:list-active', undefined)
     expect(Object.keys(studyCommitPreloadApi.topics)).toEqual(['listActive'])
-    expect(Object.keys(studyCommitPreloadApi.learningLogs)).toEqual(['getBySession', 'update'])
+    expect(Object.keys(studyCommitPreloadApi.learningLogs)).toEqual([
+      'list',
+      'getBySession',
+      'update',
+    ])
     await studyCommitPreloadApi.learningLogs.getBySession('11111111-1111-4111-8111-111111111111')
     expect(invoke).toHaveBeenCalledWith(
       'learning-logs:get-by-session',

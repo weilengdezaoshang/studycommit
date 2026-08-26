@@ -4,6 +4,8 @@ import type {
   CompleteStudySessionResult,
   CreateStudySessionInput,
   LearningLog,
+  LearningLogPage,
+  ListLearningLogsInput,
   ListActiveTopicsInput,
   SessionCommandInput,
   StudySession,
@@ -28,6 +30,7 @@ export interface TopicGateway {
 }
 
 export interface LearningLogGateway {
+  list(input?: ListLearningLogsInput): Promise<LearningLogPage>
   getBySession(sessionId: string): Promise<LearningLog>
   update(input: UpdateLearningLogInput): Promise<LearningLog>
 }
@@ -75,6 +78,7 @@ export function createDesktopLearningLogGateway(
   api: Window['studyCommit']['learningLogs'] = window.studyCommit.learningLogs,
 ): LearningLogGateway {
   return {
+    list: (input) => invokeIpc(() => api.list(input)),
     getBySession: (sessionId) => invokeIpc(() => api.getBySession(sessionId)),
     update: (input) => invokeIpc(() => api.update(input)),
   }

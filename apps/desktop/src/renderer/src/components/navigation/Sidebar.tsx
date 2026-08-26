@@ -22,6 +22,7 @@ export function Sidebar(): React.JSX.Element {
         <SidebarLink to={routes.drafts()} label="草稿" icon="drafts" end />
         <SidebarLink to={routes.topics()} label="所有专题" icon="topics" />
         <SidebarLink to={routes.review()} label="复习" icon="review" end />
+        <SidebarLink to={routes.desk()} label="成长书桌" icon="desk" end />
       </nav>
 
       <div className="sidebar__footer">

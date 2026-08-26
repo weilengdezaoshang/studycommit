@@ -1,6 +1,15 @@
 interface AppIconProps {
   name:
-    'today' | 'drafts' | 'topics' | 'review' | 'settings' | 'overview' | 'notes' | 'map' | 'logs'
+    | 'today'
+    | 'drafts'
+    | 'topics'
+    | 'review'
+    | 'desk'
+    | 'settings'
+    | 'overview'
+    | 'notes'
+    | 'map'
+    | 'logs'
 }
 
 const paths: Record<AppIconProps['name'], React.ReactNode> = {
@@ -25,6 +34,11 @@ const paths: Record<AppIconProps['name'], React.ReactNode> = {
     <>
       <path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5" />
       <path d="M4 4v4.5h4.5M12 8v4l3 2" />
+    </>
+  ),
+  desk: (
+    <>
+      <path d="M4 11h16v4H4zM6 15v5M18 15v5M7 11V7h4v4M14 11V5h3v6" />
     </>
   ),
   settings: (

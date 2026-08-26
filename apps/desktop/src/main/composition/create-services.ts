@@ -66,6 +66,7 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       listActive: reject,
     },
     learningLogs: {
+      list: reject,
       getBySession: reject,
       update: reject,
     },

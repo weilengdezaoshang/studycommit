@@ -17,6 +17,7 @@ export const topicPreloadApi = {
 }
 
 export const learningLogPreloadApi = {
+  list: (input?: unknown) => ipcRenderer.invoke(learningLogIpcChannels.list, input),
   getBySession: (sessionId: string) =>
     ipcRenderer.invoke(learningLogIpcChannels.getBySession, sessionId),
   update: (input: unknown) => ipcRenderer.invoke(learningLogIpcChannels.update, input),

@@ -48,6 +48,7 @@ export function createLearningLogGateway(
   overrides: Partial<LearningLogGateway> = {},
 ): LearningLogGateway {
   return {
+    list: async () => ({ items: [], page: 1, pageSize: 20, total: 0 }),
     getBySession: async () => {
       throw new Error('getBySession not stubbed')
     },

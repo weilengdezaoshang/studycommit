@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { StartStudyPanel } from '../components/StartStudyPanel'
 import { SessionPanel } from '../components/SessionPanel'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
+import { StudyCompanionScene } from '../../companion/StudyCompanionScene'
 
 export function TodayPage({ study }: { study: StudySessionController }): React.JSX.Element {
   const [starting, setStarting] = useState(false)
@@ -51,15 +52,25 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
   }
 
   return (
-    <section className="study-page">
-      <article className="study-card">
-        <h2>当前学习</h2>
-        <p className="study-card__title">今天，从一次专注开始</p>
-        <p className="study-card__goal">选择专题后开始学习。关闭应用不会结束进行中的会话。</p>
-        <button type="button" className="button" onClick={() => setStarting(true)}>
-          开始学习
-        </button>
-      </article>
+    <section className="study-page study-page--welcome">
+      <div className="study-welcome">
+        <div className="study-welcome__copy">
+          <p className="study-welcome__date">今天，从一次专注开始</p>
+          <h2>把想学的内容，变成真正留下来的进度。</h2>
+          <p>
+            选择一个专题，写下这次要解决的问题。陪学场景会在学习期间保持安静，退出应用也不会丢失计时。
+          </p>
+          <button
+            type="button"
+            className="button study-welcome__action"
+            onClick={() => setStarting(true)}
+          >
+            开始学习
+          </button>
+          <small>不设惩罚，不催促完成 · 随时可以暂停</small>
+        </div>
+        <StudyCompanionScene state="ready" />
+      </div>
     </section>
   )
 }

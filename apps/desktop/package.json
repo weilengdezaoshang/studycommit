@@ -13,13 +13,17 @@
     "test:e2e:backend": "pnpm build && playwright test e2e/study-session-backend.e2e.ts"
   },
   "dependencies": {
-    "@studycommit/common": "workspace:*",
-    "@studycommit/design-tokens": "workspace:*",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@studycommit/common": "workspace:*",
+    "@studycommit/design-tokens": "workspace:*",
+    "animejs": "^4.5.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-router": "^7.18.2"
+    "react-router": "^7.18.2",
+    "roughjs": "^4.6.6",
+    "svg2roughjs": "^3.2.3",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -29,6 +33,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "^43.4.0",
     "electron-vite": "^5.0.0",

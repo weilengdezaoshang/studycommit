@@ -51,6 +51,7 @@ describe('desktop study session gateway', () => {
       listActive: vi.fn().mockResolvedValue({ ok: true, data: activeTopicPageFixture }),
     }
     const learningLogs = {
+      list: vi.fn(),
       getBySession: vi.fn().mockResolvedValue({ ok: true, data: emptyLearningLogFixture }),
       update: vi.fn(),
     }

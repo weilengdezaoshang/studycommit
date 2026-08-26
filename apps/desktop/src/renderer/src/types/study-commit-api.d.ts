@@ -4,6 +4,8 @@ import type {
   CompleteStudySessionResult,
   CreateStudySessionInput,
   LearningLog,
+  LearningLogPage,
+  ListLearningLogsInput,
   ListActiveTopicsInput,
   SessionCommandInput,
   StudySession,
@@ -26,6 +28,7 @@ export interface StudyCommitTopicsApi {
 }
 
 export interface StudyCommitLearningLogsApi {
+  list: (input?: ListLearningLogsInput) => Promise<IpcResult<LearningLogPage>>
   getBySession: (sessionId: string) => Promise<IpcResult<LearningLog>>
   update: (input: UpdateLearningLogInput) => Promise<IpcResult<LearningLog>>
 }

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native'
 import type { LearningLogPage } from '@studycommit/common/contracts'
 import { useToast } from '@studycommit/common/toast-react'
 import { useMobileServices } from '../../core/MobileServicesProvider'
@@ -16,6 +16,8 @@ export function RecordsScreen() {
   const [page, setPage] = useState<LearningLogPage | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -31,6 +33,23 @@ export function RecordsScreen() {
     }
   }, [learningLogs, toast])
 
+  const refresh = useCallback(async () => {
+    setRefreshing(true)
+    await load()
+    setRefreshing(false)
+  }, [load])
+
+  const summary = useMemo(() => {
+    const items = page?.items ?? []
+    return {
+      count: items.length,
+      minutes: Math.round(
+        items.reduce((total, item) => total + item.learningLog.effectiveDurationSeconds, 0) / 60,
+      ),
+      gains: items.filter((item) => item.learningLog.gains?.trim()).length,
+    }
+  }, [page])
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load()
@@ -38,13 +57,31 @@ export function RecordsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => void refresh()}
+            refreshing={refreshing}
+            tintColor={theme.colors.primary}
+          />
+        }
+      >
         <View style={styles.heading}>
           <AppText variant="heading" weight="semibold">
             学习记录
           </AppText>
           <AppText color="muted">回顾每次学习留下的收获与下一步。</AppText>
         </View>
+        {!loading && !error && page?.items.length ? (
+          <View style={[styles.summary, { backgroundColor: theme.colors.surfaceMuted }]}>
+            <SummaryItem label="学习次数" value={`${summary.count} 次`} />
+            <View style={[styles.summaryDivider, { backgroundColor: theme.colors.border }]} />
+            <SummaryItem label="累计时长" value={formatMinutes(summary.minutes)} />
+            <View style={[styles.summaryDivider, { backgroundColor: theme.colors.border }]} />
+            <SummaryItem label="有收获" value={`${summary.gains} 次`} />
+          </View>
+        ) : null}
         {loading ? <LoadingState label="正在加载学习记录" /> : null}
         {!loading && error ? (
           <ErrorState
@@ -61,36 +98,69 @@ export function RecordsScreen() {
           </View>
         ) : null}
         {!loading && !error
-          ? page?.items.map(({ learningLog, session, topic }) => (
-              <View
-                key={learningLog.id}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                    borderRadius: theme.radii.md,
-                  },
-                ]}
-              >
-                <View style={styles.cardHeader}>
-                  <AppText weight="semibold">{topic.name}</AppText>
-                  <AppText color="muted" variant="caption">
-                    {formatDate(session.completedAt)}
-                  </AppText>
+          ? page?.items.map(({ learningLog, session, topic }) => {
+              const expanded = expandedId === learningLog.id
+              return (
+                <View
+                  key={learningLog.id}
+                  style={[
+                    styles.card,
+                    {
+                      backgroundColor: theme.colors.surface,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.radii.md,
+                    },
+                  ]}
+                >
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${topic.name}，${expanded ? '收起' : '展开'}学习详情`}
+                    onPress={() => setExpandedId(expanded ? null : learningLog.id)}
+                    style={({ pressed }) => [styles.cardHeader, pressed && styles.pressed]}
+                  >
+                    <View style={styles.titleBlock}>
+                      <AppText weight="semibold">{topic.name}</AppText>
+                      <AppText color="muted" variant="caption">
+                        {formatDate(session.completedAt)}
+                      </AppText>
+                    </View>
+                    <AppText color="muted" variant="caption">
+                      {expanded ? '收起详情' : '查看详情'}
+                    </AppText>
+                  </Pressable>
+                  {session.goal ? <AppText color="muted">目标：{session.goal}</AppText> : null}
+                  <View style={styles.durationRow}>
+                    <AppText color="muted" variant="caption">
+                      本次学习
+                    </AppText>
+                    <AppText variant="title" weight="semibold">
+                      {formatDuration(learningLog.effectiveDurationSeconds)}
+                    </AppText>
+                  </View>
+                  {expanded ? (
+                    <View style={[styles.details, { borderTopColor: theme.colors.border }]}>
+                      <RecordField label="学习收获" value={learningLog.gains} />
+                      <RecordField label="未解决问题" value={learningLog.problems} />
+                      <RecordField label="下一步" value={learningLog.nextStep} />
+                    </View>
+                  ) : null}
                 </View>
-                {session.goal ? <AppText color="muted">目标：{session.goal}</AppText> : null}
-                <AppText variant="title" weight="semibold">
-                  {formatDuration(learningLog.effectiveDurationSeconds)}
-                </AppText>
-                <RecordField label="学习收获" value={learningLog.gains} />
-                <RecordField label="未解决问题" value={learningLog.problems} />
-                <RecordField label="下一步" value={learningLog.nextStep} />
-              </View>
-            ))
+              )
+            })
           : null}
       </ScrollView>
     </Screen>
+  )
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.summaryItem}>
+      <AppText color="muted" variant="caption">
+        {label}
+      </AppText>
+      <AppText weight="semibold">{value}</AppText>
+    </View>
   )
 }
 
@@ -117,11 +187,35 @@ function formatDuration(seconds: number) {
   return hours > 0 ? `${hours}小时${minutes}分钟` : `${minutes}分钟`
 }
 
+function formatMinutes(minutes: number) {
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)}小时${minutes % 60 ? ` ${minutes % 60}分` : ''}`
+    : `${minutes}分钟`
+}
+
 const styles = StyleSheet.create({
-  content: { gap: 16, padding: 24 },
+  content: { gap: 16, padding: 24, paddingBottom: 40 },
   heading: { gap: 6, marginBottom: 8 },
   empty: { alignItems: 'center', borderRadius: 12, gap: 8, padding: 24 },
   card: { borderWidth: 1, gap: 12, padding: 16 },
-  cardHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
+  summary: {
+    alignItems: 'center',
+    borderRadius: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+  },
+  summaryItem: { alignItems: 'center', gap: 4, minWidth: 72 },
+  summaryDivider: { height: 28, width: 1 },
+  cardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  titleBlock: { flex: 1, gap: 4 },
+  pressed: { opacity: 0.65 },
+  durationRow: { alignItems: 'flex-start', gap: 2 },
+  details: { borderTopWidth: 1, gap: 12, paddingTop: 12 },
   field: { gap: 4 },
 })

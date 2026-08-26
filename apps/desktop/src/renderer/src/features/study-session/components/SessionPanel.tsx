@@ -4,6 +4,7 @@ import { useDialog } from '../../../components/dialog/useDialog'
 import { LongSessionBanner } from './LongSessionBanner'
 import { SessionStatusBadge } from './SessionStatusBadge'
 import { SessionTimer } from './SessionTimer'
+import { StudyCompanionScene } from '../../companion/StudyCompanionScene'
 import {
   COMPLETION_NOTE_FIELDS,
   formatLocalDateTimeValue,
@@ -46,6 +47,7 @@ export function SessionPanel({
   if (session.status === 'completed') {
     return (
       <section className="study-page study-page--session">
+        <StudyCompanionScene state="completed" />
         <article className="study-card">
           <div className="study-card__header">
             <p className="study-card__title">{topicName}</p>
@@ -82,34 +84,37 @@ export function SessionPanel({
           onCorrectEndTime={() => showCorrectEndTimeDialog()}
         />
       ) : null}
-      <article className="study-card study-card--session">
-        <div className="study-card__header">
-          <p className="study-card__title">{topicName}</p>
-          <SessionStatusBadge status={session.status} />
-        </div>
-        {session.goal ? <p className="study-card__goal">{session.goal}</p> : null}
-        <div className="study-card__elapsed">
-          <span className="study-card__label">已学习</span>
-          <SessionTimer value={elapsed} />
-        </div>
-        <div className="study-card__actions">
-          <button
-            type="button"
-            className="button"
-            disabled={toggleBusy}
-            onClick={() => {
-              if (session.status === 'paused') {
-                void onResume()
-                return
-              }
-              void onPause()
-            }}
-          >
-            {toggleLabel}
-          </button>
-          <CompleteStudyButton disabled={completing} onClick={() => showCompleteDialog()} />
-        </div>
-      </article>
+      <div className="study-session-layout">
+        <StudyCompanionScene state={session.status === 'paused' ? 'paused' : 'focusing'} />
+        <article className="study-card study-card--session">
+          <div className="study-card__header">
+            <p className="study-card__title">{topicName}</p>
+            <SessionStatusBadge status={session.status} />
+          </div>
+          {session.goal ? <p className="study-card__goal">{session.goal}</p> : null}
+          <div className="study-card__elapsed">
+            <span className="study-card__label">已学习</span>
+            <SessionTimer value={elapsed} />
+          </div>
+          <div className="study-card__actions">
+            <button
+              type="button"
+              className="button"
+              disabled={toggleBusy}
+              onClick={() => {
+                if (session.status === 'paused') {
+                  void onResume()
+                  return
+                }
+                void onPause()
+              }}
+            >
+              {toggleLabel}
+            </button>
+            <CompleteStudyButton disabled={completing} onClick={() => showCompleteDialog()} />
+          </div>
+        </article>
+      </div>
       {dialog.dialog}
     </section>
   )

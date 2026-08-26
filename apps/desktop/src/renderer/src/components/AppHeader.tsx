@@ -13,6 +13,9 @@ function getPageTitle(pathname: string): string {
   if (pathname === '/review') {
     return '复习'
   }
+  if (pathname === '/desk') {
+    return '成长书桌'
+  }
   if (pathname === '/settings') {
     return '设置'
   }

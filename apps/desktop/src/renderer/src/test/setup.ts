@@ -25,6 +25,7 @@ function createDefaultStudyCommit() {
       }),
     },
     learningLogs: {
+      list: async () => ({ ok: false as const, error: configurationError() }),
       getBySession: async () => ({ ok: false as const, error: configurationError() }),
       update: async () => ({ ok: false as const, error: configurationError() }),
     },

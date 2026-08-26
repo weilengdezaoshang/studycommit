@@ -27,6 +27,7 @@ function trustedEvent() {
 
 describe('registerLearningLogIpc', () => {
   const client = {
+    list: vi.fn(),
     getBySession: vi.fn(),
     update: vi.fn(),
   }
@@ -44,7 +45,7 @@ describe('registerLearningLogIpc', () => {
       rendererDevOrigin: 'http://localhost:5173',
     })
     registerLearningLogIpc(host, client)
-    expect(Object.keys(learningLogIpcChannels)).toEqual(['getBySession', 'update'])
+    expect(Object.keys(learningLogIpcChannels)).toEqual(['list', 'getBySession', 'update'])
 
     const found = await handlers.get(learningLogIpcChannels.getBySession)?.(
       trustedEvent(),

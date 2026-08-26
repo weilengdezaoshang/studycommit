@@ -12,6 +12,7 @@ export const routes = {
   drafts: (): string => '/drafts',
   topics: (): string => '/topics',
   review: (): string => '/review',
+  desk: (): string => '/desk',
   settings: (): string => '/settings',
   topicOverview: (topicId: string): string => `/topics/${encodeId(topicId)}/overview`,
   topicNotes: (topicId: string): string => `/topics/${encodeId(topicId)}/notes`,
@@ -26,6 +27,7 @@ export const TOP_LEVEL_PATHS = [
   routes.drafts(),
   routes.topics(),
   routes.review(),
+  routes.desk(),
   routes.settings(),
 ] as const
 

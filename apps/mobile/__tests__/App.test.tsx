@@ -47,7 +47,7 @@ describe('<App />', () => {
     expect(screen.getByText('整理你的知识专题')).toBeOnTheScreen()
 
     await user.press(screen.getByLabelText('记录，标签页'))
-    expect(screen.getByText('留下可追溯的学习记录')).toBeOnTheScreen()
+    expect(await screen.findByText('学习记录')).toBeOnTheScreen()
 
     await user.press(screen.getByLabelText('复习，标签页'))
     expect(screen.getByText('把学过的内容真正记住')).toBeOnTheScreen()
