@@ -5,13 +5,9 @@ import {
   type TopicPage,
 } from '../../contracts/topic'
 import type { HttpTransport } from '../../http'
+import type { TopicApi } from '../../ports'
 
-export interface TopicApi {
-  listActive(input?: ListActiveTopicsInput): Promise<TopicPage>
-}
-
-/** @deprecated Use TopicApi for new code. */
-export type TopicQueryApi = TopicApi
+export type { TopicApi, TopicQueryApi } from '../../ports'
 
 export class TopicClient implements TopicApi {
   constructor(private readonly http: HttpTransport) {}

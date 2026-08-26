@@ -1,6 +1,3 @@
-import type { LearningLogApi } from '../../clients/learning-log/learning-log-client'
-import type { StudySessionApi } from '../../clients/study-session/study-session-client'
-import type { TopicApi } from '../../clients/topic/topic-client'
 import type {
   LearningLog,
   LearningLogPage,
@@ -16,6 +13,7 @@ import type {
   StudySession,
 } from '../../contracts/study-session'
 import type { ListActiveTopicsInput, TopicPage } from '../../contracts/topic'
+import type { ApplicationServices, TopicApi } from '../../ports'
 
 type Procedure<TInput, TOutput> = (input: TInput) => Promise<TOutput>
 
@@ -42,12 +40,6 @@ export interface OrpcRawClient {
 }
 
 export type OrpcServices = ApplicationServices
-
-export interface ApplicationServices {
-  studySessions: StudySessionApi
-  topics: TopicApi
-  learningLogs: LearningLogApi
-}
 
 export function createOrpcServices(client: OrpcRawClient): OrpcServices {
   return {

@@ -14,15 +14,9 @@ import {
   type StudySession,
 } from '../../contracts/study-session'
 import { createHttpError, type HttpTransport } from '../../http'
+import type { StudySessionApi } from '../../ports'
 
-export interface StudySessionApi {
-  create(input: CreateStudySessionInput): Promise<StudySession>
-  getActive(): Promise<ActiveStudySessionResponse>
-  getById(sessionId: string): Promise<StudySession>
-  pause(input: SessionCommandInput): Promise<StudySession>
-  resume(input: SessionCommandInput): Promise<StudySession>
-  complete(input: CompleteStudySessionInput): Promise<CompleteStudySessionResult>
-}
+export type { StudySessionApi } from '../../ports'
 
 export class StudySessionClient implements StudySessionApi {
   constructor(private readonly http: HttpTransport) {}

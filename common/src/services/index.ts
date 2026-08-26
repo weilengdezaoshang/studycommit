@@ -1,6 +1,7 @@
 import { createRestServices } from '../adapters/rest'
-import { createOrpcServices, type ApplicationServices, type OrpcRawClient } from '../adapters/orpc'
+import { createOrpcServices, type OrpcRawClient } from '../adapters/orpc'
 import type { HttpTransport } from '../http'
+import type { ApplicationServices } from '../ports'
 
 export type { ApplicationServices }
 

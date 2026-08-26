@@ -10,12 +10,9 @@ import {
 } from '../../contracts/learning-log'
 import { sessionIdSchema } from '../../contracts/study-session'
 import type { HttpTransport } from '../../http'
+import type { LearningLogApi } from '../../ports'
 
-export interface LearningLogApi {
-  list(input?: ListLearningLogsInput): Promise<LearningLogPage>
-  getBySession(sessionId: string): Promise<LearningLog>
-  update(input: UpdateLearningLogInput): Promise<LearningLog>
-}
+export type { LearningLogApi } from '../../ports'
 
 export class LearningLogClient implements LearningLogApi {
   constructor(private readonly http: HttpTransport) {}
@@ -24,20 +21,20 @@ export class LearningLogClient implements LearningLogApi {
     const input = listLearningLogsInputSchema.parse(rawInput ?? {})
     const params = new URLSearchParams()
     if (input.page !== undefined) {
-params.set('page', String(input.page))
-}
+      params.set('page', String(input.page))
+    }
     if (input.pageSize !== undefined) {
-params.set('pageSize', String(input.pageSize))
-}
+      params.set('pageSize', String(input.pageSize))
+    }
     if (input.topicId) {
-params.set('topicId', input.topicId)
-}
+      params.set('topicId', input.topicId)
+    }
     if (input.from) {
-params.set('from', input.from)
-}
+      params.set('from', input.from)
+    }
     if (input.to) {
-params.set('to', input.to)
-}
+      params.set('to', input.to)
+    }
     const query = params.toString()
     return this.http.request({
       method: 'GET',
