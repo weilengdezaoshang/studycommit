@@ -4,18 +4,43 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./auth": "./src/auth.ts",
-    "./capture": "./src/capture.ts",
-    "./learning-records": "./src/learning-records.ts",
-    "./study-sessions": "./src/study-sessions.ts",
-    "./topics": "./src/topics.ts"
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./auth": {
+      "types": "./src/auth.ts",
+      "default": "./dist/auth.js"
+    },
+    "./capture": {
+      "types": "./src/capture.ts",
+      "default": "./dist/capture.js"
+    },
+    "./health": {
+      "types": "./src/health.ts",
+      "default": "./dist/health.js"
+    },
+    "./learning-records": {
+      "types": "./src/learning-records.ts",
+      "default": "./dist/learning-records.js"
+    },
+    "./study-sessions": {
+      "types": "./src/study-sessions.ts",
+      "default": "./dist/study-sessions.js"
+    },
+    "./topics": {
+      "types": "./src/topics.ts",
+      "default": "./dist/topics.js"
+    }
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@orpc/contract": "^1.15.0",
+    "@orpc/openapi": "^1.15.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
