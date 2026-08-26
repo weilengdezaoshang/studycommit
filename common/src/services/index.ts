@@ -1,17 +1,26 @@
-import { createRestServices, type RestServices } from '../adapters/rest'
+import { createRestServices } from '../adapters/rest'
+import { createOrpcServices, type ApplicationServices, type OrpcRawClient } from '../adapters/orpc'
 import type { HttpTransport } from '../http'
 
-export type ApplicationServices = RestServices
+export type { ApplicationServices }
 
-export type ServiceFactoryOptions = {
-  transport: 'rest'
-  httpTransport: HttpTransport
-}
+export type ServiceFactoryOptions =
+  | {
+      transport: 'rest'
+      httpTransport: HttpTransport
+    }
+  | {
+      transport: 'orpc'
+      orpcClient: OrpcRawClient
+    }
 
 /**
- * The application-level composition point. Add the oRPC branch here when its
- * client is introduced; platform shells should not select adapters directly.
+ * The application-level composition point. Platform shells select a protocol
+ * here rather than constructing adapters directly.
  */
 export function createServices(options: ServiceFactoryOptions): ApplicationServices {
+  if (options.transport === 'orpc') {
+    return createOrpcServices(options.orpcClient)
+  }
   return createRestServices(options.httpTransport)
 }
