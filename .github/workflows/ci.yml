@@ -30,3 +30,48 @@ jobs:
       - name: Check mini program when present
         if: hashFiles('apps/miniprogram/package.json') != ''
         run: pnpm --filter @studycommit/miniprogram check
+
+  api-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: studycommit_test
+          POSTGRES_USER: studycommit
+          POSTGRES_PASSWORD: studycommit_test_only
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U studycommit -d studycommit_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      NODE_ENV: test
+      API_PORT: 3001
+      DATABASE_URL: postgresql://studycommit:studycommit_test_only@localhost:5433/studycommit_test
+      REDIS_URL: redis://localhost:6380
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @studycommit/api db:migrate
+      - run: pnpm --filter @studycommit/api test:integration
+      - run: pnpm --filter @studycommit/api test:e2e

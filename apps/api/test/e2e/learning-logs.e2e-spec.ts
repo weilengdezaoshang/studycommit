@@ -22,7 +22,9 @@ describe('LearningLogs API', () => {
     app = await module.createApp()
   })
   beforeEach(async () => {
-    await pool.query('truncate learning_logs, study_sessions, idempotency_records, topics')
+    await pool.query(
+      'truncate learning_logs, study_sessions, idempotency_records, topics restart identity cascade',
+    )
   })
   afterAll(async () => {
     await app.close()

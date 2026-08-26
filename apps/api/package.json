@@ -8,7 +8,11 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/database/migrate.ts",
-    "test:unit": "vitest run --project unit"
+    "test": "vitest run",
+    "test:run": "vitest run --project unit",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:e2e": "vitest run --project e2e"
   },
   "dependencies": {
     "@fastify/static": "^10.1.3",
