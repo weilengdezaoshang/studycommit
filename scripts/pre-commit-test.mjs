@@ -10,6 +10,10 @@ const suites = [
     prefix: 'packages/design-tokens/',
     command: ['pnpm', ['--filter', '@studycommit/design-tokens', 'test:run']],
   },
+  {
+    prefix: 'apps/miniprogram/',
+    command: ['pnpm', ['--filter', '@studycommit/miniprogram', 'check']],
+  },
 ]
 
 const staged = execFileSync('git', ['diff', '--cached', '--name-only', '--diff-filter=ACMR'], {

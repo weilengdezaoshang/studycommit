@@ -1,0 +1,7 @@
+<view class="editor-page">
+  <textarea class="note-input" value="{{content}}" maxlength="10000" auto-focus placeholder="写下刚刚学到的内容……" bindinput="onContentInput" />
+  <view class="editor-footer">
+    <button class="question-button" bindtap="toggleQuestion">{{isQuestion ? '已标记问题' : '标记为问题'}}</button>
+    <button class="save-button" bindtap="saveNote">记下</button>
+  </view>
+</view>

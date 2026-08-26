@@ -1,0 +1,14 @@
+{
+  "description": "StudyCommit 原生微信小程序",
+  "compileType": "miniprogram",
+  "miniprogramRoot": "./",
+  "projectname": "studycommit-miniprogram",
+  "setting": {
+    "es6": true,
+    "minified": true,
+    "urlCheck": true,
+    "useCompilerPlugins": ["typescript"]
+  },
+  "simulatorType": "wechat",
+  "simulatorPluginLibVersion": {}
+}
