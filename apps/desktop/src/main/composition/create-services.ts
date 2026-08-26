@@ -1,12 +1,11 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
-import { LearningLogClient, type LearningLogApi } from '@studycommit/common/learning-log'
-import { StudySessionClient, type StudySessionApi } from '@studycommit/common/study-session'
-import { TopicClient, type TopicQueryApi } from '@studycommit/common/topic'
+import { createServices } from '@studycommit/common/services'
+import type { LearningLogApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
 import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
   studySessions: StudySessionApi
-  topics: TopicQueryApi
+  topics: TopicApi
   learningLogs: LearningLogApi
 }
 
@@ -27,9 +26,7 @@ export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): Des
     getHeaders: async () => createDesktopHeaders(env),
   })
   return {
-    studySessions: new StudySessionClient(transport),
-    topics: new TopicClient(transport),
-    learningLogs: new LearningLogClient(transport),
+    ...createServices({ transport: 'rest', httpTransport: transport }),
   }
 }
 

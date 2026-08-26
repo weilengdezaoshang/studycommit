@@ -12,7 +12,10 @@
     "./learning-log": "./src/clients/learning-log/index.ts",
     "./study-session-runtime": "./src/study-session-runtime/index.ts",
     "./study-session-react": "./src/study-session-react/index.ts",
-    "./toast-react": "./src/toast-react/index.ts"
+    "./toast-react": "./src/toast-react/index.ts",
+    "./ports": "./src/ports/index.ts",
+    "./adapters/rest": "./src/adapters/rest/index.ts",
+    "./services": "./src/services/index.ts"
   },
   "scripts": {
     "test": "vitest",
