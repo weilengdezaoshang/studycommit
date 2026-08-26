@@ -41,19 +41,6 @@ export default tseslint.config(
     },
   },
   {
-    files: ['apps/miniprogram/**/*.{js,ts}'],
-    languageOptions: {
-      globals: {
-        App: 'readonly',
-        Component: 'readonly',
-        Page: 'readonly',
-        getApp: 'readonly',
-        getCurrentPages: 'readonly',
-        wx: 'readonly',
-      },
-    },
-  },
-  {
     files: ['apps/desktop/**/*.{ts,tsx}', 'apps/mobile/**/*.{ts,tsx}'],
     extends: [
       react.configs.flat.recommended,

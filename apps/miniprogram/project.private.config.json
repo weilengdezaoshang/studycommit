@@ -1,8 +1,0 @@
-{
-  "description": "StudyCommit 本地开发配置",
-  "setting": {
-    "urlCheck": false,
-    "es6": true,
-    "minified": false
-  }
-}
