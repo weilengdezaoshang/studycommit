@@ -1,0 +1,12 @@
+{
+  "name": "@studycommit/miniprogram",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check": "node scripts/check-project.mjs"
+  },
+  "devDependencies": {
+    "miniprogram-api-typings": "^4.0.0"
+  }
+}
