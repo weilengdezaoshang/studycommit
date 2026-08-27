@@ -15,7 +15,7 @@ function renderAt(path: string) {
 describe('application shell', () => {
   it('redirects the root route to Today and renders the shell', async () => {
     renderAt('/')
-    expect(await screen.findByRole('heading', { name: '今天' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '继续一个问题' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument()
     expect(screen.getByText('StudyCommit')).toBeInTheDocument()
   })
@@ -78,7 +78,7 @@ describe('application shell', () => {
     expect(screen.getByRole('navigation', { name: '主导航' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: '返回今天' }))
-    expect(screen.getByRole('heading', { name: '今天' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '继续一个问题' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '今天' })).toHaveAttribute('aria-current', 'page')
   })
 
@@ -86,6 +86,7 @@ describe('application shell', () => {
     const user = userEvent.setup()
     renderAt('/today')
 
+    expect(screen.getByRole('button', { name: '关闭学习抽屉' })).toHaveFocus()
     await user.tab()
     expect(screen.getByRole('link', { name: '今天' })).toHaveFocus()
     await user.tab()
@@ -94,9 +95,25 @@ describe('application shell', () => {
     expect(screen.getByRole('heading', { name: '草稿' })).toBeInTheDocument()
   })
 
-  it('does not present sample business metrics on placeholder pages', () => {
+  it('renders mock topic data without legacy business metrics', () => {
     renderAt('/topics')
-    expect(screen.getByText('还没有专题')).toBeInTheDocument()
-    expect(screen.queryByText(/50 分钟|8 张|今日累计/)).not.toBeInTheDocument()
+    expect(screen.getByText('我的箱子')).toBeInTheDocument()
+    expect(screen.queryByText(/50 分钟|今日累计/)).not.toBeInTheDocument()
+  })
+
+  it('opens and closes the learning drawer without changing the current page', async () => {
+    const user = userEvent.setup()
+    renderAt('/today')
+    const menuButton = screen.getByRole('button', { name: '打开学习抽屉' })
+    expect(menuButton).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: '关闭学习抽屉' }))
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('navigation', { name: '主导航' })).not.toBeInTheDocument()
+    await user.click(menuButton)
+    expect(screen.getByRole('navigation', { name: '主导航' })).toBeVisible()
+    await user.keyboard('{Escape}')
+    expect(menuButton).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('heading', { name: '继续一个问题' })).toBeInTheDocument()
   })
 })

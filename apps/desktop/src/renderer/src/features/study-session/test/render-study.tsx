@@ -73,7 +73,7 @@ export function renderStudyApp(
   return render(
     <DesktopServicesProvider services={value}>
       <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
+        <AppRoutes workspaceMode="study-session" />
       </MemoryRouter>
     </DesktopServicesProvider>,
     options,

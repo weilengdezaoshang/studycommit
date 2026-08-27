@@ -25,18 +25,45 @@ function getPageTitle(pathname: string): string {
   return '页面不存在'
 }
 
-export function AppHeader(): React.JSX.Element {
+export function AppHeader({
+  drawerOpen,
+  onMenu,
+}: {
+  drawerOpen: boolean
+  onMenu: () => void
+}): React.JSX.Element {
   const { pathname } = useLocation()
+  const isToday = pathname === '/today' || pathname === '/'
 
   return (
-    <header className="app-header">
-      <div>
-        <span className="app-header__eyebrow">StudyCommit 桌面端</span>
-        <h1>{getPageTitle(pathname)}</h1>
+    <header className={`app-header${isToday ? ' app-header--today' : ''}`}>
+      <div className="app-header__main">
+        <button
+          className="app-header__menu"
+          type="button"
+          aria-label="打开学习抽屉"
+          aria-controls="study-drawer"
+          aria-expanded={drawerOpen}
+          onClick={onMenu}
+        >
+          <span className="menu-lines" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </span>
+        </button>
+        {isToday ? (
+          <h1>继续一个问题</h1>
+        ) : (
+          <div>
+            <span className="app-header__eyebrow">StudyCommit 桌面端</span>
+            <h1>{getPageTitle(pathname)}</h1>
+          </div>
+        )}
       </div>
-      <span className="local-status">
+      <span className={isToday ? 'home-question-status' : 'local-status'}>
         <i aria-hidden="true" />
-        本地工作
+        {isToday ? '还有 2 个问题在等你' : '本地工作'}
       </span>
     </header>
   )

@@ -8,6 +8,8 @@ import { PagePlaceholder } from '../components/PagePlaceholder'
 import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
+import { MockDraftsPage, MockReviewPage, MockTopicsPage } from '../features/mock/MockWorkspacePages'
+import { MockAuthPage } from '../features/auth/MockAuthPage'
 
 const DeskDemoPage = lazy(() =>
   import('../features/desk/DeskDemoPage').then((module) => ({ default: module.DeskDemoPage })),
@@ -68,34 +70,20 @@ function NotFoundPage(): React.JSX.Element {
   )
 }
 
-export function AppRoutes(): React.JSX.Element {
+export function AppRoutes({
+  workspaceMode = 'mock',
+}: {
+  workspaceMode?: 'mock' | 'study-session'
+}): React.JSX.Element {
   return (
     <DesktopServicesProvider>
       <ToastProvider renderToast={(toast) => <Toast {...toast} />}>
         <Routes>
-          <Route element={<AppShell />}>
+          <Route element={<AppShell workspaceMode={workspaceMode} />}>
             <Route index element={<LandingRedirect />} />
             <Route path="today" element={null} />
-            <Route
-              path="drafts"
-              element={
-                <PagePlaceholder
-                  title="暂无待整理草稿"
-                  description="草稿创建、整理和归档将在 EL-201 实现。"
-                  nextTask="EL-201"
-                />
-              }
-            />
-            <Route
-              path="topics"
-              element={
-                <PagePlaceholder
-                  title="还没有专题"
-                  description="专题列表与创建功能将在 EL-005 接入真实 Repository。"
-                  nextTask="EL-005"
-                />
-              }
-            />
+            <Route path="drafts" element={<MockDraftsPage />} />
+            <Route path="topics" element={<MockTopicsPage />} />
             <Route path="topics/:topicId" element={<TopicLayout />}>
               <Route index element={<TopicRedirect />} />
               <Route
@@ -140,16 +128,7 @@ export function AppRoutes(): React.JSX.Element {
                 }
               />
             </Route>
-            <Route
-              path="review"
-              element={
-                <PagePlaceholder
-                  title="暂无到期复习"
-                  description="复习卡片和评分流程将在 EL-203 实现。"
-                  nextTask="EL-203"
-                />
-              }
-            />
+            <Route path="review" element={<MockReviewPage />} />
             <Route
               path="desk"
               element={
@@ -174,6 +153,7 @@ export function AppRoutes(): React.JSX.Element {
                 />
               }
             />
+            <Route path="auth" element={<MockAuthPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

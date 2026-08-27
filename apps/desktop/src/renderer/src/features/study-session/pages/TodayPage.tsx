@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { StartStudyPanel } from '../components/StartStudyPanel'
 import { SessionPanel } from '../components/SessionPanel'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
-import { StudyCompanionScene } from '../../companion/StudyCompanionScene'
 
 export function TodayPage({ study }: { study: StudySessionController }): React.JSX.Element {
   const [starting, setStarting] = useState(false)
@@ -69,7 +68,9 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
           </button>
           <small>不设惩罚，不催促完成 · 随时可以暂停</small>
         </div>
-        <StudyCompanionScene state="ready" />
+        <div className="study-welcome__quiet-mark" aria-hidden="true">
+          纸页
+        </div>
       </div>
     </section>
   )

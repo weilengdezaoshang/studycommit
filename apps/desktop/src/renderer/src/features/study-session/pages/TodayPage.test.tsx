@@ -44,7 +44,7 @@ describe('TodayPage', () => {
     })
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: '所有专题' }))
-    expect(screen.getByText('还没有专题')).toBeInTheDocument()
+    expect(screen.getByText('我的箱子')).toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: '今天' }))
     expect(screen.getByRole('button', { name: '暂停' })).toBeEnabled()
     expect(screen.queryByText('正在读取当前学习会话')).not.toBeInTheDocument()

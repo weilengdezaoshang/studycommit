@@ -14,6 +14,7 @@ export const routes = {
   review: (): string => '/review',
   desk: (): string => '/desk',
   settings: (): string => '/settings',
+  auth: (): string => '/auth',
   topicOverview: (topicId: string): string => `/topics/${encodeId(topicId)}/overview`,
   topicNotes: (topicId: string): string => `/topics/${encodeId(topicId)}/notes`,
   topicMap: (topicId: string): string => `/topics/${encodeId(topicId)}/map`,
