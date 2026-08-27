@@ -9,7 +9,7 @@
 }
 
 .eyebrow {
-  color: #8a8b80;
+  color: var(--sc-muted);
   font-size: 22rpx;
   letter-spacing: 4rpx;
 }
@@ -23,7 +23,7 @@
 .subtitle,
 .empty-copy {
   margin-top: 16rpx;
-  color: #77786d;
+  color: var(--sc-muted);
   font-size: 28rpx;
   line-height: 1.6;
 }
@@ -31,9 +31,9 @@
 .empty-card {
   margin-top: 80rpx;
   padding: 40rpx;
-  border: 1rpx solid #dedbcc;
+  border: 1rpx solid var(--sc-line);
   border-radius: 24rpx;
-  background: #fffdf7;
+  background: var(--sc-surface-soft);
 }
 
 .empty-title {
@@ -44,7 +44,7 @@
 .primary-button {
   margin: 40rpx 0 0;
   border-radius: 16rpx;
-  background: #68765f;
-  color: #fffdf7;
+  background: var(--sc-action);
+  color: var(--sc-paper);
   font-size: 30rpx;
 }

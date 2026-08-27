@@ -6,7 +6,11 @@
     "noEmit": true,
     "skipLibCheck": true,
     "types": ["miniprogram-api-typings"],
-    "allowJs": false
+    "allowJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "@studycommit/observability": ["../../packages/observability/src/index.ts"]
+    }
   },
   "include": ["**/*.ts", "types/**/*.d.ts"]
 }

@@ -1,0 +1,14 @@
+/* 与 packages/design-tokens/src/colors.ts 中 studyCommitColors 对齐。 */
+:root {
+  --sc-ink: #34423b;
+  --sc-muted: #7b867e;
+  --sc-paper: #fffef9;
+  --sc-canvas: #e8eee8;
+  --sc-line: #ccd6cc;
+  --sc-accent: #f1dc7a;
+  --sc-action: #53635a;
+  --sc-action-surface: #dce9d8;
+  --sc-surface-soft: #fbfcf7;
+  --sc-surface-warm: #f1f5ef;
+  --sc-scrim: #34423b99;
+}

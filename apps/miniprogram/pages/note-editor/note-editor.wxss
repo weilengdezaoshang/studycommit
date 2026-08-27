@@ -1,7 +1,7 @@
 .editor-page {
   min-height: 100vh;
   padding: 32rpx;
-  background: #f8f6ef;
+  background: var(--sc-canvas);
 }
 
 .note-input {
@@ -9,10 +9,10 @@
   width: 100%;
   min-height: 520rpx;
   padding: 32rpx;
-  border: 1rpx solid #dedbcc;
+  border: 1rpx solid var(--sc-line);
   border-radius: 20rpx;
-  background: #fffdf7;
-  color: #24251f;
+  background: var(--sc-paper);
+  color: var(--sc-ink);
   font-size: 32rpx;
   line-height: 1.7;
 }
@@ -31,12 +31,12 @@
 }
 
 .question-button {
-  border: 1rpx solid #c6c5b9;
+  border: 1rpx solid var(--sc-line);
   background: transparent;
-  color: #55574e;
+  color: var(--sc-action);
 }
 
 .save-button {
-  background: #68765f;
-  color: #fffdf7;
+  background: var(--sc-action);
+  color: var(--sc-paper);
 }

@@ -1,6 +1,8 @@
+@import './styles/tokens.wxss';
+
 page {
-  background: #f8f6ef;
-  color: #24251f;
+  background: var(--sc-paper);
+  color: var(--sc-ink);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
 }
 

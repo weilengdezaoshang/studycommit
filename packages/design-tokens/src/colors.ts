@@ -44,4 +44,19 @@ export const darkColors: { readonly [Key in keyof typeof lightColors]: string } 
   scrim: '#00000099',
 }
 
+/** StudyCommit 纸张/鼠尾草主题，供 PRD 与原生小程序复用。 */
+export const studyCommitColors = {
+  ink: '#34423B',
+  muted: '#7B867E',
+  paper: '#FFFEF9',
+  canvas: '#E8EEE8',
+  line: '#CCD6CC',
+  accent: '#F1DC7A',
+  action: '#53635A',
+  actionSurface: '#DCE9D8',
+  surfaceSoft: '#FBFCF7',
+  surfaceWarm: '#F1F5EF',
+  scrim: '#34423B99',
+} as const
+
 export type SemanticColors = typeof lightColors | typeof darkColors

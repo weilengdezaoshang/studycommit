@@ -18,4 +18,19 @@ for (const file of ['app.json', 'project.config.json', 'sitemap.json']) {
   readJson(file)
 }
 
+for (const file of [
+  'app.ts',
+  'app.wxss',
+  'styles/tokens.wxss',
+  'services/monitor-adapter.ts',
+  'constants/app.ts',
+  'constants/api.ts',
+  'constants/events.ts',
+  'constants/routes.ts',
+]) {
+  if (!existsSync(resolve(root, file))) {
+    throw new Error(`工程缺少基础文件 ${file}`)
+  }
+}
+
 console.log(`[miniprogram] 检查通过：${app.pages.length} 个页面`)
