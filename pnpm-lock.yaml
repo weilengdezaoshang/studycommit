@@ -74,9 +74,15 @@ importers:
       '@orpc/nest':
         specifier: ^1.15.0
         version: 1.15.0(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.29(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(fastify@5.11.0)(rxjs@7.8.2)(ws@8.21.3)
+      '@orpc/openapi':
+        specifier: ^1.15.0
+        version: 1.15.0(fastify@5.11.0)(ws@8.21.3)
       '@orpc/server':
         specifier: ^1.15.0
         version: 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/zod':
+        specifier: ^1.15.0
+        version: 1.15.0(@orpc/contract@1.15.0)(@orpc/server@1.15.0(fastify@5.11.0)(ws@8.21.3))(fastify@5.11.0)(ws@8.21.3)(zod@4.4.3)
       '@studycommit/rpc-contracts':
         specifier: workspace:*
         version: link:../../packages/rpc-contracts
@@ -330,13 +336,16 @@ importers:
       '@orpc/contract':
         specifier: ^1.15.0
         version: 1.15.0
-      '@orpc/openapi':
-        specifier: ^1.15.0
-        version: 1.15.0(fastify@5.11.0)(ws@8.21.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
+      '@orpc/openapi':
+        specifier: ^1.15.0
+        version: 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/zod':
+        specifier: ^1.15.0
+        version: 1.15.0(@orpc/contract@1.15.0)(@orpc/server@1.15.0(fastify@5.11.0)(ws@8.21.3))(fastify@5.11.0)(ws@8.21.3)(zod@4.4.3)
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
@@ -1817,6 +1826,9 @@ packages:
   '@orpc/interop@1.15.0':
     resolution: {integrity: sha512-Ah48o/rc00rN1yP5HcaoVsDCjdUhoh3JP1VibBbvwijhGvdOwRwiw5RWiGu442GSKcrPt9etAGhWXH88q8C3ww==}
 
+  '@orpc/json-schema@1.15.0':
+    resolution: {integrity: sha512-MH8Qh6yPVaz76BdwcetKMUoL+Fpho1/e30Tb3WawU+EDZGD5jzA7W/KdRGvEYTHGod7qduS/kPd191NCVIEtDw==}
+
   '@orpc/nest@1.15.0':
     resolution: {integrity: sha512-iloZTCnEnUlckgneUn6OU/unXkSOpvIdRtFzVKAYbQuZh19fb5/NHw58kglV5xQ+Bus4sXeZY1IAfdgQ7wTmEw==}
     peerDependencies:
@@ -1878,6 +1890,13 @@ packages:
 
   '@orpc/standard-server@1.15.0':
     resolution: {integrity: sha512-bje/xn6thDqJY/JQ7xoOjmD1KWE4FsyZOPgnPxwqTZLx/r00stRhLuFvk1hDEGj9UlG7NLZEijDVx0wqvcyDzA==}
+
+  '@orpc/zod@1.15.0':
+    resolution: {integrity: sha512-QaxvUaxemoz57ljE6GNoRHy6tUrLz9PZH+NjPtbL2SilTwrtTDPgWzS+D8TYW6VZqhdBJM6jY93j81ygVf88dQ==}
+    peerDependencies:
+      '@orpc/contract': 1.15.0
+      '@orpc/server': 1.15.0
+      zod: '>=3.25.0'
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
@@ -3293,6 +3312,10 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
+
+  escape-string-regexp@5.0.0:
+    resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
+    engines: {node: '>=12'}
 
   escodegen@2.1.0:
     resolution: {integrity: sha512-2NlIDTwUWJN0mRPQOdtQBzbUHvdGY2P1VXSyU83Q3xKxM7WHX2Ql8dKq782Q9TgQUNOLEzEYu9bzLNj1q88I5w==}
@@ -5971,6 +5994,9 @@ packages:
     engines: {node: '>=8'}
     hasBin: true
 
+  wildcard-match@5.1.4:
+    resolution: {integrity: sha512-wldeCaczs8XXq7hj+5d/F38JE2r7EXgb6WQDM84RVwxy81T/sxB5e9+uZLK9Q9oNz1mlvjut+QtvgaOQFPVq/g==}
+
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
@@ -7708,6 +7734,20 @@ snapshots:
 
   '@orpc/interop@1.15.0': {}
 
+  '@orpc/json-schema@1.15.0(fastify@5.11.0)(ws@8.21.3)':
+    dependencies:
+      '@orpc/contract': 1.15.0
+      '@orpc/interop': 1.15.0
+      '@orpc/openapi': 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/server': 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/shared': 1.15.0
+      json-schema-typed: 8.0.2
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - crossws
+      - fastify
+      - ws
+
   '@orpc/nest@1.15.0(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.29(@nestjs/common@11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2))(fastify@5.11.0)(rxjs@7.8.2)(ws@8.21.3)':
     dependencies:
       '@nestjs/common': 11.1.29(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -7826,6 +7866,22 @@ snapshots:
       '@orpc/shared': 1.15.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
+
+  '@orpc/zod@1.15.0(@orpc/contract@1.15.0)(@orpc/server@1.15.0(fastify@5.11.0)(ws@8.21.3))(fastify@5.11.0)(ws@8.21.3)(zod@4.4.3)':
+    dependencies:
+      '@orpc/contract': 1.15.0
+      '@orpc/json-schema': 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/openapi': 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/server': 1.15.0(fastify@5.11.0)(ws@8.21.3)
+      '@orpc/shared': 1.15.0
+      escape-string-regexp: 5.0.0
+      wildcard-match: 5.1.4
+      zod: 4.4.3
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+      - crossws
+      - fastify
+      - ws
 
   '@pinojs/redact@0.4.0': {}
 
@@ -9402,6 +9458,8 @@ snapshots:
   escape-string-regexp@2.0.0: {}
 
   escape-string-regexp@4.0.0: {}
+
+  escape-string-regexp@5.0.0: {}
 
   escodegen@2.1.0:
     dependencies:
@@ -12540,6 +12598,8 @@ snapshots:
     dependencies:
       siginfo: 2.0.0
       stackback: 0.0.2
+
+  wildcard-match@5.1.4: {}
 
   word-wrap@1.2.5: {}
 

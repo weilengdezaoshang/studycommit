@@ -1,5 +1,6 @@
 export * from './auth.js'
 export * from './capture.js'
+export * from './contract.js'
 export * from './health.js'
 export * from './learning-records.js'
 export * from './study-sessions.js'

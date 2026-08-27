@@ -1,4 +1,5 @@
 import { OpenAPIGenerator } from '@orpc/openapi'
+import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4'
 import { describe, expect, it } from 'vitest'
 import { healthContract, livenessSchema } from './health.js'
 
@@ -30,9 +31,9 @@ describe('health contract', () => {
   })
 
   it('从同一份契约生成 OpenAPI 路由', async () => {
-    const specification = await new OpenAPIGenerator().generate(healthContract, {
-      info: { title: 'StudyCommit API', version: '1.0.0' },
-    })
+    const specification = await new OpenAPIGenerator({
+      schemaConverters: [new ZodToJsonSchemaConverter()],
+    }).generate(healthContract, { info: { title: 'StudyCommit API', version: '1.0.0' } })
 
     expect(specification.paths?.['/health/live']?.get).toEqual(
       expect.objectContaining({

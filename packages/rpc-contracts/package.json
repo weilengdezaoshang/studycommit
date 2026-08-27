@@ -16,6 +16,10 @@
       "types": "./src/capture.ts",
       "default": "./dist/capture.js"
     },
+    "./contract": {
+      "types": "./src/contract.ts",
+      "default": "./dist/contract.js"
+    },
     "./health": {
       "types": "./src/health.ts",
       "default": "./dist/health.js"
@@ -35,15 +39,17 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@orpc/contract": "^1.15.0",
-    "@orpc/openapi": "^1.15.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@orpc/openapi": "^1.15.0",
+    "@orpc/zod": "^1.15.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.10"
   }

@@ -31,7 +31,7 @@ try {
   run('pnpm', ['--filter', '@studycommit/api', 'db:migrate'], { cwd: projectRoot, env })
   log(`后端已就绪：http://localhost:${env.API_PORT ?? 3000}/api`)
   log('按 Ctrl+C 停止 API；数据库容器会继续运行')
-  runForeground('pnpm', ['--filter', '@studycommit/api', 'dev'], { cwd: projectRoot, env })
+  runForeground('pnpm', ['dev:api'], { cwd: projectRoot, env })
 } catch (error) {
   console.error(`\n[StudyCommit] ${error.message}`)
   process.exitCode = 1
