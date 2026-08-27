@@ -73,15 +73,22 @@ function sanitize(value: unknown): unknown {
     )
   }
 
-  return value
+  return typeof value === 'string' ? sanitizeText(value) : value
+}
+
+const SENSITIVE_TEXT_PATTERN =
+  /(\b(?:token|authorization|password|secret|cookie|phone|openid)\b\s*[:=]\s*)(?:Bearer\s+)?[^\s,;]+/gi
+
+function sanitizeText(value: string): string {
+  return value.replace(SENSITIVE_TEXT_PATTERN, '$1[REDACTED]')
 }
 
 function normalizeError(error: unknown): NonNullable<MonitorRecord['error']> {
   if (error instanceof Error) {
     return {
       name: error.name,
-      message: error.message,
-      ...(error.stack ? { stack: error.stack } : {}),
+      message: sanitizeText(error.message),
+      ...(error.stack ? { stack: sanitizeText(error.stack) } : {}),
     }
   }
 

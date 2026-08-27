@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
+    "lib": ["ES2022", "DOM"],
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
@@ -9,6 +10,7 @@
     "allowJs": false,
     "baseUrl": ".",
     "paths": {
+      "@studycommit/common/http": ["../../common/src/http/index.ts"],
       "@studycommit/observability": ["../../packages/observability/src/index.ts"]
     }
   },

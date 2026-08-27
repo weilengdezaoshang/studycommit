@@ -22,6 +22,7 @@ for (const file of [
   'app.ts',
   'app.wxss',
   'styles/tokens.wxss',
+  'services/http.ts',
   'services/monitor-adapter.ts',
   'constants/app.ts',
   'constants/api.ts',

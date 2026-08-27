@@ -3,14 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "check": "node scripts/check-project.mjs"
   },
   "devDependencies": {
     "miniprogram-api-typings": "^4.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@studycommit/common": "workspace:*",
     "@studycommit/observability": "workspace:*"
   }
 }

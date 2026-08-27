@@ -69,6 +69,24 @@ describe('monitor', () => {
     )
   })
 
+  it('redacts sensitive values in error messages and stacks', () => {
+    const { report, reporter } = createReporter()
+    const monitor = createMonitor({ platform: 'miniprogram', reporters: [reporter] })
+    const error = new Error('request failed token=secret-token')
+    error.stack = 'Error: password=secret-password'
+
+    monitor.captureError(error)
+
+    expect(report).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.objectContaining({
+          message: 'request failed token=[REDACTED]',
+          stack: 'Error: password=[REDACTED]',
+        }),
+      }),
+    )
+  })
+
   it('redacts sensitive values recursively', () => {
     const { report, reporter } = createReporter()
     const monitor = createMonitor({ platform: 'miniprogram', reporters: [reporter] })

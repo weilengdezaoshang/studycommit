@@ -229,6 +229,9 @@ importers:
 
   apps/miniprogram:
     dependencies:
+      '@studycommit/common':
+        specifier: workspace:*
+        version: link:../../common
       '@studycommit/observability':
         specifier: workspace:*
         version: link:../../packages/observability
@@ -239,6 +242,9 @@ importers:
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.10
+        version: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@7.3.6(@types/node@24.13.3)(lightningcss@1.33.0)(terser@5.50.0)(tsx@4.23.12)(yaml@2.9.0))
 
   apps/mobile:
     dependencies:
