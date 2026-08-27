@@ -11,6 +11,7 @@ import { createLoggingConfig, type RuntimeEnvironment } from './common/logging/l
 import { LearningLogsModule } from './learning-logs/learning-logs.module'
 import { StudySessionsModule } from './study-sessions/study-sessions.module'
 import { ORPCModule } from '@orpc/nest'
+import { PapersModule } from './papers/papers.module'
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ORPCModule } from '@orpc/nest'
     TopicsModule,
     StudySessionsModule,
     LearningLogsModule,
+    PapersModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

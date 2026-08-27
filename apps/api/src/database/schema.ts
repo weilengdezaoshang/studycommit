@@ -55,6 +55,32 @@ export const topics = pgTable(
   ],
 )
 
+export const papers = pgTable(
+  'papers',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    content: text('content').notNull(),
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    check('papers_content_not_blank', sql`length(trim(${table.content})) > 0`),
+    check('papers_content_length', sql`length(${table.content}) <= 20000`),
+    check('papers_version_positive', sql`${table.version} >= 1`),
+    index('papers_user_created_idx').on(table.userId, table.createdAt, table.id),
+    index('papers_user_topic_created_idx').on(
+      table.userId,
+      table.topicId,
+      table.createdAt,
+      table.id,
+    ),
+  ],
+)
+
 export const idempotencyRecords = pgTable(
   'idempotency_records',
   {
