@@ -13,7 +13,7 @@ import type {
   StudySession,
 } from '../../contracts/study-session'
 import type { ListActiveTopicsInput, TopicPage } from '../../contracts/topic'
-import type { ApplicationServices, TopicApi } from '../../ports'
+import type { ApplicationServices } from '../../ports'
 
 type Procedure<TInput, TOutput> = (input: TInput) => Promise<TOutput>
 
@@ -31,7 +31,9 @@ export interface OrpcRawClient {
     resume: Procedure<SessionCommandInput, StudySession>
     complete: Procedure<CompleteStudySessionInput, CompleteStudySessionResult>
   }
-  topics: TopicApi
+  topics: {
+    list: Procedure<ListActiveTopicsInput | undefined, TopicPage>
+  }
   learningLogs: {
     list: Procedure<ListLearningLogsInput | undefined, LearningLogPage>
     bySession: Procedure<string, LearningLog>
@@ -52,8 +54,7 @@ export function createOrpcServices(client: OrpcRawClient): OrpcServices {
       complete: (input) => client.studySessions.complete(input),
     },
     topics: {
-      listActive: (input?: ListActiveTopicsInput): Promise<TopicPage> =>
-        client.topics.listActive(input),
+      listActive: (input?: ListActiveTopicsInput): Promise<TopicPage> => client.topics.list(input),
     },
     learningLogs: {
       list: (input) => client.learningLogs.list(input),

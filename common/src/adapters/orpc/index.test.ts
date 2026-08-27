@@ -11,7 +11,7 @@ function createClient(): OrpcRawClient {
       resume: vi.fn(),
       complete: vi.fn(),
     },
-    topics: { listActive: vi.fn() },
+    topics: { list: vi.fn() },
     learningLogs: { list: vi.fn(), bySession: vi.fn(), update: vi.fn() },
   }
 }
@@ -56,7 +56,7 @@ describe('createOrpcServices', () => {
     await services.learningLogs.getBySession('session')
     await services.learningLogs.update(updateInput)
 
-    expect(client.topics.listActive).toHaveBeenCalledExactlyOnceWith(topicInput)
+    expect(client.topics.list).toHaveBeenCalledExactlyOnceWith(topicInput)
     expect(client.learningLogs.list).toHaveBeenCalledExactlyOnceWith(listInput)
     expect(client.learningLogs.bySession).toHaveBeenCalledExactlyOnceWith('session')
     expect(client.learningLogs.update).toHaveBeenCalledExactlyOnceWith(updateInput)
@@ -69,7 +69,7 @@ describe('createOrpcServices', () => {
     await services.topics.listActive()
     await services.learningLogs.list()
 
-    expect(client.topics.listActive).toHaveBeenCalledExactlyOnceWith(undefined)
+    expect(client.topics.list).toHaveBeenCalledExactlyOnceWith(undefined)
     expect(client.learningLogs.list).toHaveBeenCalledExactlyOnceWith(undefined)
   })
 
@@ -83,7 +83,7 @@ describe('createOrpcServices', () => {
     [
       '主题',
       (client: OrpcRawClient, error: Error) =>
-        vi.mocked(client.topics.listActive).mockRejectedValueOnce(error),
+        vi.mocked(client.topics.list).mockRejectedValueOnce(error),
       (services: ReturnType<typeof createOrpcServices>) => services.topics.listActive(),
     ],
     [

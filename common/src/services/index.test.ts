@@ -24,7 +24,7 @@ describe('createServices', () => {
         resume: vi.fn(),
         complete: vi.fn(),
       },
-      topics: { listActive: vi.fn() },
+      topics: { list: vi.fn() },
       learningLogs: { list: vi.fn(), bySession: vi.fn(), update: vi.fn() },
     }
 
