@@ -28,6 +28,10 @@
       "types": "./src/learning-records.ts",
       "default": "./dist/learning-records.js"
     },
+    "./papers": {
+      "types": "./src/papers.ts",
+      "default": "./dist/papers.js"
+    },
     "./study-sessions": {
       "types": "./src/study-sessions.ts",
       "default": "./dist/study-sessions.js"
