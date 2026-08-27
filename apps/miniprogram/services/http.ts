@@ -1,12 +1,75 @@
-import {
-  createApiUrl,
-  createHttpError,
-  httpErrorFromStatus,
-  HttpError,
-  redactSensitive,
-} from '@studycommit/common/http'
-import type { Monitor } from '@studycommit/observability'
-import { monitor as defaultMonitor } from './monitor-adapter'
+import { monitor as defaultMonitor, type Monitor } from './monitor-adapter'
+
+export type HttpErrorCode =
+  | 'NETWORK_ERROR'
+  | 'TIMEOUT'
+  | 'CANCELLED'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'CONFLICT'
+  | 'RATE_LIMITED'
+  | 'SERVER_ERROR'
+  | 'INVALID_RESPONSE'
+  | 'CONFIGURATION_ERROR'
+  | 'UNKNOWN'
+
+export type SerializedHttpError = {
+  code: HttpErrorCode
+  message: string
+  status: number | null
+  backendCode: string | null
+  requestId: string | null
+  details: unknown
+}
+
+export class HttpError extends Error {
+  readonly serialized: SerializedHttpError
+
+  constructor(error: SerializedHttpError, options?: ErrorOptions) {
+    super(error.message, options)
+    this.name = 'HttpError'
+    this.serialized = error
+  }
+
+  get code(): HttpErrorCode {
+    return this.serialized.code
+  }
+}
+
+export function createHttpError(
+  error: Omit<SerializedHttpError, 'status' | 'backendCode' | 'requestId' | 'details'> &
+    Partial<SerializedHttpError>,
+  options?: ErrorOptions,
+): HttpError {
+  return new HttpError(
+    {
+      code: error.code,
+      message: error.message,
+      status: error.status ?? null,
+      backendCode: error.backendCode ?? null,
+      requestId: error.requestId ?? null,
+      details: error.details ?? null,
+    },
+    options,
+  )
+}
+
+const DEFAULT_API_PREFIX = '/api'
+const DEFAULT_TIMEOUT_MS = 10_000
+const MAX_TIMEOUT_MS = 120_000
+const REQUEST_ACTION = 'http_request'
+const DANGEROUS_PROTOCOL = /^(javascript|data|file|vbscript):/i
+const SENSITIVE_KEYS = new Set([
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-user-id',
+  'password',
+  'token',
+])
+const MAX_TEXT_LENGTH = 256
 
 export type MiniProgramResponse = {
   statusCode: number
@@ -60,11 +123,6 @@ export type MiniProgramHttpClientOptions = {
 export type MiniProgramRequestPromise<TResponse> = Promise<TResponse> & {
   cancel(): void
 }
-
-const DEFAULT_API_PREFIX = '/api'
-const DEFAULT_TIMEOUT_MS = 10_000
-const MAX_TIMEOUT_MS = 120_000
-const REQUEST_ACTION = 'http_request'
 
 export function createMiniProgramHttpClient(options: MiniProgramHttpClientOptions) {
   const requestImpl = options.requestImpl ?? defaultRequest
@@ -331,4 +389,106 @@ function defaultRequest(options: MiniProgramRequestOption): MiniProgramRequestTa
 
 function defaultRequestId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function createApiUrl(options: {
+  origin: string
+  apiPrefix: string
+  path: string
+  allowInsecureHttp?: boolean
+}): URL {
+  const originUrl = parseOrigin(options.origin, options.allowInsecureHttp === true)
+  const prefix = normalizeApiPrefix(options.apiPrefix)
+  const path = normalizeBusinessPath(options.path)
+  return new URL(`${originUrl.origin}${prefix}${path}`)
+}
+
+function httpErrorFromStatus(status: number): HttpErrorCode {
+  if (status === 401) {
+    return 'UNAUTHORIZED'
+  }
+  if (status === 403) {
+    return 'FORBIDDEN'
+  }
+  if (status === 404) {
+    return 'NOT_FOUND'
+  }
+  if (status === 409) {
+    return 'CONFLICT'
+  }
+  if (status === 429) {
+    return 'RATE_LIMITED'
+  }
+  if (status >= 500) {
+    return 'SERVER_ERROR'
+  }
+  return 'UNKNOWN'
+}
+
+function redactSensitive(value: unknown, seen = new WeakSet<object>()): unknown {
+  if (typeof value === 'string') {
+    return value.length > MAX_TEXT_LENGTH ? `${value.slice(0, MAX_TEXT_LENGTH)}…` : value
+  }
+  if (!value || typeof value !== 'object') {
+    return value
+  }
+  if (seen.has(value)) {
+    return '[Circular]'
+  }
+  seen.add(value)
+  if (Array.isArray(value)) {
+    return value.map((item) => redactSensitive(item, seen))
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      SENSITIVE_KEYS.has(key.toLowerCase()) ? '[redacted]' : redactSensitive(item, seen),
+    ]),
+  )
+}
+
+function parseOrigin(origin: string, allowInsecureHttp: boolean): URL {
+  let originUrl: URL
+  try {
+    originUrl = new URL(origin)
+  } catch {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: 'API Origin 无效' })
+  }
+
+  if (originUrl.username || originUrl.password || originUrl.search || originUrl.hash) {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: 'API Origin 无效' })
+  }
+  if (originUrl.pathname !== '/' && originUrl.pathname !== '') {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: 'API Origin 不能包含业务路径' })
+  }
+  if (originUrl.protocol !== 'https:' && originUrl.protocol !== 'http:') {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: 'API Origin 协议不受支持' })
+  }
+  if (originUrl.protocol === 'http:' && !allowInsecureHttp) {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: '生产环境只允许 HTTPS' })
+  }
+  return originUrl
+}
+
+function normalizeApiPrefix(apiPrefix: string): string {
+  const prefix = apiPrefix.trim()
+  if (!prefix || prefix.includes('://') || prefix.startsWith('//') || prefix.includes('..')) {
+    throw createHttpError({ code: 'CONFIGURATION_ERROR', message: 'API Prefix 无效' })
+  }
+  const withSlash = prefix.startsWith('/') ? prefix : `/${prefix}`
+  return withSlash.endsWith('/') ? withSlash.slice(0, -1) : withSlash
+}
+
+function normalizeBusinessPath(path: string): string {
+  const value = path.trim()
+  if (
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    value.includes('://') ||
+    value.includes('..') ||
+    DANGEROUS_PROTOCOL.test(value)
+  ) {
+    throw createHttpError({ code: 'INVALID_RESPONSE', message: '请求路径不受支持' })
+  }
+  return value
 }

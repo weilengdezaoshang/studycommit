@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@studycommit/common": "workspace:*",
-    "@studycommit/observability": "workspace:*"
+    "@studycommit/observability": "workspace:*",
+    "@studycommit/rpc-contracts": "workspace:*"
   }
 }

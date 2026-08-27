@@ -1,12 +1,115 @@
-<view class="page-shell">
-  <view class="intro">
-    <text class="eyebrow">STUDYCOMMIT</text>
-    <text class="title">今天学了什么？</text>
-    <text class="subtitle">先留下理解，再慢慢形成体系。</text>
+<view class="home-page" style="padding-top: {{statusBarHeight}}px;">
+  <view class="topbar">
+    <button class="icon-button menu-button" aria-label="打开学习抽屉" bindtap="openDrawer">
+      <view class="menu-icon"><view></view><view></view><view></view></view>
+    </button>
+    <text class="month-title">{{monthTitle}}</text>
+    <view class="topbar-spacer"></view>
   </view>
-  <view class="empty-card">
-    <text class="empty-title">准备好记下第一张纸页了吗？</text>
-    <text class="empty-copy">记录会先进入待整理，之后再归入主题箱子。</text>
-    <button class="primary-button" bindtap="startWriting">记下一张纸页</button>
+
+  <view class="greeting">
+    <text class="greeting-title">今天学了什么？</text>
+    <text class="greeting-copy">先留下一张理解，再慢慢形成体系。</text>
+  </view>
+
+  <button class="capture-button" bindtap="startWriting" aria-label="记下刚学到的">
+    <view class="capture-copy"><text>记下刚学到的</text><small>把一张理解放进今天。</small></view>
+    <text class="capture-icon">+</text>
+  </button>
+
+  <view class="week-strip">
+    <view class="week-days">
+      <block wx:for="{{weekDays}}" wx:key="dateKey">
+        <button class="week-day {{item.isSelected ? 'is-selected' : ''}}" data-date="{{item.dateKey}}" bindtap="selectDate" aria-label="{{item.dateKey}}，{{item.paperCount}} 张纸页">
+          <text class="weekday-label">{{item.weekdayLabel}}</text>
+          <text class="day-label">{{item.dayLabel}}</text>
+          <view class="paper-stack {{item.paperCount ? '' : 'is-empty'}}">
+            <block wx:for="{{item.stack}}" wx:key="*this"><view class="stack-paper"></view></block>
+            <text wx:if="{{item.hasMore}}" class="stack-more">3+</text>
+          </view>
+        </button>
+      </block>
+    </view>
+  </view>
+
+  <view class="timeline-heading">
+    <view><text class="timeline-title">{{selectedDateLabel}}</text><text wx:if="{{selectedTopicId}}" class="timeline-date">{{timelineTitle}}</text></view>
+    <text class="timeline-count">{{timelinePapers.length}} 张</text>
+  </view>
+
+  <view wx:if="{{isLoading}}" class="state-card"><text>正在取回你的纸页……</text></view>
+  <view wx:elif="{{timelinePapers.length}}" class="timeline-list">
+    <block wx:for="{{timelinePapers}}" wx:key="id">
+      <view class="timeline-entry">
+        <view class="timeline-rail"><view class="timeline-dot"></view><text>{{item.timeLabel}}</text></view>
+        <view class="paper-card" data-id="{{item.id}}" bindtap="openPaper">
+          <text class="paper-content">{{item.content}}</text>
+          <view class="paper-meta"><text class="paper-label">{{item.topicLabel}}</text><text wx:if="{{item.isInbox}}" class="problem-mark">?</text></view>
+          <view wx:if="{{item.isInbox}}" class="paper-card-footer">
+            <text class="paper-hint">稍后归入一个主题</text>
+            <button class="organize-button" loading="{{organizingId === item.id}}" disabled="{{organizingId}}" data-id="{{item.id}}" data-version="{{item.version}}" catchtap="organizePaper">整理</button>
+          </view>
+        </view>
+      </view>
+    </block>
+  </view>
+  <view wx:elif="{{!isLoading}}" class="empty-day">
+    <text class="empty-title">这天还没有纸页</text><text class="empty-copy">空白只是留白，不是中断。</text>
+    <button class="secondary-button" bindtap="startWriting">写下第一张</button>
+  </view>
+
+  <button class="fab" aria-label="记下一张纸页" bindtap="startWriting"><text>+</text></button>
+
+  <view wx:if="{{isDrawerOpen}}" class="scrim" catchtap="closeDrawer"></view>
+  <view class="drawer {{isDrawerOpen ? 'drawer-open' : ''}}" aria-label="个人学习抽屉">
+    <view class="drawer-profile">
+      <view class="avatar">hi</view><text class="profile-name">我的学习</text>
+      <button class="drawer-icon-button" aria-label="搜索纸页与主题" bindtap="openSearch"><view class="search-icon"></view></button>
+      <button class="drawer-icon-button drawer-close" aria-label="关闭学习抽屉" bindtap="closeDrawer"><view class="close-icon"></view></button>
+    </view>
+
+    <button class="review-entry" bindtap="openReview"><text>{{monthLabel}}</text><text>查看装订 ›</text></button>
+    <view class="calendar-weekdays"><text wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</text></view>
+    <view class="calendar-grid">
+      <block wx:for="{{monthDays}}" wx:key="dateKey">
+        <view wx:if="{{item.isBlank}}" class="calendar-day is-blank"></view>
+        <button wx:else class="calendar-day level-{{item.level}} {{item.isSelected ? 'is-selected' : ''}}" data-date="{{item.dateKey}}" bindtap="selectDate" aria-label="{{item.dateKey}}，{{item.paperCount}} 张纸页">{{item.dayLabel}}</button>
+      </block>
+    </view>
+    <view class="heat-legend"><text>少</text><i></i><i></i><i></i><i></i><text>多</text></view>
+
+    <view class="drawer-section-heading"><text>我的箱子</text><button class="add-topic-button" aria-label="新建主题" bindtap="toggleTopicForm"><text>+</text></button></view>
+    <view wx:if="{{isTopicFormOpen}}" class="topic-form">
+      <input class="topic-input" maxlength="80" value="{{newTopicName}}" placeholder="主题名称" bindinput="onTopicNameInput" confirm-type="done" bindconfirm="createTopic" />
+      <button class="topic-submit" loading="{{isCreatingTopic}}" bindtap="createTopic">创建</button>
+    </view>
+    <view class="topic-list"><block wx:for="{{topics}}" wx:key="id"><button class="topic-row {{item.isSelected ? 'is-selected' : ''}}" data-id="{{item.id}}" bindtap="selectTopic"><view class="topic-dot" style="background-color: {{item.color}};"></view><text>{{item.name}}</text><small>{{item.paperCount}} 张</small></button></block></view>
+
+    <view class="drawer-section-heading attention-heading"><text>需要留意</text></view>
+    <button class="drawer-row {{inboxCount ? 'has-attention' : ''}}" bindtap="showInbox"><view class="inbox-icon"></view><text>待整理的纸页</text><small>{{inboxCount}}</small></button>
+    <button class="drawer-row" bindtap="openProblems"><view class="problem-icon">?</view><text>还在思考的问题</text><small>{{problemCount}}</small></button>
+  </view>
+
+  <view wx:if="{{isSearchOpen}}" class="overlay-panel search-panel">
+    <view class="overlay-header"><button class="back-button" aria-label="关闭搜索" bindtap="closeSearch">‹</button><input class="search-input" focus="{{isSearchOpen}}" value="{{searchQuery}}" placeholder="搜索纸页与主题" bindinput="onSearchInput" /><button class="clear-button" wx:if="{{searchQuery}}" bindtap="closeSearch">×</button></view>
+    <text wx:if="{{!searchQuery}}" class="overlay-hint">输入关键词，找回过去的记录</text>
+    <view wx:elif="{{searchResults.length}}" class="search-results"><block wx:for="{{searchResults}}" wx:key="id"><button class="search-result" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectSearchResult"><text class="result-title">{{item.title}}</text><text class="result-detail">{{item.detail}}</text></button></block></view>
+    <view wx:else class="overlay-empty"><text>没有找到相关内容</text></view>
+  </view>
+
+  <view wx:if="{{isReviewOpen}}" class="overlay-panel review-panel">
+    <view class="overlay-header"><button class="back-button" aria-label="关闭月份回顾" bindtap="closeReview">‹</button><text class="overlay-title">{{monthLabel}}装订</text><view class="header-spacer"></view></view>
+    <view class="bound-book"><text class="book-kicker">AUGUST · 2026</text><text class="book-title">学习装订</text><text class="book-copy">理解不是一次完成的，它在记录、整理与追问之间慢慢变厚。</text></view>
+    <view class="review-stats"><view><text>{{paperCount}}</text><small>纸页</small></view><view><text>{{topicCount}}</text><small>主题</small></view><view><text>{{inboxCount}}</text><small>待整理</small></view></view>
+  </view>
+
+  <view wx:if="{{isProblemsOpen}}" class="overlay-panel problems-panel">
+    <view class="overlay-header"><button class="back-button" aria-label="关闭问题" bindtap="closeProblems">‹</button><text class="overlay-title">还在思考的问题</text><view class="header-spacer"></view></view>
+    <view class="overlay-empty"><text>当前契约还没有问题字段</text><small>先把纸页放入待整理，问题标记将在下一版接入。</small></view>
+  </view>
+
+  <view wx:if="{{isDetailOpen && selectedPaper}}" class="overlay-panel detail-panel">
+    <view class="overlay-header"><button class="back-button" aria-label="关闭纸页详情" bindtap="closePaper">‹</button><text class="overlay-title">{{selectedPaper.topicLabel}}</text><view class="header-spacer"></view></view>
+    <view class="detail-paper"><text class="paper-date">{{selectedPaper.dateLabel}} · {{selectedPaper.timeLabel}}</text><text class="detail-content">{{selectedPaper.content}}</text><button wx:if="{{selectedPaper.isInbox}}" class="primary-button" data-id="{{selectedPaper.id}}" data-version="{{selectedPaper.version}}" bindtap="organizePaper">归入学习方法</button></view>
   </view>
 </view>

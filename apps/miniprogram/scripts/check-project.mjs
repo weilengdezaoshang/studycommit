@@ -23,6 +23,7 @@ for (const file of [
   'app.wxss',
   'styles/tokens.wxss',
   'services/http.ts',
+  'services/mock-papers.ts',
   'services/monitor-adapter.ts',
   'constants/app.ts',
   'constants/api.ts',

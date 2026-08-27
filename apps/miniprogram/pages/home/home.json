@@ -1,3 +1,5 @@
 {
-  "navigationBarTitleText": "今天学了什么"
+  "navigationBarTitleText": "今天学了什么",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": true
 }

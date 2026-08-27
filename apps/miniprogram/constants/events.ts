@@ -1,3 +1,26 @@
-import { MONITOR_EVENTS } from '@studycommit/observability'
-
-export { MONITOR_EVENTS }
+export const MONITOR_EVENTS = {
+  APP_LAUNCH: 'app_launch',
+  APP_ERROR: 'app_error',
+  UNHANDLED_REJECTION: 'unhandled_rejection',
+  PAGE_NOT_FOUND: 'page_not_found',
+  HOME_VIEW: 'home_view',
+  HOME_OPEN_NOTE_EDITOR: 'home_open_note_editor',
+  HOME_LOAD_FAILED: 'home_load_failed',
+  HOME_ORGANIZE_CLICK: 'home_organize_click',
+  HOME_ORGANIZE_SUCCESS: 'home_organize_success',
+  HOME_ORGANIZE_FAILED: 'home_organize_failed',
+  HOME_DRAWER_OPEN: 'home_drawer_open',
+  HOME_DRAWER_CLOSE: 'home_drawer_close',
+  HOME_DATE_SELECT: 'home_date_select',
+  HOME_TOPIC_SELECT: 'home_topic_select',
+  HOME_SEARCH_OPEN: 'home_search_open',
+  HOME_REVIEW_OPEN: 'home_review_open',
+  HOME_PROBLEMS_OPEN: 'home_problems_open',
+  HOME_DETAIL_OPEN: 'home_detail_open',
+  HOME_TOPIC_CREATE: 'home_topic_create',
+  HOME_TOPIC_CREATE_FAILED: 'home_topic_create_failed',
+  NOTE_EDITOR_OPEN: 'note_editor_open',
+  NOTE_SAVE_CLICK: 'note_save_click',
+  NOTE_SAVE_SUCCESS: 'note_save_success',
+  NOTE_SAVE_FAILED: 'note_save_failed',
+} as const

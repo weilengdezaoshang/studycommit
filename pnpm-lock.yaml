@@ -235,6 +235,9 @@ importers:
       '@studycommit/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@studycommit/rpc-contracts':
+        specifier: workspace:*
+        version: link:../../packages/rpc-contracts
     devDependencies:
       miniprogram-api-typings:
         specifier: ^4.0.0

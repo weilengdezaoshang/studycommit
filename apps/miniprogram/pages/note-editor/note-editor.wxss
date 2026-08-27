@@ -23,17 +23,10 @@
   margin-top: 32rpx;
 }
 
-.question-button,
 .save-button {
   flex: 1;
   border-radius: 16rpx;
   font-size: 28rpx;
-}
-
-.question-button {
-  border: 1rpx solid var(--sc-line);
-  background: transparent;
-  color: var(--sc-action);
 }
 
 .save-button {

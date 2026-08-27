@@ -1,20 +1,10 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { monitor } from '../../services/monitor-adapter'
-
-interface LocalNote {
-  id: string
-  content: string
-  isQuestion: boolean
-  isResolved: boolean
-  createdAt: string
-}
-
-const NOTES_STORAGE_KEY = 'studycommit.notes' as const
+import { getMockPapersApi } from '../../services/mock-papers'
 
 Page({
   data: {
     content: '',
-    isQuestion: false,
     isSaving: false,
   },
 
@@ -26,20 +16,12 @@ Page({
     this.setData({ content: event.detail.value })
   },
 
-  toggleQuestion() {
-    const isQuestion = !this.data.isQuestion
-    this.setData({ isQuestion })
-    monitor.track(MONITOR_EVENTS.NOTE_QUESTION_TOGGLE, { isQuestion })
-  },
-
-  saveNote() {
+  async saveNote() {
     if (this.data.isSaving) {
       return
     }
 
-    monitor.track(MONITOR_EVENTS.NOTE_SAVE_CLICK, {
-      isQuestion: this.data.isQuestion,
-    })
+    monitor.track(MONITOR_EVENTS.NOTE_SAVE_CLICK)
 
     const content = this.data.content.trim()
     if (!content) {
@@ -50,19 +32,8 @@ Page({
     this.setData({ isSaving: true })
 
     try {
-      const storedNotes = wx.getStorageSync(NOTES_STORAGE_KEY)
-      const notes = Array.isArray(storedNotes) ? (storedNotes as LocalNote[]) : []
-      notes.unshift({
-        id: `${Date.now()}`,
-        content,
-        isQuestion: this.data.isQuestion,
-        isResolved: false,
-        createdAt: new Date().toISOString(),
-      })
-      wx.setStorageSync(NOTES_STORAGE_KEY, notes)
-      monitor.track(MONITOR_EVENTS.NOTE_SAVE_SUCCESS, {
-        isQuestion: this.data.isQuestion,
-      })
+      await getMockPapersApi().create({ content })
+      monitor.track(MONITOR_EVENTS.NOTE_SAVE_SUCCESS)
       wx.showToast({ title: '已记下', icon: 'success' })
       setTimeout(() => wx.navigateBack(), 300)
     } catch (error) {

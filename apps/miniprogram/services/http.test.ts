@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { HttpError } from '@studycommit/common/http'
 import {
   createMiniProgramHttpClient,
+  HttpError,
   type MiniProgramRequestOption,
   type MiniProgramRequestPromise,
 } from './http'
