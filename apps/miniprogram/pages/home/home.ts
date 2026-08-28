@@ -1,7 +1,12 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { ROUTES } from '../../constants/routes'
 import { monitor } from '../../services/monitor-adapter'
-import { getMockPapersApi, MOCK_TOPIC_ID, type MockTopic } from '../../services/mock-papers'
+import {
+  getMockPapersApi,
+  MOCK_TOPIC_ID,
+  type MockPaperMetadata,
+  type MockTopic,
+} from '../../services/mock-papers'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
 import {
   formatDisplayCount,
@@ -18,6 +23,7 @@ type PaperViewModel = Paper & {
   isInbox: boolean
   hasQuestion: boolean
   isQuestionResolved: boolean
+  photoPath: string
   templateClass: 'template-dot' | 'template-rule' | 'template-grid' | 'template-plain'
 }
 
@@ -65,10 +71,9 @@ type DateParts = { year: number; month: number; day: number }
 const INBOX_TOPIC_ID = '__inbox__'
 const DEFAULT_DATE = '2026-08-25'
 const DEMO_TODAY_DATE = '2026-08-25'
-const AGENT_DEMO_PAPER_IDS = new Set([
-  '22222222-2222-4222-8222-222222222222',
-  '55555555-5555-4555-8555-555555555555',
-])
+let timelineSwapTimer: ReturnType<typeof setTimeout> | undefined
+let agentTransitionTimer: ReturnType<typeof setTimeout> | undefined
+let loadSequence = 0
 const PAPER_PRESENTATION = {
   '11111111-1111-4111-8111-111111111111': {
     topicLabel: '系统设计',
@@ -98,6 +103,7 @@ Page({
     weekDays: [] as WeekDayViewModel[],
     monthDays: [] as MonthDayViewModel[],
     searchResults: [] as SearchResultViewModel[],
+    problemPapers: [] as PaperViewModel[],
     selectedPaper: null as PaperViewModel | null,
     selectedDate: DEFAULT_DATE,
     selectedTopicId: '',
@@ -153,24 +159,50 @@ Page({
     this.setData({ statusBarHeight: systemInfo.statusBarHeight ?? 0 })
   },
 
+  onUnload() {
+    if (timelineSwapTimer) {
+      clearTimeout(timelineSwapTimer)
+    }
+    if (agentTransitionTimer) {
+      clearTimeout(agentTransitionTimer)
+    }
+    loadSequence += 1
+  },
+
   onPullDownRefresh() {
     void this.loadHome()
   },
 
   async loadHome() {
+    const currentLoad = ++loadSequence
     this.setData({ isLoading: true, isLoadError: false, loadErrorMessage: '' })
     try {
       const api = getMockPapersApi()
-      const [paperPage, topics] = await Promise.all([api.list(), api.listTopics()])
-      this.setData({ papers: paperPage.items.map(toPaperViewModel) })
+      const [paperPage, topics, metadata] = await Promise.all([
+        api.list(),
+        api.listTopics(),
+        api.listPaperMetadata(),
+      ])
+      if (currentLoad !== loadSequence) {
+        return
+      }
+      const metadataByPaperId = new Map(metadata.map((item) => [item.paperId, item]))
+      this.setData({
+        papers: paperPage.items.map((paper) => toPaperViewModel(paper, metadataByPaperId)),
+      })
       this.applyDerivedData(topics)
     } catch (error) {
+      if (currentLoad !== loadSequence) {
+        return
+      }
       monitor.captureError(error, { action: MONITOR_EVENTS.HOME_LOAD_FAILED })
       this.setData({ isLoadError: true, loadErrorMessage: getHomeLoadErrorMessage(error) })
       wx.showToast({ title: '内容加载失败', icon: 'none' })
     } finally {
-      this.setData({ isLoading: false })
-      wx.stopPullDownRefresh()
+      if (currentLoad === loadSequence) {
+        this.setData({ isLoading: false })
+        wx.stopPullDownRefresh()
+      }
     }
   },
 
@@ -206,10 +238,13 @@ Page({
   },
 
   playTimelineSwap() {
+    if (timelineSwapTimer) {
+      clearTimeout(timelineSwapTimer)
+    }
     this.setData({ isTimelineSwapping: false })
     wx.nextTick(() => {
       this.setData({ isTimelineSwapping: true })
-      setTimeout(() => this.setData({ isTimelineSwapping: false }), 220)
+      timelineSwapTimer = setTimeout(() => this.setData({ isTimelineSwapping: false }), 220)
     })
   },
 
@@ -363,7 +398,10 @@ Page({
       agentTransform: `translate3d(${direction === 'left' ? '-120%' : '120%'}, 0, 0) rotate(${direction === 'left' ? '-8deg' : '8deg'})`,
       agentOpacity: 0,
     })
-    setTimeout(() => {
+    if (agentTransitionTimer) {
+      clearTimeout(agentTransitionTimer)
+    }
+    agentTransitionTimer = setTimeout(() => {
       if (direction === 'right' || this.data.agentStep >= 2) {
         monitor.track(MONITOR_EVENTS.HOME_AGENT_FINISH, { direction })
         this.closeAgent()
@@ -408,6 +446,24 @@ Page({
 
   closeProblems() {
     this.setData({ isProblemsOpen: false })
+  },
+
+  async resolveQuestion() {
+    const selectedPaper = this.data.selectedPaper
+    if (!selectedPaper || selectedPaper.isQuestionResolved) {
+      return
+    }
+    try {
+      await getMockPapersApi().resolveQuestion(selectedPaper.id)
+      this.closeDetailManage()
+      await this.loadHome()
+      const refreshedPaper = this.data.papers.find((paper) => paper.id === selectedPaper.id)
+      this.setData({ selectedPaper: refreshedPaper ?? null, isDetailOpen: Boolean(refreshedPaper) })
+      wx.showToast({ title: '问题已标记为解决', icon: 'success' })
+    } catch (error) {
+      monitor.captureError(error, { action: MONITOR_EVENTS.HOME_ORGANIZE_FAILED })
+      wx.showToast({ title: '暂时无法更新，请重试', icon: 'none' })
+    }
   },
 
   toggleTopicForm() {
@@ -528,6 +584,7 @@ Page({
       weekDays,
       monthDays: buildMonthDays(selected, papers),
       timelinePapers,
+      problemPapers: papers.filter((paper) => paper.hasQuestion && !paper.isQuestionResolved),
       selectedDateLabel: formatDateLabel(selected),
       monthLabel: `${selected.year}年${selected.month}月`,
       monthDisplayLabel: `${selected.year} 年 ${selected.month} 月`,
@@ -536,8 +593,10 @@ Page({
         selectedTopicId === INBOX_TOPIC_ID ? '待整理' : selectedTopicId ? '主题纸页' : '当天的纸页',
       inboxCount: papers.filter((paper) => paper.isInbox).length,
       inboxCountLabel: formatDisplayCount(papers.filter((paper) => paper.isInbox).length),
-      problemCount: 0,
-      problemCountLabel: '0',
+      problemCount: papers.filter((paper) => paper.hasQuestion && !paper.isQuestionResolved).length,
+      problemCountLabel: formatDisplayCount(
+        papers.filter((paper) => paper.hasQuestion && !paper.isQuestionResolved).length,
+      ),
       paperCount: papers.length,
       topicCount: topics.length,
     })
@@ -553,9 +612,13 @@ Page({
   },
 })
 
-function toPaperViewModel(paper: Paper): PaperViewModel {
+function toPaperViewModel(
+  paper: Paper,
+  metadataByPaperId: ReadonlyMap<string, MockPaperMetadata>,
+): PaperViewModel {
   const date = new Date(paper.createdAt)
   const presentation = PAPER_PRESENTATION[paper.id as keyof typeof PAPER_PRESENTATION]
+  const metadata = metadataByPaperId.get(paper.id)
   return {
     ...paper,
     dateKey: toDateKey(date),
@@ -563,8 +626,9 @@ function toPaperViewModel(paper: Paper): PaperViewModel {
     timeLabel: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     topicLabel: presentation?.topicLabel ?? (paper.topicId ? '已归入主题' : '待整理'),
     isInbox: paper.status === 'inbox',
-    hasQuestion: AGENT_DEMO_PAPER_IDS.has(paper.id),
-    isQuestionResolved: false,
+    hasQuestion: metadata?.hasQuestion ?? false,
+    isQuestionResolved: metadata?.isQuestionResolved ?? false,
+    photoPath: metadata?.photoPath ?? '',
     templateClass: presentation?.templateClass ?? 'template-plain',
   }
 }

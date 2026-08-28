@@ -2098,10 +2098,11 @@ button::after {
 
 .drawer-v2 .add-topic-button text {
   display: block;
-  flex: 0 0 auto;
+  flex: 0 0 40rpx;
+  width: 40rpx;
   font-size: 38rpx;
   line-height: 1;
-  text-align: right;
+  text-align: center;
 }
 
 .drawer-v2 .topic-row,
@@ -2181,6 +2182,8 @@ button::after {
   border: 1rpx solid #b9c8bc;
   background: #e2ece0;
   color: #53645a;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   text-align: center;
 }
 
@@ -2287,6 +2290,8 @@ button::after {
   background: #e2ece0;
   color: #53645a;
   font-size: 18rpx;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
