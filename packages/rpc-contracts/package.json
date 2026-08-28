@@ -36,6 +36,10 @@
       "types": "./src/study-sessions.ts",
       "default": "./dist/study-sessions.js"
     },
+    "./templates": {
+      "types": "./src/templates.ts",
+      "default": "./dist/templates.js"
+    },
     "./topics": {
       "types": "./src/topics.ts",
       "default": "./dist/topics.js"

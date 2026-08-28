@@ -1,11 +1,14 @@
 import { z } from 'zod'
+import { templateSummarySchema } from './templates.js'
 
 export const topicSchema = z.object({
   id: z.uuid(),
   userId: z.uuid(),
-  name: z.string().min(1).max(80),
+  name: z.string().min(1).max(18),
   description: z.string().max(1000).nullable(),
   color: z.string().regex(/^#[0-9A-F]{6}$/),
+  templateId: z.uuid(),
+  template: templateSummarySchema,
   status: z.enum(['active', 'archived']),
   totalDurationSeconds: z.number().int().nonnegative(),
   version: z.number().int().min(1),
@@ -15,9 +18,14 @@ export const topicSchema = z.object({
 })
 
 export const createTopicInputSchema = z.object({
-  name: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(18),
   description: z.string().max(1000).nullable().optional(),
-  color: z.string().regex(/^#[0-9A-F]{6}$/),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .transform((value) => value.toUpperCase())
+    .optional(),
+  templateId: z.uuid().optional(),
   status: z.enum(['active', 'archived']).default('active'),
 })
 
