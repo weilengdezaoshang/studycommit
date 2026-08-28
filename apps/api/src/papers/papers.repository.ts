@@ -70,7 +70,10 @@ export class PapersRepository {
           : { kind: PAPER_CREATE_KIND.idempotencyConflict }
       }
 
-      const [paper] = await tx.insert(papers).values({ userId, content: input.content }).returning()
+      const [paper] = await tx
+        .insert(papers)
+        .values({ userId, content: input.content, topicId: null })
+        .returning()
       await tx.insert(idempotencyRecords).values({
         userId,
         key: idempotency.key,

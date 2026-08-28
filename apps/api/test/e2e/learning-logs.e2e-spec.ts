@@ -23,7 +23,7 @@ describe('LearningLogs API', () => {
   })
   beforeEach(async () => {
     await pool.query(
-      'truncate learning_logs, study_sessions, idempotency_records, topics restart identity cascade',
+      'truncate papers, learning_logs, study_sessions, idempotency_records, topics restart identity cascade',
     )
   })
   afterAll(async () => {

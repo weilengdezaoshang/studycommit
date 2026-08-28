@@ -19,7 +19,7 @@ const row = {
 }
 
 describe('PapersService', () => {
-  it('creates a paper and derives inbox status', async () => {
+  it('创建记录并推导为待整理状态', async () => {
     const repository = {
       create: vi
         .fn()
@@ -43,14 +43,14 @@ describe('PapersService', () => {
     })
   })
 
-  it('returns not found for another user or deleted paper', async () => {
+  it('其他用户或已删除记录返回不存在', async () => {
     const repository = { findById: vi.fn().mockResolvedValue(null) }
     await expect(
       new PapersService(repository as never).get(userId, paperId),
     ).rejects.toBeInstanceOf(NotFoundException)
   })
 
-  it('passes list filters through and maps the page', async () => {
+  it('透传列表筛选并映射分页结果', async () => {
     const repository = {
       list: vi
         .fn()
@@ -65,7 +65,7 @@ describe('PapersService', () => {
     expect(repository.list).toHaveBeenCalledWith(userId, { limit: 20 })
   })
 
-  it('rejects reusing an idempotency key with different content', async () => {
+  it('相同幂等键用于不同内容时拒绝', async () => {
     const repository = {
       create: vi.fn().mockResolvedValue({ kind: PAPER_CREATE_KIND.idempotencyConflict }),
     }
@@ -74,7 +74,7 @@ describe('PapersService', () => {
     ).rejects.toMatchObject({ response: { code: IDEMPOTENCY_ERROR.keyReused.code } })
   })
 
-  it('retries after an idempotency unique conflict', async () => {
+  it('幂等键唯一冲突后重试创建', async () => {
     const repository = {
       create: vi
         .fn()
@@ -91,7 +91,7 @@ describe('PapersService', () => {
     expect(repository.create).toHaveBeenCalledTimes(2)
   })
 
-  it('maps an invalid cursor to a bad request', async () => {
+  it('无效分页游标映射为错误请求', async () => {
     const repository = { list: vi.fn().mockRejectedValue(new Error('INVALID_CURSOR')) }
     await expect(
       new PapersService(repository as never).list(userId, { limit: 20 }),
