@@ -108,7 +108,7 @@ describe('mock papers api', () => {
       delayMs: 0,
     })
 
-    await expect(api.listTopics()).resolves.toHaveLength(3)
+    await expect(api.listTopics()).resolves.toHaveLength(6)
     await expect(api.createTopic({ name: '  新主题  ' })).resolves.toMatchObject({
       name: '新主题',
       color: '#DCE9D8',

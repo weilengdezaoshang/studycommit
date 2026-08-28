@@ -32,39 +32,52 @@ export type MockPapersApiOptions = {
   delayMs?: number
 }
 
-export const MOCK_PAPERS_STORAGE_KEY = 'studycommit.mock.papers' as const
-export const MOCK_TOPICS_STORAGE_KEY = 'studycommit.mock.topics' as const
+export const MOCK_PAPERS_STORAGE_KEY = 'studycommit.mock.papers.agent-prd.v1' as const
+export const MOCK_TOPICS_STORAGE_KEY = 'studycommit.mock.topics.agent-prd.v1' as const
 export const MOCK_TOPIC_ID = '33333333-3333-4333-8333-333333333333' as const
+export const MOCK_SYSTEM_DESIGN_TOPIC_ID = '77777777-7777-4777-8777-777777777777' as const
+export const MOCK_MOBILE_DESIGN_TOPIC_ID = '88888888-8888-4888-8888-888888888888' as const
+export const MOCK_FRONTEND_TOPIC_ID = '99999999-9999-4999-8999-999999999999' as const
 
 const SEED_PAPERS: Paper[] = [
   {
     id: '11111111-1111-4111-8111-111111111111',
-    content: '费曼学习法的关键不是复述，而是暴露自己真正没有理解的部分。',
-    status: 'inbox',
-    topicId: null,
+    content: '数据库索引不是越多越好，写入成本与查询收益必须结合真实访问模式判断。',
+    status: 'organized',
+    topicId: MOCK_SYSTEM_DESIGN_TOPIC_ID,
     version: 1,
-    createdAt: '2026-08-27T09:30:00.000Z',
-    updatedAt: '2026-08-27T09:30:00.000Z',
+    createdAt: '2026-08-24T14:10:00.000Z',
+    updatedAt: '2026-08-24T14:10:00.000Z',
     deletedAt: null,
   },
   {
     id: '22222222-2222-4222-8222-222222222222',
-    content: '把复杂问题拆成可验证的小问题，学习会更容易开始。',
+    content: '为什么 React 的状态更新不是立即生效？批处理和调度分别解决了什么问题？',
     status: 'inbox',
     topicId: null,
     version: 1,
-    createdAt: '2026-08-26T15:20:00.000Z',
-    updatedAt: '2026-08-26T15:20:00.000Z',
+    createdAt: '2026-08-25T06:20:00.000Z',
+    updatedAt: '2026-08-25T06:20:00.000Z',
     deletedAt: null,
   },
   {
     id: '44444444-4444-4444-8444-444444444444',
-    content: '已经归档的内容不会出现在待整理列表里。',
+    content: 'Safe Area 不只是顶部留白，它代表系统界面与应用内容之间需要共同遵守的边界。',
     status: 'organized',
-    topicId: MOCK_TOPIC_ID,
+    topicId: MOCK_MOBILE_DESIGN_TOPIC_ID,
     version: 2,
-    createdAt: '2026-08-25T11:00:00.000Z',
-    updatedAt: '2026-08-25T11:30:00.000Z',
+    createdAt: '2026-08-25T01:42:00.000Z',
+    updatedAt: '2026-08-25T01:42:00.000Z',
+    deletedAt: null,
+  },
+  {
+    id: '55555555-5555-4555-8555-555555555555',
+    content: 'Optimistic update 失败时，怎样回滚才能不覆盖用户随后产生的新状态？',
+    status: 'inbox',
+    topicId: null,
+    version: 1,
+    createdAt: '2026-08-21T10:36:00.000Z',
+    updatedAt: '2026-08-21T10:36:00.000Z',
     deletedAt: null,
   },
 ]
@@ -73,6 +86,9 @@ const SEED_TOPICS: MockTopic[] = [
   { id: MOCK_TOPIC_ID, name: '学习方法', color: '#DCE9D8' },
   { id: '55555555-5555-4555-8555-555555555555', name: '工程实践', color: '#E8E4C9' },
   { id: '66666666-6666-4666-8666-666666666666', name: '待验证', color: '#E6DCD5' },
+  { id: MOCK_SYSTEM_DESIGN_TOPIC_ID, name: '系统设计', color: '#DCE9D8' },
+  { id: MOCK_MOBILE_DESIGN_TOPIC_ID, name: '移动端设计', color: '#E8E4C9' },
+  { id: MOCK_FRONTEND_TOPIC_ID, name: '前端架构', color: '#E6DCD5' },
 ]
 
 export function createMockPapersApi(options: MockPapersApiOptions = {}) {
