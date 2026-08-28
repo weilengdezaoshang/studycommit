@@ -6,7 +6,7 @@
   </view>
 
   <view class="sheet-paper">
-    <view class="editor-date"><text>{{editorDate}}</text><text>2026 · STUDYCOMMIT</text></view>
+    <view class="editor-date"><text>{{editorDate}}</text><text>{{editorSignature}}</text></view>
     <textarea class="note-input" value="{{content}}" maxlength="20000" auto-focus placeholder="写点什么吧……" bindinput="onContentInput" />
     <image wx:if="{{photoPath}}" class="photo-preview" src="{{photoPath}}" mode="aspectFill" />
   </view>

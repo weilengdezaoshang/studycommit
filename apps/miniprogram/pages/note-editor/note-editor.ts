@@ -1,6 +1,7 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { monitor } from '../../services/monitor-adapter'
 import { getMockPapersApi } from '../../services/mock-papers'
+import { formatEditorDate, parseNoteDraft, type NoteDraft } from './note-editor-utils'
 
 const NOTE_DRAFT_STORAGE_KEY = 'studycommit.note-editor.draft'
 
@@ -8,7 +9,8 @@ Page({
   data: {
     statusBarHeight: 0,
     content: '',
-    editorDate: 'AUG 27',
+    editorDate: '',
+    editorSignature: '',
     isQuestionActive: false,
     photoPath: '',
     isSaving: false,
@@ -16,10 +18,15 @@ Page({
 
   onLoad() {
     const systemInfo = wx.getSystemInfoSync()
-    const draft = wx.getStorageSync(NOTE_DRAFT_STORAGE_KEY)
+    const draft = parseNoteDraft(wx.getStorageSync(NOTE_DRAFT_STORAGE_KEY))
+    const editorDate = formatEditorDate(new Date())
     this.setData({
       statusBarHeight: systemInfo.statusBarHeight ?? 0,
-      content: typeof draft === 'string' ? draft : '',
+      content: draft.content,
+      isQuestionActive: draft.isQuestionActive,
+      photoPath: draft.photoPath,
+      editorDate: editorDate.dateLabel,
+      editorSignature: editorDate.signatureLabel,
     })
   },
 
@@ -30,7 +37,7 @@ Page({
   onContentInput(event: WechatMiniprogram.Input) {
     const content = event.detail.value
     this.setData({ content })
-    wx.setStorageSync(NOTE_DRAFT_STORAGE_KEY, content)
+    this.persistDraft({ content })
   },
 
   cancelWriting() {
@@ -38,7 +45,9 @@ Page({
   },
 
   toggleQuestion() {
-    this.setData({ isQuestionActive: !this.data.isQuestionActive })
+    const isQuestionActive = !this.data.isQuestionActive
+    this.setData({ isQuestionActive })
+    this.persistDraft({ isQuestionActive })
   },
 
   choosePhoto() {
@@ -46,10 +55,28 @@ Page({
       count: 1,
       sourceType: ['album', 'camera'],
       success: (result) => {
-        this.setData({ photoPath: result.tempFilePaths[0] ?? '' })
+        const tempFilePath = result.tempFilePaths[0]
+        if (!tempFilePath) {
+          return
+        }
+        wx.saveFile({
+          tempFilePath,
+          success: ({ savedFilePath }) => {
+            this.setData({ photoPath: savedFilePath })
+            this.persistDraft({ photoPath: savedFilePath })
+          },
+          fail: (error) => {
+            monitor.captureError(error, { action: MONITOR_EVENTS.NOTE_SAVE_FAILED })
+            wx.showToast({ title: '图片保存失败，请重试', icon: 'none' })
+          },
+        })
       },
       fail: (error) => {
+        if (String(error.errMsg).includes('cancel')) {
+          return
+        }
         monitor.captureError(error, { action: MONITOR_EVENTS.NOTE_SAVE_FAILED })
+        wx.showToast({ title: '无法读取图片，请检查权限', icon: 'none' })
       },
     })
   },
@@ -70,7 +97,11 @@ Page({
     this.setData({ isSaving: true })
 
     try {
-      await getMockPapersApi().create({ content })
+      await getMockPapersApi().create({
+        content,
+        hasQuestion: this.data.isQuestionActive,
+        photoPath: this.data.photoPath,
+      })
       wx.removeStorageSync(NOTE_DRAFT_STORAGE_KEY)
       monitor.track(MONITOR_EVENTS.NOTE_SAVE_SUCCESS)
       wx.showToast({ title: '已记下', icon: 'success' })
@@ -82,5 +113,14 @@ Page({
       })
       wx.showToast({ title: '保存失败，请稍后重试', icon: 'none' })
     }
+  },
+
+  persistDraft(patch: Partial<NoteDraft>) {
+    const draft: NoteDraft = {
+      content: patch.content ?? this.data.content,
+      isQuestionActive: patch.isQuestionActive ?? this.data.isQuestionActive,
+      photoPath: patch.photoPath ?? this.data.photoPath,
+    }
+    wx.setStorageSync(NOTE_DRAFT_STORAGE_KEY, draft)
   },
 })

@@ -25,15 +25,34 @@ export type MockTopicsStorage = {
   write(topics: MockTopic[]): void
 }
 
+export type MockPaperMetadata = {
+  paperId: string
+  hasQuestion: boolean
+  isQuestionResolved: boolean
+  photoPath: string
+}
+
+export type MockPaperMetadataStorage = {
+  read(): unknown
+  write(metadata: MockPaperMetadata[]): void
+}
+
+export type CreateMockPaperInput = CreatePaperInput & {
+  hasQuestion?: boolean
+  photoPath?: string
+}
+
 export type MockPapersApiOptions = {
   storage?: MockPapersStorage
   topicStorage?: MockTopicsStorage
+  metadataStorage?: MockPaperMetadataStorage
   now?: () => Date
   delayMs?: number
 }
 
 export const MOCK_PAPERS_STORAGE_KEY = 'studycommit.mock.papers.agent-prd.v1' as const
 export const MOCK_TOPICS_STORAGE_KEY = 'studycommit.mock.topics.agent-prd.v1' as const
+export const MOCK_PAPER_METADATA_STORAGE_KEY = 'studycommit.mock.paper-metadata.v1' as const
 export const MOCK_TOPIC_ID = '33333333-3333-4333-8333-333333333333' as const
 export const MOCK_SYSTEM_DESIGN_TOPIC_ID = '77777777-7777-4777-8777-777777777777' as const
 export const MOCK_MOBILE_DESIGN_TOPIC_ID = '88888888-8888-4888-8888-888888888888' as const
@@ -91,13 +110,30 @@ const SEED_TOPICS: MockTopic[] = [
   { id: MOCK_FRONTEND_TOPIC_ID, name: '前端架构', color: '#E6DCD5' },
 ]
 
+const SEED_PAPER_METADATA: MockPaperMetadata[] = [
+  {
+    paperId: '22222222-2222-4222-8222-222222222222',
+    hasQuestion: true,
+    isQuestionResolved: false,
+    photoPath: '',
+  },
+  {
+    paperId: '55555555-5555-4555-8555-555555555555',
+    hasQuestion: true,
+    isQuestionResolved: false,
+    photoPath: '',
+  },
+]
+
 export function createMockPapersApi(options: MockPapersApiOptions = {}) {
   const storage = options.storage ?? createWxStorage()
   const topicStorage = options.topicStorage ?? createDefaultTopicStorage()
+  const metadataStorage = options.metadataStorage ?? createDefaultMetadataStorage()
   const now = options.now ?? (() => new Date())
   const delayMs = options.delayMs ?? 120
   let papers = readPapers(storage)
   let topics = readTopics(topicStorage)
+  let paperMetadata = readPaperMetadata(metadataStorage)
 
   async function settle<T>(value: T): Promise<T> {
     if (delayMs > 0) {
@@ -151,6 +187,10 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
       return settle(topics.map(cloneTopic))
     },
 
+    async listPaperMetadata(): Promise<MockPaperMetadata[]> {
+      return settle(paperMetadata.map(clonePaperMetadata))
+    },
+
     async createTopic(input: { name: string }): Promise<MockTopic> {
       const name = readString(asRecord(input).name, '主题名称').trim()
       if (!name || name.length > 80) {
@@ -169,7 +209,7 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
       return settle(clonePaper(findPaper(id)))
     },
 
-    async create(input: CreatePaperInput): Promise<Paper> {
+    async create(input: CreateMockPaperInput): Promise<Paper> {
       const data = parseCreateInput(input)
       const timestamp = now().toISOString()
       const paper = parsePaper({
@@ -183,7 +223,27 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
         deletedAt: null,
       })
       persist([paper, ...papers])
+      const metadata = parsePaperMetadata({
+        paperId: paper.id,
+        hasQuestion: input.hasQuestion ?? false,
+        isQuestionResolved: false,
+        photoPath: input.photoPath ?? '',
+      })
+      paperMetadata = [metadata, ...paperMetadata]
+      metadataStorage.write(paperMetadata.map(clonePaperMetadata))
       return settle(clonePaper(paper))
+    },
+
+    async resolveQuestion(id: string): Promise<MockPaperMetadata> {
+      findPaper(id)
+      const current = paperMetadata.find((item) => item.paperId === id)
+      if (!current?.hasQuestion) {
+        throw invalidContract('这张纸页没有待解决问题')
+      }
+      const resolved = { ...current, isQuestionResolved: true }
+      paperMetadata = paperMetadata.map((item) => (item.paperId === id ? resolved : item))
+      metadataStorage.write(paperMetadata.map(clonePaperMetadata))
+      return settle(clonePaperMetadata(resolved))
     },
 
     async update(input: UpdatePaperInput): Promise<Paper> {
@@ -242,6 +302,8 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
         deletedAt,
       })
       persist(papers.map((item) => (item.id === deleted.id ? deleted : item)))
+      paperMetadata = paperMetadata.filter((item) => item.paperId !== deleted.id)
+      metadataStorage.write(paperMetadata.map(clonePaperMetadata))
       return settle({ id: deleted.id, version: deleted.version, deletedAt })
     },
   }
@@ -299,6 +361,51 @@ function cloneTopic(topic: MockTopic): MockTopic {
   return { ...topic }
 }
 
+function readPaperMetadata(storage: MockPaperMetadataStorage): MockPaperMetadata[] {
+  const stored = storage.read()
+  if (isPaperMetadataArray(stored)) {
+    return stored
+  }
+  const seeds = SEED_PAPER_METADATA.map(clonePaperMetadata)
+  storage.write(seeds)
+  return seeds
+}
+
+function clonePaperMetadata(metadata: MockPaperMetadata): MockPaperMetadata {
+  return { ...metadata }
+}
+
+function parsePaperMetadata(value: unknown): MockPaperMetadata {
+  const record = asRecord(value)
+  const photoPath = record.photoPath
+  if (
+    typeof record.hasQuestion !== 'boolean' ||
+    typeof record.isQuestionResolved !== 'boolean' ||
+    typeof photoPath !== 'string' ||
+    photoPath.length > 2_048
+  ) {
+    throw invalidContract('纸页附加信息不符合契约')
+  }
+  return {
+    paperId: readUuid(record.paperId),
+    hasQuestion: record.hasQuestion,
+    isQuestionResolved: record.isQuestionResolved,
+    photoPath,
+  }
+}
+
+function isPaperMetadataArray(value: unknown): value is MockPaperMetadata[] {
+  if (!Array.isArray(value)) {
+    return false
+  }
+  try {
+    value.forEach(parsePaperMetadata)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function isTopicArray(value: unknown): value is MockTopic[] {
   return (
     Array.isArray(value) &&
@@ -332,6 +439,26 @@ function createDefaultTopicStorage(): MockTopicsStorage {
     read: () => value,
     write: (topics) => {
       value = topics
+    },
+  }
+}
+
+function createWxMetadataStorage(): MockPaperMetadataStorage {
+  return {
+    read: () => wx.getStorageSync(MOCK_PAPER_METADATA_STORAGE_KEY),
+    write: (metadata) => wx.setStorageSync(MOCK_PAPER_METADATA_STORAGE_KEY, metadata),
+  }
+}
+
+function createDefaultMetadataStorage(): MockPaperMetadataStorage {
+  if (typeof wx !== 'undefined') {
+    return createWxMetadataStorage()
+  }
+  let value: unknown
+  return {
+    read: () => value,
+    write: (metadata) => {
+      value = metadata
     },
   }
 }
