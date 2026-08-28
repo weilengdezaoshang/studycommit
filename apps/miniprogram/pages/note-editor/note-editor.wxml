@@ -1,6 +1,23 @@
-<view class="editor-page">
-  <textarea class="note-input" value="{{content}}" maxlength="20000" auto-focus placeholder="写下刚刚学到的内容……" bindinput="onContentInput" />
-  <view class="editor-footer">
-    <button class="save-button" loading="{{isSaving}}" disabled="{{isSaving}}" bindtap="saveNote">记下</button>
+<view class="editor-page" style="padding-top: {{statusBarHeight}}px;">
+  <view class="editor-bar">
+    <button class="editor-cancel" bindtap="cancelWriting">取消</button>
+    <text class="editor-title">新记录</text>
+    <button class="editor-save" loading="{{isSaving}}" disabled="{{isSaving}}" bindtap="saveNote">记下</button>
+  </view>
+
+  <view class="sheet-paper">
+    <view class="editor-date"><text>{{editorDate}}</text><text>2026 · STUDYCOMMIT</text></view>
+    <textarea class="note-input" value="{{content}}" maxlength="20000" auto-focus placeholder="写点什么吧……" bindinput="onContentInput" />
+    <image wx:if="{{photoPath}}" class="photo-preview" src="{{photoPath}}" mode="aspectFill" />
+  </view>
+
+  <view class="editor-tools">
+    <button class="tool {{photoPath ? 'tool-active' : ''}}" bindtap="choosePhoto">
+      <view class="camera-icon"></view><text>图片</text>
+    </button>
+    <button class="tool {{isQuestionActive ? 'tool-active' : ''}}" bindtap="toggleQuestion">
+      <view class="question-icon">?</view><text>标记问题</text>
+    </button>
+    <text class="editor-hint">仅支持文本与图片</text>
   </view>
 </view>
