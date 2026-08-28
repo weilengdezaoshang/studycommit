@@ -6,12 +6,30 @@ import {
   BadRequestException,
 } from '@nestjs/common'
 import { createHash } from 'node:crypto'
-import type { CreatePaperInput, ListPapersInput, Paper } from '@studycommit/rpc-contracts/papers'
+import type {
+  CreatePaperInput,
+  ListPapersInput,
+  OrganizePaperInput,
+  Paper,
+} from '@studycommit/rpc-contracts/papers'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY, isConstraint } from '../common/idempotency'
-import { PAPER_CREATE_KIND, PAPER_ERROR } from './papers.constants'
-import { PapersRepository } from './papers.repository'
+import { TOPIC_ERROR } from '../topics/topic.constants'
+import { PAPER_CREATE_KIND, PAPER_ERROR, PAPER_ORGANIZE_KIND } from './papers.constants'
+import { PapersRepository, type PaperOrganizeResult } from './papers.repository'
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+
+const organizeErrors: Record<
+  Exclude<
+    PaperOrganizeResult['kind'],
+    typeof PAPER_ORGANIZE_KIND.ok | typeof PAPER_ORGANIZE_KIND.versionConflict
+  >,
+  () => Error
+> = {
+  [PAPER_ORGANIZE_KIND.notFound]: () => new NotFoundException(PAPER_ERROR.notFound),
+  [PAPER_ORGANIZE_KIND.topicNotFound]: () => new NotFoundException(TOPIC_ERROR.notFound),
+  [PAPER_ORGANIZE_KIND.topicArchived]: () => new ConflictException(TOPIC_ERROR.archived),
+}
 
 type PaperRow = {
   id: string
@@ -49,6 +67,20 @@ export class PapersService {
       throw new NotFoundException(PAPER_ERROR.notFound)
     }
     return this.toPaper(paper)
+  }
+
+  async organize(userId: string, input: OrganizePaperInput) {
+    const result = await this.repository.organize(userId, input)
+    if (result.kind === PAPER_ORGANIZE_KIND.ok) {
+      return this.toPaper(result.paper)
+    }
+    if (result.kind === PAPER_ORGANIZE_KIND.versionConflict) {
+      throw new ConflictException({
+        ...PAPER_ERROR.versionConflict,
+        details: { paper: this.toPaper(result.paper) },
+      })
+    }
+    throw organizeErrors[result.kind]()
   }
 
   async list(userId: string, input: ListPapersInput) {

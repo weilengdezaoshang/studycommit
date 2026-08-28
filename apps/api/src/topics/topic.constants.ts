@@ -22,6 +22,7 @@ export const TOPIC_STATUS = {
 
 export const TOPIC_ERROR = {
   notFound: { code: 'TOPIC_NOT_FOUND', message: '专题不存在' },
+  archived: { code: 'TOPIC_ARCHIVED', message: '专题当前不可用于归类' },
   hasActiveSession: {
     code: 'TOPIC_HAS_ACTIVE_SESSION',
     message: '该专题有正在进行或暂停的学习会话，请先结束学习',

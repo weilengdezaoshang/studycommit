@@ -1,15 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
-import type { CreatePaperInput, ListPapersInput } from '@studycommit/rpc-contracts/papers'
+import type {
+  CreatePaperInput,
+  ListPapersInput,
+  OrganizePaperInput,
+} from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
 import { DatabaseService } from '../database/database.service'
-import { idempotencyRecords, papers } from '../database/schema'
-import { PAPER_CREATE_KIND, PAPER_RESOURCE_TYPE } from './papers.constants'
+import { idempotencyRecords, papers, topics } from '../database/schema'
+import { TOPIC_STATUS } from '../topics/topic.constants'
+import { PAPER_CREATE_KIND, PAPER_ORGANIZE_KIND, PAPER_RESOURCE_TYPE } from './papers.constants'
 
 export type Paper = typeof papers.$inferSelect
 export type PaperCreateResult =
   | { kind: typeof PAPER_CREATE_KIND.ok; paper: Paper; replayed: boolean }
   | { kind: typeof PAPER_CREATE_KIND.idempotencyConflict }
+
+export type PaperOrganizeResult =
+  | { kind: typeof PAPER_ORGANIZE_KIND.ok; paper: Paper }
+  | { kind: typeof PAPER_ORGANIZE_KIND.notFound }
+  | { kind: typeof PAPER_ORGANIZE_KIND.topicNotFound }
+  | { kind: typeof PAPER_ORGANIZE_KIND.topicArchived }
+  | { kind: typeof PAPER_ORGANIZE_KIND.versionConflict; paper: Paper }
 
 type Cursor = { createdAt: string; id: string }
 
@@ -83,6 +95,74 @@ export class PapersRepository {
         response: paper,
       })
       return { kind: PAPER_CREATE_KIND.ok, paper, replayed: false }
+    })
+  }
+
+  async organize(userId: string, input: OrganizePaperInput): Promise<PaperOrganizeResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_ORGANIZE_KIND.notFound }
+      }
+
+      const [topic] = await tx
+        .select()
+        .from(topics)
+        .where(
+          and(eq(topics.userId, userId), eq(topics.id, input.topicId), isNull(topics.deletedAt)),
+        )
+        .for('update')
+        .limit(1)
+      if (!topic) {
+        return { kind: PAPER_ORGANIZE_KIND.topicNotFound }
+      }
+      if (topic.status === TOPIC_STATUS.archived) {
+        return { kind: PAPER_ORGANIZE_KIND.topicArchived }
+      }
+      if (paper.topicId === input.topicId) {
+        return { kind: PAPER_ORGANIZE_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_ORGANIZE_KIND.versionConflict, paper }
+      }
+
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          topicId: input.topicId,
+          version: sql`${papers.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            isNull(papers.deletedAt),
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_ORGANIZE_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_ORGANIZE_KIND.notFound }
+      }
+      if (latest.topicId === input.topicId) {
+        return { kind: PAPER_ORGANIZE_KIND.ok, paper: latest }
+      }
+      return { kind: PAPER_ORGANIZE_KIND.versionConflict, paper: latest }
     })
   }
 

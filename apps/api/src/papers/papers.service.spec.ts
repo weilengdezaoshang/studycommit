@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { NotFoundException } from '@nestjs/common'
 import { BadRequestException } from '@nestjs/common'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY } from '../common/idempotency'
-import { PAPER_CREATE_KIND } from './papers.constants'
+import { TOPIC_ERROR } from '../topics/topic.constants'
+import { PAPER_CREATE_KIND, PAPER_ERROR, PAPER_ORGANIZE_KIND } from './papers.constants'
 import { PapersService } from './papers.service'
 
 const userId = crypto.randomUUID()
@@ -96,5 +97,56 @@ describe('PapersService', () => {
     await expect(
       new PapersService(repository as never).list(userId, { limit: 20 }),
     ).rejects.toBeInstanceOf(BadRequestException)
+  })
+
+  it('归入箱子后映射为已整理状态', async () => {
+    const topicId = crypto.randomUUID()
+    const repository = {
+      organize: vi.fn().mockResolvedValue({
+        kind: PAPER_ORGANIZE_KIND.ok,
+        paper: { ...row, topicId, version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).organize(userId, {
+        id: paperId,
+        topicId,
+        version: 1,
+      }),
+    ).resolves.toMatchObject({ status: 'organized', topicId, version: 2 })
+  })
+
+  it('版本冲突时带上当前记录', async () => {
+    const repository = {
+      organize: vi.fn().mockResolvedValue({
+        kind: PAPER_ORGANIZE_KIND.versionConflict,
+        paper: { ...row, version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).organize(userId, {
+        id: paperId,
+        topicId: crypto.randomUUID(),
+        version: 1,
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: PAPER_ERROR.versionConflict.code,
+        details: { paper: expect.objectContaining({ version: 2 }) },
+      },
+    })
+  })
+
+  it('已归档主题不可归类', async () => {
+    const repository = {
+      organize: vi.fn().mockResolvedValue({ kind: PAPER_ORGANIZE_KIND.topicArchived }),
+    }
+    await expect(
+      new PapersService(repository as never).organize(userId, {
+        id: paperId,
+        topicId: crypto.randomUUID(),
+        version: 1,
+      }),
+    ).rejects.toMatchObject({ response: { code: TOPIC_ERROR.archived.code } })
   })
 })

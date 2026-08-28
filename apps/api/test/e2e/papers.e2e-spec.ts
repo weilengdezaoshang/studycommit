@@ -95,4 +95,141 @@ describe('Papers API', () => {
     expect(foreign.statusCode).toBe(404)
     expect(foreign.json().error.code).toBe('PAPER_NOT_FOUND')
   })
+
+  const createTopic = (user = userA, body: object = { name: '系统设计', color: '#4F46E5' }) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/topics',
+      headers: { 'x-user-id': user, 'idempotency-key': crypto.randomUUID() },
+      payload: body,
+    })
+
+  const organize = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'POST',
+      url: `/api/papers/${paperId}/organize`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
+  it('归入箱子后变为已整理并增加版本', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    const organized = await organize(paper.id, { topicId: topic.id, version: paper.version })
+    expect(organized.statusCode).toBe(200)
+    expect(organized.json()).toMatchObject({
+      id: paper.id,
+      content: paper.content,
+      status: 'organized',
+      topicId: topic.id,
+      version: 2,
+      createdAt: paper.createdAt,
+    })
+    expect(organized.json().updatedAt).not.toBe(paper.updatedAt)
+  })
+
+  it('重复归入同一箱子直接返回且不增加版本', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: topic.id, version: 1 })
+    const replay = await organize(paper.id, { topicId: topic.id, version: 1 })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json()).toMatchObject({ topicId: topic.id, version: 2, status: 'organized' })
+  })
+
+  it('换到另一个箱子视为一次更新', async () => {
+    const first = (await createTopic()).json()
+    const second = (await createTopic(userA, { name: '前端架构', color: '#0F766E' })).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: first.id, version: 1 })
+    const moved = await organize(paper.id, { topicId: second.id, version: 2 })
+    expect(moved.statusCode).toBe(200)
+    expect(moved.json()).toMatchObject({
+      topicId: second.id,
+      version: 3,
+      status: 'organized',
+      createdAt: paper.createdAt,
+    })
+  })
+
+  it('版本不一致时返回记录版本冲突', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    const conflict = await organize(paper.id, { topicId: topic.id, version: 9 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().error.details.paper.version).toBe(1)
+  })
+
+  it('专题不存在、已归档或属于他人时拒绝归类', async () => {
+    const paper = (await create()).json()
+    const missing = await organize(paper.id, { topicId: crypto.randomUUID(), version: 1 })
+    expect(missing.statusCode).toBe(404)
+    expect(missing.json().error.code).toBe('TOPIC_NOT_FOUND')
+
+    const foreignTopic = (await createTopic(userB, { name: '别人的箱子', color: '#111111' })).json()
+    const foreign = await organize(paper.id, { topicId: foreignTopic.id, version: 1 })
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().error.code).toBe('TOPIC_NOT_FOUND')
+
+    const archived = (await createTopic(userA, { name: '已归档', color: '#222222' })).json()
+    await app.inject({
+      method: 'PATCH',
+      url: `/api/topics/${archived.id}`,
+      headers: { 'x-user-id': userA },
+      payload: { status: 'archived', version: archived.version },
+    })
+    const blocked = await organize(paper.id, { topicId: archived.id, version: 1 })
+    expect(blocked.statusCode).toBe(409)
+    expect(blocked.json().error.code).toBe('TOPIC_ARCHIVED')
+  })
+
+  it('其他用户不能整理不属于自己的记录', async () => {
+    const topic = (await createTopic(userB, { name: '别人的箱子', color: '#111111' })).json()
+    const paper = (await create()).json()
+    const foreign = await organize(paper.id, { topicId: topic.id, version: 1 }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('记录不存在或已删除时返回不存在', async () => {
+    const topic = (await createTopic()).json()
+    const missing = await organize(crypto.randomUUID(), { topicId: topic.id, version: 1 })
+    expect(missing.statusCode).toBe(404)
+    expect(missing.json().error.code).toBe('PAPER_NOT_FOUND')
+
+    const paper = (await create()).json()
+    await pool.query('update papers set deleted_at = now() where id = $1', [paper.id])
+    const deleted = await organize(paper.id, { topicId: topic.id, version: 1 })
+    expect(deleted.statusCode).toBe(404)
+    expect(deleted.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('已整理记录用旧版本换箱时返回冲突', async () => {
+    const first = (await createTopic()).json()
+    const second = (await createTopic(userA, { name: '前端架构', color: '#0F766E' })).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: first.id, version: 1 })
+    const conflict = await organize(paper.id, { topicId: second.id, version: 1 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().error.details.paper).toMatchObject({
+      topicId: first.id,
+      version: 2,
+    })
+  })
+
+  it('并发归入同一箱子只升一次版本', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    const [first, second] = await Promise.all([
+      organize(paper.id, { topicId: topic.id, version: 1 }),
+      organize(paper.id, { topicId: topic.id, version: 1 }),
+    ])
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(new Set([first.json().version, second.json().version])).toEqual(new Set([2]))
+    expect(first.json().topicId).toBe(topic.id)
+    expect(second.json().topicId).toBe(topic.id)
+  })
 })

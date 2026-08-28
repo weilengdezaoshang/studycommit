@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  HttpCode,
   Inject,
   Param,
   Post,
@@ -11,7 +12,11 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
-import { createPaperInputSchema, listPapersInputSchema } from '@studycommit/rpc-contracts/papers'
+import {
+  createPaperInputSchema,
+  listPapersInputSchema,
+  organizePaperInputSchema,
+} from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
 import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'
@@ -54,5 +59,16 @@ export class PapersController {
   @Get(':id')
   get(@CurrentUserId() userId: string, @Param('id', new ZodPipe(z.uuid())) id: string) {
     return this.papers.get(userId, id)
+  }
+
+  @Post(':id/organize')
+  @HttpCode(200)
+  organize(
+    @CurrentUserId() userId: string,
+    @Param('id', new ZodPipe(z.uuid())) id: string,
+    @Body(new ZodPipe(organizePaperInputSchema.omit({ id: true })))
+    body: { topicId: string; version: number },
+  ) {
+    return this.papers.organize(userId, { id, ...body })
   }
 }
