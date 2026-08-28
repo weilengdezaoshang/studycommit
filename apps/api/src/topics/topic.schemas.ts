@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DEFAULT_TOPIC_COLOR } from '../templates/template.constants'
 import { TOPIC_STATUS } from './topic.constants'
 
 const color = z
@@ -15,16 +16,17 @@ const description = z
 
 export const createTopicSchema = z
   .object({
-    name: z.string().trim().min(1).max(80),
+    name: z.string().trim().min(1).max(18),
     description,
-    color,
+    color: color.default(DEFAULT_TOPIC_COLOR),
+    templateId: z.uuid().optional(),
     status: z.enum([TOPIC_STATUS.active, TOPIC_STATUS.archived]).default(TOPIC_STATUS.active),
   })
   .strict()
 
 export const updateTopicSchema = z
   .object({
-    name: z.string().trim().min(1).max(80).optional(),
+    name: z.string().trim().min(1).max(18).optional(),
     description,
     color: color.optional(),
     status: z.enum([TOPIC_STATUS.active, TOPIC_STATUS.archived]).optional(),

@@ -10,11 +10,14 @@ export type TopicRemoveKind = (typeof TOPIC_REMOVE_KIND)[keyof typeof TOPIC_REMO
 export const TOPIC_CREATE_KIND = {
   ok: 'ok',
   idempotencyConflict: 'idempotency_conflict',
+  nameConflict: 'name_conflict',
+  templateNotFound: 'template_not_found',
 } as const
 
 export type TopicCreateKind = (typeof TOPIC_CREATE_KIND)[keyof typeof TOPIC_CREATE_KIND]
 
 export const TOPIC_RESOURCE_TYPE = 'topic'
+export const TOPICS_USER_NAME_UNIQUE = 'topics_user_name_unique'
 export const TOPIC_STATUS = {
   active: 'active',
   archived: 'archived',
@@ -22,6 +25,7 @@ export const TOPIC_STATUS = {
 
 export const TOPIC_ERROR = {
   notFound: { code: 'TOPIC_NOT_FOUND', message: '专题不存在' },
+  nameConflict: { code: 'TOPIC_NAME_CONFLICT', message: '已有同名专题' },
   archived: { code: 'TOPIC_ARCHIVED', message: '专题当前不可用于归类' },
   hasActiveSession: {
     code: 'TOPIC_HAS_ACTIVE_SESSION',

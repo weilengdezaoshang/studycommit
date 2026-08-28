@@ -7,16 +7,30 @@ import {
 } from '@nestjs/common'
 import { createHash } from 'node:crypto'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY, isConstraint } from '../common/idempotency'
+import { DEFAULT_TEMPLATE_ID, TEMPLATE_ERROR } from '../templates/template.constants'
 import {
   TOPIC_CREATE_KIND,
   TOPIC_ERROR,
   TOPIC_REMOVE_KIND,
+  TOPICS_USER_NAME_UNIQUE,
   type TopicRemoveKind,
 } from './topic.constants'
 import { TopicsRepository } from './topics.repository'
 import type { CreateTopicInput, ListTopicsInput, UpdateTopicInput } from './topic.schemas'
 
-const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
+export function hashCreateTopicInput(input: CreateTopicInput) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        color: input.color,
+        description: input.description ?? null,
+        name: input.name,
+        status: input.status,
+        templateId: input.templateId ?? DEFAULT_TEMPLATE_ID,
+      }),
+    )
+    .digest('hex')
+}
 
 const removeErrors: Record<
   Exclude<TopicRemoveKind, typeof TOPIC_REMOVE_KIND.removed>,
@@ -32,15 +46,16 @@ export class TopicsService {
   constructor(@Inject(TopicsRepository) private readonly repository: TopicsRepository) {}
 
   async create(userId: string, input: CreateTopicInput, key: string) {
-    const requestHash = hash(input)
+    const payload = { ...input, templateId: input.templateId ?? DEFAULT_TEMPLATE_ID }
+    const requestHash = hashCreateTopicInput(payload)
     try {
       return this.handleCreateResult(
-        await this.repository.create(userId, input, { key, hash: requestHash }),
+        await this.repository.create(userId, payload, { key, hash: requestHash }),
       )
     } catch (error) {
       if (isConstraint(error, IDEMPOTENCY_RECORDS_PKEY)) {
         return this.handleCreateResult(
-          await this.repository.create(userId, input, { key, hash: requestHash }),
+          await this.repository.create(userId, payload, { key, hash: requestHash }),
         )
       }
       throw error
@@ -67,9 +82,16 @@ export class TopicsService {
   }
 
   async update(userId: string, id: string, input: UpdateTopicInput) {
-    const topic = await this.repository.update(userId, id, input)
-    if (topic) {
-      return topic
+    try {
+      const topic = await this.repository.update(userId, id, input)
+      if (topic) {
+        return topic
+      }
+    } catch (error) {
+      if (isConstraint(error, TOPICS_USER_NAME_UNIQUE)) {
+        throw new ConflictException(TOPIC_ERROR.nameConflict)
+      }
+      throw error
     }
     if (!(await this.repository.findById(userId, id))) {
       throw new NotFoundException(TOPIC_ERROR.notFound)
@@ -87,6 +109,12 @@ export class TopicsService {
   private handleCreateResult(result: Awaited<ReturnType<TopicsRepository['create']>>) {
     if (result.kind === TOPIC_CREATE_KIND.ok) {
       return { topic: result.topic, replayed: result.replayed }
+    }
+    if (result.kind === TOPIC_CREATE_KIND.nameConflict) {
+      throw new ConflictException(TOPIC_ERROR.nameConflict)
+    }
+    if (result.kind === TOPIC_CREATE_KIND.templateNotFound) {
+      throw new NotFoundException(TEMPLATE_ERROR.notFound)
     }
     throw new ConflictException(IDEMPOTENCY_ERROR.keyReused)
   }

@@ -12,6 +12,7 @@ import { LearningLogsModule } from './learning-logs/learning-logs.module'
 import { StudySessionsModule } from './study-sessions/study-sessions.module'
 import { ORPCModule } from '@orpc/nest'
 import { PapersModule } from './papers/papers.module'
+import { TemplatesModule } from './templates/templates.module'
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PapersModule } from './papers/papers.module'
     StudySessionsModule,
     LearningLogsModule,
     PapersModule,
+    TemplatesModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

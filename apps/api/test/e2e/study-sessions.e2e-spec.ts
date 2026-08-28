@@ -31,13 +31,13 @@ describe('StudySessions API', () => {
     await pool.end()
   })
 
-  async function createTopic() {
+  async function createTopic(name = 'Node.js') {
     return (
       await app.inject({
         method: 'POST',
         url: '/api/topics',
         headers: headers(),
-        payload: { name: 'Node.js', color: '#4F46E5' },
+        payload: { name, color: '#4F46E5' },
       })
     ).json()
   }
@@ -243,7 +243,7 @@ describe('StudySessions API', () => {
       ).statusCode,
     ).toBe(404)
 
-    const archived = await createTopic()
+    const archived = await createTopic('已归档')
     await app.inject({
       method: 'PATCH',
       url: `/api/topics/${archived.id}`,
@@ -280,7 +280,7 @@ describe('StudySessions API', () => {
       ).json().error.code,
     ).toBe('TOPIC_NOT_FOUND')
 
-    const deleted = await createTopic()
+    const deleted = await createTopic('已删除')
     await app.inject({
       method: 'DELETE',
       url: `/api/topics/${deleted.id}`,

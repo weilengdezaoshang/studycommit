@@ -4,6 +4,11 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator'
 import { drizzle } from 'drizzle-orm/node-postgres'
 import type { NestFastifyApplication } from '@nestjs/platform-fastify'
 import { applyTestEnv, testEnv } from '../helpers/env'
+import {
+  DEFAULT_TEMPLATE_ID,
+  DEFAULT_TOPIC_COLOR,
+  SYSTEM_TEMPLATE,
+} from '../../src/templates/template.constants'
 
 describe('Topics API', () => {
   let app: NestFastifyApplication
@@ -130,5 +135,79 @@ describe('Topics API', () => {
       headers: { 'x-user-id': userA },
     })
     expect(bad.statusCode).toBe(400)
+  })
+
+  it('只填名称时创建箱子并关联默认模板', async () => {
+    const created = await create(userA, crypto.randomUUID(), { name: ' 系统设计 ' })
+    expect(created.statusCode).toBe(201)
+    expect(created.json()).toMatchObject({
+      name: '系统设计',
+      color: DEFAULT_TOPIC_COLOR,
+      templateId: DEFAULT_TEMPLATE_ID,
+      template: {
+        id: DEFAULT_TEMPLATE_ID,
+        name: '空白',
+        icon: 'box',
+        paperBackground: 'plain',
+      },
+    })
+  })
+
+  it('创建时可指定模板且同名箱子冲突', async () => {
+    const created = await create(userA, crypto.randomUUID(), {
+      name: '前端架构',
+      templateId: SYSTEM_TEMPLATE.rule.id,
+    })
+    expect(created.json()).toMatchObject({
+      templateId: SYSTEM_TEMPLATE.rule.id,
+      template: { icon: 'rule', paperBackground: 'rule' },
+    })
+    const duplicate = await create(userA, crypto.randomUUID(), { name: '前端架构' })
+    expect(duplicate.statusCode).toBe(409)
+    expect(duplicate.json().error.code).toBe('TOPIC_NAME_CONFLICT')
+  })
+
+  it('省略模板和显式默认模板可用同一幂等键重试', async () => {
+    const key = 'same-default-template'
+    const first = await create(userA, key, { name: '幂等模板' })
+    const replay = await create(userA, key, {
+      name: '幂等模板',
+      templateId: DEFAULT_TEMPLATE_ID,
+    })
+    expect(first.statusCode).toBe(201)
+    expect(replay.statusCode).toBe(201)
+    expect(replay.json().id).toBe(first.json().id)
+    expect(replay.headers['idempotency-replayed']).toBe('true')
+  })
+
+  it('改名与已有箱子重名时返回冲突', async () => {
+    const first = (await create(userA, crypto.randomUUID(), { name: '系统设计' })).json()
+    const second = (await create(userA, crypto.randomUUID(), { name: '前端架构' })).json()
+    const conflict = await app.inject({
+      method: 'PATCH',
+      url: `/api/topics/${second.id}`,
+      headers: { 'x-user-id': userA },
+      payload: { name: '系统设计', version: second.version },
+    })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('TOPIC_NAME_CONFLICT')
+    expect(
+      (
+        await app.inject({
+          method: 'GET',
+          url: `/api/topics/${first.id}`,
+          headers: { 'x-user-id': userA },
+        })
+      ).json().name,
+    ).toBe('系统设计')
+  })
+
+  it('模板不存在时拒绝创建箱子', async () => {
+    const missing = await create(userA, crypto.randomUUID(), {
+      name: '移动端设计',
+      templateId: crypto.randomUUID(),
+    })
+    expect(missing.statusCode).toBe(404)
+    expect(missing.json().error.code).toBe('TEMPLATE_NOT_FOUND')
   })
 })

@@ -26,6 +26,29 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
   'mastered',
 ])
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
+export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
+
+export const templates = pgTable(
+  'templates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id'),
+    name: varchar('name', { length: 18 }).notNull(),
+    icon: varchar('icon', { length: 100 }).notNull(),
+    paperBackground: paperBackground('paper_background').notNull(),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    check('templates_name_not_blank', sql`length(trim(${table.name})) > 0`),
+    check('templates_icon_not_blank', sql`length(trim(${table.icon})) > 0`),
+    check('templates_version_positive', sql`${table.version} >= 1`),
+    index('templates_user_created_idx').on(table.userId, table.createdAt, table.id),
+  ],
+)
+
 export const topics = pgTable(
   'topics',
   {
@@ -34,6 +57,9 @@ export const topics = pgTable(
     name: varchar('name', { length: 80 }).notNull(),
     description: varchar('description', { length: 1000 }),
     color: varchar('color', { length: 7 }).notNull(),
+    templateId: uuid('template_id')
+      .notNull()
+      .references(() => templates.id, { onDelete: 'restrict' }),
     status: topicStatus('status').notNull().default('active'),
     totalDurationSeconds: integer('total_duration_seconds').notNull().default(0),
     version: integer('version').notNull().default(1),
@@ -52,6 +78,9 @@ export const topics = pgTable(
       table.updatedAt,
       table.id,
     ),
+    uniqueIndex('topics_user_name_unique')
+      .on(table.userId, sql`lower(trim(${table.name}))`)
+      .where(sql`${table.deletedAt} is null`),
   ],
 )
 
