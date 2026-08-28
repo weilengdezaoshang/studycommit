@@ -1,11 +1,41 @@
 @import './styles/tokens.wxss';
 
 page {
-  background: var(--sc-paper);
-  color: var(--sc-ink);
+  background-color: #fffef9;
+  background-color: var(--sc-paper, #fffef9);
+  color: #34423b;
+  color: var(--sc-ink, #34423b);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
 }
 
 button {
+  position: relative;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: center;
+  overflow: visible;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 微信 button 的默认边框由伪元素绘制，必须在全局基础层清除。 */
+button::after {
+  border: 0;
+}
+
+/* 未显式指定 hover-class 的按钮也不应出现微信默认灰色覆盖层。 */
+.button-hover {
+  background: transparent;
+  color: inherit;
+  opacity: 1;
 }

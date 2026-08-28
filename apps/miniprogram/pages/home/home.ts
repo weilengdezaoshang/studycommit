@@ -3,6 +3,12 @@ import { ROUTES } from '../../constants/routes'
 import { monitor } from '../../services/monitor-adapter'
 import { getMockPapersApi, MOCK_TOPIC_ID, type MockTopic } from '../../services/mock-papers'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
+import {
+  formatDisplayCount,
+  getDrawerTopicSummary,
+  getHomeLoadErrorMessage,
+  getNextDefaultTopicName,
+} from './home-utils'
 
 type PaperViewModel = Paper & {
   dateKey: string
@@ -10,20 +16,24 @@ type PaperViewModel = Paper & {
   timeLabel: string
   topicLabel: string
   isInbox: boolean
+  hasQuestion: boolean
+  isQuestionResolved: boolean
+  templateClass: 'template-dot' | 'template-rule' | 'template-grid' | 'template-plain'
 }
 
 type TopicViewModel = MockTopic & {
   paperCount: number
+  paperCountLabel: string
   isSelected: boolean
 }
 
 type WeekDayViewModel = {
   dateKey: string
   dayLabel: string
-  weekdayLabel: string
   paperCount: number
   stack: number[]
   hasMore: boolean
+  isToday: boolean
   isSelected: boolean
 }
 
@@ -53,8 +63,30 @@ type PageEvent = {
 type DateParts = { year: number; month: number; day: number }
 
 const INBOX_TOPIC_ID = '__inbox__'
-const DEFAULT_DATE = '2026-08-27'
-const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
+const DEFAULT_DATE = '2026-08-25'
+const DEMO_TODAY_DATE = '2026-08-25'
+const AGENT_DEMO_PAPER_IDS = new Set([
+  '22222222-2222-4222-8222-222222222222',
+  '55555555-5555-4555-8555-555555555555',
+])
+const PAPER_PRESENTATION = {
+  '11111111-1111-4111-8111-111111111111': {
+    topicLabel: '系统设计',
+    templateClass: 'template-rule',
+  },
+  '22222222-2222-4222-8222-222222222222': {
+    topicLabel: '待整理',
+    templateClass: 'template-dot',
+  },
+  '44444444-4444-4444-8444-444444444444': {
+    topicLabel: '移动端设计',
+    templateClass: 'template-grid',
+  },
+  '55555555-5555-4555-8555-555555555555': {
+    topicLabel: '待整理',
+    templateClass: 'template-plain',
+  },
+} as const
 
 Page({
   data: {
@@ -62,31 +94,53 @@ Page({
     papers: [] as PaperViewModel[],
     timelinePapers: [] as PaperViewModel[],
     topics: [] as TopicViewModel[],
+    visibleTopics: [] as TopicViewModel[],
     weekDays: [] as WeekDayViewModel[],
     monthDays: [] as MonthDayViewModel[],
     searchResults: [] as SearchResultViewModel[],
     selectedPaper: null as PaperViewModel | null,
     selectedDate: DEFAULT_DATE,
     selectedTopicId: '',
-    selectedDateLabel: '8月27日',
+    selectedDateLabel: '8月25日',
     monthLabel: '2026年8月',
+    monthDisplayLabel: '2026 年 8 月',
     monthTitle: '八月',
     timelineTitle: '当天的纸页',
     searchQuery: '',
     newTopicName: '',
     inboxCount: 0,
+    inboxCountLabel: '0',
     problemCount: 0,
+    problemCountLabel: '0',
     paperCount: 0,
     topicCount: 0,
+    hasMoreTopics: false,
+    topicOverflowLabel: '',
     isLoading: false,
+    isLoadError: false,
+    loadErrorMessage: '',
     isDrawerOpen: false,
     isSearchOpen: false,
     isReviewOpen: false,
     isProblemsOpen: false,
+    isTopicsOpen: false,
     isDetailOpen: false,
+    isDetailManageOpen: false,
+    isTopicChoicesOpen: false,
+    isAgentOpen: false,
+    agentStep: 0,
+    agentStepLabel: '1 / 3',
+    agentOffsetX: 0,
+    agentTransform: 'translate3d(0, 0, 0)',
+    agentOpacity: 1,
+    agentCardTitle: '',
+    agentCardBody: '',
+    agentCardExample: '',
+    agentTouchStartX: 0,
     isTopicFormOpen: false,
     isCreatingTopic: false,
     organizingId: '',
+    isTimelineSwapping: false,
   },
 
   onShow() {
@@ -104,7 +158,7 @@ Page({
   },
 
   async loadHome() {
-    this.setData({ isLoading: true })
+    this.setData({ isLoading: true, isLoadError: false, loadErrorMessage: '' })
     try {
       const api = getMockPapersApi()
       const [paperPage, topics] = await Promise.all([api.list(), api.listTopics()])
@@ -112,11 +166,16 @@ Page({
       this.applyDerivedData(topics)
     } catch (error) {
       monitor.captureError(error, { action: MONITOR_EVENTS.HOME_LOAD_FAILED })
+      this.setData({ isLoadError: true, loadErrorMessage: getHomeLoadErrorMessage(error) })
       wx.showToast({ title: '内容加载失败', icon: 'none' })
     } finally {
       this.setData({ isLoading: false })
       wx.stopPullDownRefresh()
     }
+  },
+
+  retryLoad() {
+    void this.loadHome()
   },
 
   startWriting() {
@@ -143,14 +202,32 @@ Page({
     monitor.track(MONITOR_EVENTS.HOME_DATE_SELECT, { dateKey })
     this.setData({ selectedDate: dateKey, isDrawerOpen: false })
     this.applyDerivedData(this.data.topics)
+    this.playTimelineSwap()
+  },
+
+  playTimelineSwap() {
+    this.setData({ isTimelineSwapping: false })
+    wx.nextTick(() => {
+      this.setData({ isTimelineSwapping: true })
+      setTimeout(() => this.setData({ isTimelineSwapping: false }), 220)
+    })
   },
 
   selectTopic(event: PageEvent) {
     const topicId = String(event.currentTarget.dataset.id)
     const selectedTopicId = this.data.selectedTopicId === topicId ? '' : topicId
     monitor.track(MONITOR_EVENTS.HOME_TOPIC_SELECT, { topicId: selectedTopicId })
-    this.setData({ selectedTopicId, isDrawerOpen: false })
+    this.setData({ selectedTopicId, isDrawerOpen: false, isTopicsOpen: false })
     this.applyDerivedData(this.data.topics)
+  },
+
+  openTopics() {
+    monitor.track(MONITOR_EVENTS.HOME_TOPICS_OPEN)
+    this.setData({ isDrawerOpen: false, isTopicsOpen: true })
+  },
+
+  closeTopics() {
+    this.setData({ isTopicsOpen: false })
   },
 
   showInbox() {
@@ -201,7 +278,118 @@ Page({
   },
 
   closePaper() {
-    this.setData({ isDetailOpen: false, selectedPaper: null })
+    this.setData({ isDetailOpen: false, isDetailManageOpen: false, selectedPaper: null })
+  },
+
+  openDetailManage() {
+    this.setData({ isDetailManageOpen: true, isTopicChoicesOpen: false })
+  },
+
+  closeDetailManage() {
+    this.setData({ isDetailManageOpen: false, isTopicChoicesOpen: false })
+  },
+
+  openTopicChoices() {
+    this.setData({ isTopicChoicesOpen: true })
+  },
+
+  keepDetailManageOpen() {
+    return
+  },
+
+  selectDetailTopic(event: PageEvent) {
+    const topicId = String(event.currentTarget.dataset.id)
+    const selectedPaper = this.data.selectedPaper
+    if (!selectedPaper) {
+      return
+    }
+    this.closeDetailManage()
+    void this.organizePaper({
+      currentTarget: { dataset: { id: selectedPaper.id, version: selectedPaper.version, topicId } },
+    })
+  },
+
+  openAgent() {
+    const paper = this.data.selectedPaper
+    if (!paper?.hasQuestion) {
+      return
+    }
+    const explanation = getAgentExplanation(paper, 0)
+    monitor.track(MONITOR_EVENTS.HOME_AGENT_OPEN)
+    this.setData({
+      isAgentOpen: true,
+      agentStep: 0,
+      agentStepLabel: '1 / 3',
+      agentTransform: 'translate3d(0, 0, 0)',
+      agentOpacity: 1,
+      agentCardTitle: explanation.title,
+      agentCardBody: explanation.body,
+      agentCardExample: explanation.example,
+    })
+  },
+
+  closeAgent() {
+    this.setData({
+      isAgentOpen: false,
+      agentOffsetX: 0,
+      agentTransform: 'translate3d(0, 0, 0)',
+      agentOpacity: 1,
+    })
+  },
+
+  onAgentTouchStart(event: WechatMiniprogram.TouchEvent) {
+    this.setData({ agentTouchStartX: event.touches[0]?.clientX ?? 0, agentOffsetX: 0 })
+  },
+
+  onAgentTouchMove(event: WechatMiniprogram.TouchEvent) {
+    const startX = this.data.agentTouchStartX
+    const currentX = event.touches[0]?.clientX ?? startX
+    const offsetX = Math.max(-180, Math.min(180, currentX - startX))
+    this.setData({
+      agentOffsetX: offsetX,
+      agentTransform: `translate3d(${offsetX}px, 0, 0) rotate(${offsetX / 24}deg)`,
+      agentOpacity: 1 - Math.min(0.45, Math.abs(offsetX) / 400),
+    })
+  },
+
+  onAgentTouchEnd() {
+    const offsetX = this.data.agentOffsetX
+    if (Math.abs(offsetX) < 80) {
+      this.setData({ agentOffsetX: 0, agentTransform: 'translate3d(0, 0, 0)', agentOpacity: 1 })
+      return
+    }
+    const direction = offsetX < 0 ? 'left' : 'right'
+    this.setData({
+      agentTransform: `translate3d(${direction === 'left' ? '-120%' : '120%'}, 0, 0) rotate(${direction === 'left' ? '-8deg' : '8deg'})`,
+      agentOpacity: 0,
+    })
+    setTimeout(() => {
+      if (direction === 'right' || this.data.agentStep >= 2) {
+        monitor.track(MONITOR_EVENTS.HOME_AGENT_FINISH, { direction })
+        this.closeAgent()
+        wx.showToast({
+          title: direction === 'right' ? '这部分已经理解' : '这次先到这里',
+          icon: 'none',
+        })
+        return
+      }
+      const nextStep = this.data.agentStep + 1
+      const paper = this.data.selectedPaper
+      if (!paper) {
+        this.closeAgent()
+        return
+      }
+      const explanation = getAgentExplanation(paper, nextStep)
+      this.setData({
+        agentStep: nextStep,
+        agentStepLabel: `${nextStep + 1} / 3`,
+        agentTransform: 'translate3d(0, 0, 0)',
+        agentOpacity: 1,
+        agentCardTitle: explanation.title,
+        agentCardBody: explanation.body,
+        agentCardExample: explanation.example,
+      })
+    }, 220)
   },
 
   openReview() {
@@ -224,6 +412,31 @@ Page({
 
   toggleTopicForm() {
     this.setData({ isTopicFormOpen: !this.data.isTopicFormOpen })
+  },
+
+  async createDefaultTopic() {
+    if (this.data.isCreatingTopic) {
+      return
+    }
+    const name = getNextDefaultTopicName(this.data.topics.map((topic) => topic.name))
+    this.setData({ isCreatingTopic: true })
+    monitor.track(MONITOR_EVENTS.HOME_TOPIC_CREATE, { source: 'quick', name })
+    try {
+      const api = getMockPapersApi()
+      await api.createTopic({ name })
+      const topics = await api.listTopics()
+      this.setData({ newTopicName: '', isTopicFormOpen: false })
+      this.applyDerivedData(topics)
+      wx.showToast({ title: '箱子已新建', icon: 'success' })
+    } catch (error) {
+      monitor.captureError(error, {
+        action: MONITOR_EVENTS.HOME_TOPIC_CREATE_FAILED,
+        source: 'quick',
+      })
+      wx.showToast({ title: '新建箱子失败', icon: 'none' })
+    } finally {
+      this.setData({ isCreatingTopic: false })
+    }
   },
 
   onTopicNameInput(event: WechatMiniprogram.Input) {
@@ -257,7 +470,7 @@ Page({
   },
 
   async organizePaper(event: PageEvent) {
-    const { id, version } = event.currentTarget.dataset
+    const { id, version, topicId } = event.currentTarget.dataset
     if (this.data.organizingId) {
       return
     }
@@ -267,7 +480,7 @@ Page({
       await getMockPapersApi().organize({
         id: String(id),
         version: Number(version),
-        topicId: MOCK_TOPIC_ID,
+        topicId: String(topicId ?? MOCK_TOPIC_ID),
       })
       monitor.track(MONITOR_EVENTS.HOME_ORGANIZE_SUCCESS)
       wx.showToast({ title: '已归入学习方法', icon: 'success' })
@@ -292,8 +505,10 @@ Page({
     const viewTopics = topics.map((topic) => ({
       ...topic,
       paperCount: paperCountByTopic[topic.id] ?? 0,
+      paperCountLabel: formatDisplayCount(paperCountByTopic[topic.id] ?? 0),
       isSelected: topic.id === selectedTopicId,
     }))
+    const drawerTopics = getDrawerTopicSummary(viewTopics)
     const timelinePapers = papers.filter((paper) => {
       if (paper.dateKey !== selectedDate) {
         return false
@@ -304,18 +519,25 @@ Page({
       return !selectedTopicId || paper.topicId === selectedTopicId
     })
     const selected = parseDateKey(selectedDate)
+    const weekDays = buildWeekDays(selectedDate, papers)
     this.setData({
       topics: viewTopics,
-      weekDays: buildWeekDays(selectedDate, papers),
+      visibleTopics: drawerTopics.visibleTopics,
+      hasMoreTopics: drawerTopics.hasMoreTopics,
+      topicOverflowLabel: drawerTopics.topicOverflowLabel,
+      weekDays,
       monthDays: buildMonthDays(selected, papers),
       timelinePapers,
       selectedDateLabel: formatDateLabel(selected),
       monthLabel: `${selected.year}年${selected.month}月`,
+      monthDisplayLabel: `${selected.year} 年 ${selected.month} 月`,
       monthTitle: formatMonthTitle(selected.month),
       timelineTitle:
         selectedTopicId === INBOX_TOPIC_ID ? '待整理' : selectedTopicId ? '主题纸页' : '当天的纸页',
       inboxCount: papers.filter((paper) => paper.isInbox).length,
+      inboxCountLabel: formatDisplayCount(papers.filter((paper) => paper.isInbox).length),
       problemCount: 0,
+      problemCountLabel: '0',
       paperCount: papers.length,
       topicCount: topics.length,
     })
@@ -333,13 +555,52 @@ Page({
 
 function toPaperViewModel(paper: Paper): PaperViewModel {
   const date = new Date(paper.createdAt)
+  const presentation = PAPER_PRESENTATION[paper.id as keyof typeof PAPER_PRESENTATION]
   return {
     ...paper,
     dateKey: toDateKey(date),
     dateLabel: `${date.getMonth() + 1}月${date.getDate()}日`,
     timeLabel: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-    topicLabel: paper.topicId ? '已归入主题' : '待整理',
+    topicLabel: presentation?.topicLabel ?? (paper.topicId ? '已归入主题' : '待整理'),
     isInbox: paper.status === 'inbox',
+    hasQuestion: AGENT_DEMO_PAPER_IDS.has(paper.id),
+    isQuestionResolved: false,
+    templateClass: presentation?.templateClass ?? 'template-plain',
+  }
+}
+
+function getAgentExplanation(
+  paper: PaperViewModel,
+  step: number,
+): { title: string; body: string; example: string } {
+  if (paper.content.includes('费曼')) {
+    if (step === 0) {
+      return {
+        title: '先把“复述”换成检验',
+        body: '费曼学习法不是把原话再说一遍，而是尝试用自己的话讲清楚。讲不下去的地方，就是还没有真正理解的地方。',
+        example: '先合上资料，用一句自己的话解释一个概念，再回头检查遗漏。',
+      }
+    }
+    if (step === 1) {
+      return {
+        title: '把卡住的地方拆小',
+        body: '如果一句话讲不清，不必重新学习全部内容。先找出具体卡点：是概念不熟、因果关系不清，还是缺少一个例子。',
+        example: '把“我不懂”改成“我不懂它为什么会导致这个结果”。',
+      }
+    }
+    return {
+      title: '用一个反例确认理解',
+      body: '真正理解不只是在熟悉的例子里复述，还能判断结论什么时候成立、什么时候不成立。',
+      example: '试着找一个不适用的场景，再说明它为什么不适用。',
+    }
+  }
+  return {
+    title: step === 0 ? '先把原记录换成一句解释' : '再换一个角度',
+    body:
+      step === 0
+        ? `${paper.content} 可以先拆成“它解决什么问题”和“在什么条件下成立”两部分理解。`
+        : '先从一个具体场景开始，再回到抽象结论，会更容易确认每个词的含义。',
+    example: '尝试找一个符合结论的例子，再找一个不符合的反例。',
   }
 }
 
@@ -357,10 +618,10 @@ function buildWeekDays(selectedDate: string, papers: PaperViewModel[]): WeekDayV
     return {
       dateKey,
       dayLabel: String(date.getDate()),
-      weekdayLabel: WEEKDAY_LABELS[index] ?? '',
       paperCount,
       stack: Array.from({ length: Math.min(paperCount, 3) }, (_, stackIndex) => stackIndex),
       hasMore: paperCount > 3,
+      isToday: dateKey === DEMO_TODAY_DATE,
       isSelected: dateKey === selectedDate,
     }
   })
