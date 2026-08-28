@@ -168,38 +168,36 @@ button::after {
   font-size: 22rpx;
   font-weight: 500;
 }
-.paper-stack {
+.week-paper-visual {
   position: relative;
   width: 54rpx;
-  height: 40rpx;
+  height: 48rpx;
   margin-top: 6rpx;
-  transform: scale(0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.stack-paper {
-  position: absolute;
-  left: 10rpx;
-  bottom: 2rpx;
-  width: 40rpx;
+.week-paper-icon {
+  display: block;
+  width: 48rpx;
+  height: 52rpx;
+}
+.week-paper-single {
+  width: 38rpx;
   height: 44rpx;
-  border: 1rpx solid var(--sc-ink);
-  border-radius: 5rpx;
-  background: var(--sc-paper);
-  transform: translate(-6rpx, 4rpx) rotate(-5deg);
-  opacity: 0.55;
 }
-.stack-paper:nth-child(2) {
-  transform: translate(-2rpx, 2rpx) rotate(3deg);
-  background: var(--sc-paper);
-  opacity: 0.78;
+.week-paper-stack-2 {
+  width: 44rpx;
+  height: 48rpx;
 }
-.stack-paper:nth-child(3) {
-  transform: translate(2rpx, 0) rotate(0);
-  background: var(--sc-paper);
-  opacity: 1;
+.week-paper-stack-3 {
+  width: 48rpx;
+  height: 52rpx;
 }
-.stack-paper:last-child {
-  transform: translate(2rpx, 0) rotate(0);
-  opacity: 1;
+.week-paper-empty {
+  display: block;
+  width: 8rpx;
+  height: 8rpx;
 }
 .stack-more {
   position: absolute;
@@ -214,15 +212,6 @@ button::after {
   line-height: 28rpx;
   text-align: center;
 }
-.is-empty .stack-paper {
-  display: none;
-}
-.is-empty::after {
-  content: '';
-  position: absolute;
-  left: 24rpx;
-  top: 20rpx;
-  width: 10rpx;
   height: 10rpx;
   border-radius: 50%;
   background: var(--sc-line);
@@ -2096,6 +2085,133 @@ button::after {
   transform: none;
 }
 
+/* 全页面精修：统一版心、状态层级与安全区。 */
+.home-page {
+  padding-right: var(--sc-page-gutter, 32rpx);
+  padding-bottom: calc(152rpx + env(safe-area-inset-bottom));
+  padding-left: var(--sc-page-gutter, 32rpx);
+}
+
+.topbar {
+  height: 96rpx;
+  margin: 0;
+}
+
+.week-days {
+  padding-bottom: 16rpx;
+}
+
+.week-day {
+  min-height: 92rpx;
+}
+
+.timeline-list {
+  margin-top: 24rpx;
+  margin-left: 20rpx;
+}
+
+.timeline-entry {
+  margin-bottom: 24rpx;
+  padding-left: 58rpx;
+}
+
+.timeline-dot {
+  left: -66rpx;
+}
+
+.timeline-rail::before {
+  left: -38rpx;
+  width: 26rpx;
+}
+
+.paper-card {
+  min-height: 132rpx;
+  padding: 22rpx 24rpx 18rpx;
+}
+
+.paper-content {
+  font-size: 27rpx;
+  line-height: 1.6;
+}
+
+.state-card,
+.empty-day {
+  min-height: 480rpx;
+  padding: 48rpx 24rpx;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.empty-copy {
+  max-width: 480rpx;
+  line-height: 1.6;
+}
+
+.fab {
+  right: var(--sc-page-gutter, 32rpx);
+  bottom: calc(32rpx + env(safe-area-inset-bottom));
+  width: 104rpx;
+  min-width: 104rpx !important;
+  max-width: 104rpx;
+  height: 104rpx;
+}
+
+.overlay-panel {
+  background-color: var(--sc-paper, #fffef9);
+}
+
+.overlay-title {
+  color: var(--sc-ink);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.search-input {
+  min-width: 0;
+  height: 80rpx;
+}
+
+.search-result {
+  min-height: 96rpx;
+  margin-bottom: 0;
+  padding: 24rpx 8rpx;
+  border: 0;
+  border-bottom: 1rpx solid var(--sc-line);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.result-title,
+.result-detail {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-title {
+  white-space: nowrap;
+}
+
+.detail-paper {
+  border-radius: 20rpx 20rpx 0 0;
+}
+
+.detail-content {
+  font-size: 29rpx;
+  line-height: 1.75;
+}
+
+.detail-manage-sheet {
+  right: var(--sc-page-gutter, 32rpx);
+  bottom: calc(var(--sc-page-gutter, 32rpx) + env(safe-area-inset-bottom));
+  left: var(--sc-page-gutter, 32rpx);
+}
+
+.agent-body {
+  padding-right: var(--sc-page-gutter, 32rpx);
+  padding-left: var(--sc-page-gutter, 32rpx);
+}
+
 .drawer-v2 .add-topic-button text {
   display: block;
   flex: 0 0 40rpx;
@@ -2295,4 +2411,153 @@ button::after {
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 交付收敛层：只修正抽屉与覆盖层的可达性，不改变 PRD 的视觉比例。 */
+.drawer-v2 .drawer-icon-button,
+.drawer-v2 .add-topic-button {
+  min-width: 88rpx !important;
+  height: 88rpx;
+}
+
+.drawer-v2 .drawer-profile-actions {
+  gap: 4rpx;
+}
+
+.drawer-v2 .drawer-action-icon {
+  width: 32rpx;
+  height: 32rpx;
+}
+
+.drawer-v2 .review-binding {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  color: var(--sc-muted);
+  font-size: 22rpx;
+}
+
+.drawer-v2 .review-binding image {
+  width: 24rpx;
+  height: 24rpx;
+}
+
+.drawer-v2 .calendar-weekdays,
+.drawer-v2 .heat-legend,
+.drawer-v2 .topic-row > small,
+.drawer-v2 .drawer-row > small,
+.topics-panel-row > small {
+  font-size: 22rpx;
+}
+
+.drawer-v2 .calendar-weekdays,
+.drawer-v2 .review-entry,
+.drawer-v2 .drawer-section-heading {
+  color: var(--sc-muted);
+}
+
+.drawer-v2 .calendar-day {
+  width: 56rpx;
+  min-width: 56rpx !important;
+  max-width: 56rpx;
+  height: 56rpx;
+  min-height: 56rpx;
+}
+
+.drawer-v2 .calendar-paper-icon {
+  width: 32rpx;
+  height: 40rpx;
+}
+
+.drawer-v2 .add-topic-button image {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.drawer-v2 .topic-row,
+.drawer-v2 .drawer-row {
+  min-height: 88rpx;
+  font-size: 26rpx;
+}
+
+.overlay-panel {
+  padding-right: max(32rpx, env(safe-area-inset-right));
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  padding-left: max(32rpx, env(safe-area-inset-left));
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+}
+
+.back-button,
+.detail-back-button,
+.agent-back-button,
+.clear-button {
+  display: grid;
+  place-items: center;
+  min-width: 88rpx !important;
+  height: 88rpx;
+}
+
+.back-button image,
+.detail-back-button image,
+.agent-back-button image {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.clear-button {
+  width: auto;
+  padding: 0 16rpx;
+  color: var(--sc-muted);
+  font-size: 24rpx;
+}
+
+.plus-icon {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.problem-list {
+  margin-top: 24rpx;
+}
+
+.detail-photo {
+  display: block;
+  width: 100%;
+  max-height: 520rpx;
+  margin-top: 28rpx;
+  border-radius: 16rpx;
+}
+
+/* 抽屉列表采用紧凑节奏：同组行紧凑，分区之间保留清晰层级。 */
+.drawer-v2 .drawer-topics-section {
+  margin-top: 8rpx;
+}
+
+.drawer-v2 .drawer-attention-section {
+  margin-top: 8rpx;
+}
+
+.drawer-v2 .drawer-section-heading {
+  min-height: 64rpx;
+  margin-top: 0;
+}
+
+.drawer-v2 .topic-row,
+.drawer-v2 .drawer-row {
+  min-height: 76rpx;
+}
+
+.drawer-v2 .topic-overflow-button {
+  min-height: 48rpx;
+}
+
+.drawer-v2 .add-topic-button {
+  min-width: 64rpx !important;
+  width: 64rpx;
+  height: 64rpx;
 }

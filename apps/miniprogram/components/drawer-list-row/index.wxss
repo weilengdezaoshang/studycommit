@@ -1,0 +1,70 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.row-shell {
+  width: calc(100% + var(--drawer-gutter, 32rpx) + var(--drawer-gutter, 32rpx));
+  min-height: 76rpx;
+  margin-left: calc(0rpx - var(--drawer-gutter, 32rpx));
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.row-shell.is-selected {
+  background: #e2ece0;
+  background: var(--sc-action-surface, #e2ece0);
+}
+
+.row-shell-pressed {
+  background: rgba(220, 233, 216, 0.45);
+}
+
+.row-content {
+  display: grid;
+  grid-template-columns: var(--drawer-icon-column, 48rpx) minmax(0, 1fr) var(--drawer-value-column, 80rpx);
+  align-items: center;
+  width: 100%;
+  min-height: 76rpx;
+  padding: 0 var(--drawer-gutter, 32rpx);
+  gap: 12rpx;
+  box-sizing: border-box;
+  color: #34423b;
+  color: var(--sc-ink, #34423b);
+  font-size: 26rpx;
+  text-align: left;
+}
+
+.row-icon {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.row-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-count {
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  min-width: 40rpx;
+  max-width: var(--drawer-value-column, 80rpx);
+  height: 40rpx;
+  padding: 0 8rpx;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1rpx solid #b9c8bc;
+  border-radius: 20rpx;
+  background: #e2ece0;
+  color: #53645a;
+  font-size: 22rpx;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

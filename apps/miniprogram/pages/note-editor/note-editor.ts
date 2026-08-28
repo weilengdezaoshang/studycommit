@@ -4,6 +4,7 @@ import { getMockPapersApi } from '../../services/mock-papers'
 import { formatEditorDate, parseNoteDraft, type NoteDraft } from './note-editor-utils'
 
 const NOTE_DRAFT_STORAGE_KEY = 'studycommit.note-editor.draft'
+let navigateBackTimer: ReturnType<typeof setTimeout> | undefined
 
 Page({
   data: {
@@ -34,6 +35,12 @@ Page({
     monitor.track(MONITOR_EVENTS.NOTE_EDITOR_OPEN)
   },
 
+  onUnload() {
+    if (navigateBackTimer) {
+      clearTimeout(navigateBackTimer)
+    }
+  },
+
   onContentInput(event: WechatMiniprogram.Input) {
     const content = event.detail.value
     this.setData({ content })
@@ -59,7 +66,7 @@ Page({
         if (!tempFilePath) {
           return
         }
-        wx.saveFile({
+        wx.getFileSystemManager().saveFile({
           tempFilePath,
           success: ({ savedFilePath }) => {
             this.setData({ photoPath: savedFilePath })
@@ -105,7 +112,7 @@ Page({
       wx.removeStorageSync(NOTE_DRAFT_STORAGE_KEY)
       monitor.track(MONITOR_EVENTS.NOTE_SAVE_SUCCESS)
       wx.showToast({ title: '已记下', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 300)
+      navigateBackTimer = setTimeout(() => wx.navigateBack(), 300)
     } catch (error) {
       this.setData({ isSaving: false })
       monitor.captureError(error, {

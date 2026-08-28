@@ -1,23 +1,23 @@
 <view class="editor-page" style="padding-top: {{statusBarHeight}}px;">
   <view class="editor-bar">
-    <button class="editor-cancel" bindtap="cancelWriting">取消</button>
+    <button class="editor-cancel" aria-label="取消并返回" bindtap="cancelWriting">取消</button>
     <text class="editor-title">新记录</text>
-    <button class="editor-save" loading="{{isSaving}}" disabled="{{isSaving}}" bindtap="saveNote">记下</button>
+    <button class="editor-save" aria-label="保存这张纸页" loading="{{isSaving}}" disabled="{{isSaving}}" bindtap="saveNote">记下</button>
   </view>
 
   <view class="sheet-paper">
     <view class="editor-date"><text>{{editorDate}}</text><text>{{editorSignature}}</text></view>
-    <textarea class="note-input" value="{{content}}" maxlength="20000" auto-focus placeholder="写点什么吧……" bindinput="onContentInput" />
+    <textarea class="note-input" value="{{content}}" maxlength="20000" auto-focus cursor-spacing="24" adjust-position placeholder="写点什么吧……" bindinput="onContentInput" />
     <image wx:if="{{photoPath}}" class="photo-preview" src="{{photoPath}}" mode="aspectFill" />
   </view>
 
   <view class="editor-tools">
-    <button class="tool {{photoPath ? 'tool-active' : ''}}" bindtap="choosePhoto">
+    <button class="tool {{photoPath ? 'tool-active' : ''}}" aria-label="{{photoPath ? '重新选择图片' : '添加图片'}}" bindtap="choosePhoto">
       <view class="camera-icon"></view><text>图片</text>
     </button>
-    <button class="tool {{isQuestionActive ? 'tool-active' : ''}}" bindtap="toggleQuestion">
+    <button class="tool {{isQuestionActive ? 'tool-active' : ''}}" aria-label="{{isQuestionActive ? '取消问题标记' : '标记为问题'}}" bindtap="toggleQuestion">
       <view class="question-icon">?</view><text>标记问题</text>
     </button>
-    <text class="editor-hint">仅支持文本与图片</text>
+    <text class="editor-hint">草稿已自动保存</text>
   </view>
 </view>

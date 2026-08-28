@@ -12,8 +12,11 @@
       <block wx:for="{{weekDays}}" wx:key="dateKey">
         <button class="week-day {{item.isSelected ? 'is-selected' : ''}}" data-date="{{item.dateKey}}" bindtap="selectDate" hover-class="none" aria-label="{{item.dateKey}}，{{item.paperCount}} 张纸页">
           <text class="day-label">{{item.isToday ? '今天' : item.dayLabel}}</text>
-          <view class="paper-stack {{item.paperCount ? '' : 'is-empty'}}">
-            <block wx:for="{{item.stack}}" wx:key="*this"><view class="stack-paper"></view></block>
+          <view class="week-paper-visual">
+            <image wx:if="{{item.paperCount === 1}}" class="week-paper-icon week-paper-single" src="/assets/icons/paper.svg" mode="aspectFit" />
+            <image wx:elif="{{item.paperCount === 2}}" class="week-paper-icon week-paper-stack-2" src="/assets/icons/paper-stack-2.svg" mode="aspectFit" />
+            <image wx:elif="{{item.paperCount >= 3}}" class="week-paper-icon week-paper-stack-3" src="/assets/icons/paper-stack-3.svg" mode="aspectFit" />
+            <image wx:else class="week-paper-empty" src="/assets/icons/calendar-dot.svg" mode="aspectFit" />
             <text wx:if="{{item.hasMore}}" class="stack-more">3+</text>
           </view>
         </button>
@@ -85,14 +88,18 @@
         <small>创建一个箱子，开始整理纸页。</small>
         <button class="topic-empty-button" bindtap="toggleTopicForm">新建箱子</button>
       </view>
-      <view wx:else class="topic-list"><block wx:for="{{visibleTopics}}" wx:key="id"><button class="topic-row {{item.isSelected ? 'is-selected' : ''}}" data-id="{{item.id}}" bindtap="selectTopic" aria-label="{{item.name}}，{{item.paperCountLabel}} 张纸页"><image class="topic-box-icon" src="/assets/icons/box.svg" mode="aspectFit" /><text>{{item.name}}</text><small>{{item.paperCountLabel}}</small></button></block></view>
+      <view wx:else class="topic-list">
+        <block wx:for="{{visibleTopics}}" wx:key="id">
+          <drawer-list-row action="topic" item-id="{{item.id}}" icon="/assets/icons/box.svg" label="{{item.name}}" count-label="{{item.paperCountLabel}}" selected="{{item.isSelected}}" bindselect="onDrawerRowSelect" />
+        </block>
+      </view>
       <button wx:if="{{hasMoreTopics}}" class="topic-overflow-button" bindtap="openTopics">{{topicOverflowLabel}}</button>
     </view>
 
     <view class="drawer-section drawer-attention-section">
       <view class="drawer-section-heading attention-heading"><text>需要留意</text></view>
-      <button class="drawer-row {{inboxCount ? 'has-attention' : ''}}" bindtap="showInbox"><image class="attention-icon" src="/assets/icons/inbox.svg" mode="aspectFit" /><text>待整理的纸页</text><small>{{inboxCountLabel}}</small></button>
-      <button class="drawer-row" bindtap="openProblems"><image class="attention-icon" src="/assets/icons/review.svg" mode="aspectFit" /><text>还在思考的问题</text><small>{{problemCountLabel}}</small></button>
+      <drawer-list-row action="inbox" icon="/assets/icons/inbox.svg" label="待整理的纸页" count-label="{{inboxCountLabel}}" selected="{{selectedTopicId === '__inbox__'}}" bindselect="onDrawerRowSelect" />
+      <drawer-list-row action="problems" icon="/assets/icons/review.svg" label="还在思考的问题" count-label="{{problemCountLabel}}" bindselect="onDrawerRowSelect" />
     </view>
   </view>
 
@@ -111,7 +118,7 @@
   </view>
 
   <view wx:if="{{isSearchOpen}}" class="overlay-panel search-panel" style="padding-top: calc({{statusBarHeight}}px + 24rpx);">
-    <view class="overlay-header"><button class="back-button" aria-label="关闭搜索" bindtap="closeSearch"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><input class="search-input" focus="{{isSearchOpen}}" value="{{searchQuery}}" placeholder="搜索纸页与主题" bindinput="onSearchInput" /><button class="clear-button" wx:if="{{searchQuery}}" bindtap="closeSearch" aria-label="清空搜索">清空</button></view>
+    <view class="overlay-header"><button class="back-button" aria-label="关闭搜索" bindtap="closeSearch"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><input class="search-input" focus="{{isSearchOpen}}" value="{{searchQuery}}" placeholder="搜索纸页与主题" bindinput="onSearchInput" /><button class="clear-button" wx:if="{{searchQuery}}" bindtap="clearSearch" aria-label="清空搜索关键词">清空</button></view>
     <text wx:if="{{!searchQuery}}" class="overlay-hint">输入关键词，找回过去的记录</text>
     <view wx:elif="{{searchResults.length}}" class="search-results"><block wx:for="{{searchResults}}" wx:key="id"><button class="search-result" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectSearchResult"><text class="result-title">{{item.title}}</text><text class="result-detail">{{item.detail}}</text></button></block></view>
     <view wx:else class="overlay-empty"><text>没有找到相关内容</text></view>

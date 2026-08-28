@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "今天学了什么",
   "navigationStyle": "custom",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "drawer-list-row": "/components/drawer-list-row/index"
+  }
 }

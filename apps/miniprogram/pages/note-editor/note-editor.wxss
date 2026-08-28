@@ -1,7 +1,10 @@
 .editor-page {
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
   box-sizing: border-box;
-  padding: 0 32rpx 32rpx;
+  padding: 0 var(--sc-page-gutter, 32rpx) calc(24rpx + env(safe-area-inset-bottom));
+  overflow: hidden;
   background-color: #e8eee8;
   background-color: var(--sc-canvas, #e8eee8);
   color: #34423b;
@@ -12,8 +15,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 88rpx;
-  margin-bottom: 24rpx;
+  flex: 0 0 var(--sc-control-height, 88rpx);
+  height: var(--sc-control-height, 88rpx);
+  margin-bottom: 16rpx;
 }
 
 .editor-title {
@@ -39,16 +43,32 @@
   color: var(--sc-muted);
 }
 
+.editor-cancel:active {
+  background: rgba(220, 233, 216, 0.55);
+}
+
 .editor-save {
   background: var(--sc-action);
   color: var(--sc-paper);
 }
 
+.editor-save:active {
+  opacity: 0.82;
+}
+
+.editor-save[disabled] {
+  opacity: 0.55;
+}
+
 .sheet-paper {
-  min-height: 700rpx;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 36rpx 32rpx 32rpx;
-  border-radius: 24rpx;
+  padding: 32rpx 32rpx 28rpx;
+  overflow: hidden;
+  border-radius: 20rpx;
   background-color: #fffef9;
   background-color: var(--sc-paper, #fffef9);
   background-image: radial-gradient(rgba(158, 175, 162, 0.24) 1rpx, transparent 1rpx);
@@ -63,7 +83,7 @@
   padding-bottom: 20rpx;
   border-bottom: 1rpx solid var(--sc-line);
   color: var(--sc-muted);
-  font-size: 18rpx;
+  font-size: 22rpx;
   font-weight: 500;
   letter-spacing: 1rpx;
 }
@@ -71,7 +91,9 @@
 .note-input {
   display: block;
   width: 100%;
-  min-height: 520rpx;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 240rpx;
   box-sizing: border-box;
   margin-top: 24rpx;
   padding: 0;
@@ -79,12 +101,13 @@
   background: transparent;
   color: var(--sc-ink);
   font-size: 30rpx;
-  line-height: 1.8;
+  line-height: 1.72;
 }
 
 .photo-preview {
   display: block;
   width: 100%;
+  flex: 0 0 220rpx;
   height: 220rpx;
   margin-top: 20rpx;
   border-radius: 16rpx;
@@ -94,12 +117,13 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  min-height: 112rpx;
-  margin-top: 20rpx;
-  padding: 12rpx 16rpx;
+  flex: 0 0 auto;
+  min-height: 104rpx;
+  margin-top: 16rpx;
+  padding: 8rpx;
   box-sizing: border-box;
   border: 1rpx solid var(--sc-line);
-  border-radius: 24rpx;
+  border-radius: 20rpx;
   background: rgba(255, 254, 249, 0.9);
 }
 
@@ -169,6 +193,17 @@
 .editor-hint {
   margin-left: auto;
   color: var(--sc-muted);
-  font-size: 18rpx;
+  font-size: 22rpx;
   white-space: nowrap;
+}
+
+@media (max-width: 340px) {
+  .editor-hint {
+    display: none;
+  }
+
+  .tool {
+    flex: 1;
+    min-width: 0 !important;
+  }
 }

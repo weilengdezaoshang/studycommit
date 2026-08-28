@@ -11,4 +11,6 @@
   --sc-surface-soft: #fbfcf7;
   --sc-surface-warm: #f1f5ef;
   --sc-scrim: #34423b99;
+  --sc-page-gutter: 32rpx;
+  --sc-control-height: 88rpx;
 }

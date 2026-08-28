@@ -66,6 +66,13 @@ type PageEvent = {
   }
 }
 
+type DrawerRowEvent = {
+  detail: {
+    action: 'topic' | 'inbox' | 'problems'
+    itemId: string
+  }
+}
+
 type DateParts = { year: number; month: number; day: number }
 
 const INBOX_TOPIC_ID = '__inbox__'
@@ -256,6 +263,19 @@ Page({
     this.applyDerivedData(this.data.topics)
   },
 
+  onDrawerRowSelect(event: DrawerRowEvent) {
+    const { action, itemId } = event.detail
+    if (action === 'topic') {
+      this.selectTopic({ currentTarget: { dataset: { id: itemId } } })
+      return
+    }
+    if (action === 'inbox') {
+      this.showInbox()
+      return
+    }
+    this.openProblems()
+  },
+
   openTopics() {
     monitor.track(MONITOR_EVENTS.HOME_TOPICS_OPEN)
     this.setData({ isDrawerOpen: false, isTopicsOpen: true })
@@ -278,6 +298,10 @@ Page({
 
   closeSearch() {
     this.setData({ isSearchOpen: false, searchQuery: '', searchResults: [] })
+  },
+
+  clearSearch() {
+    this.setData({ searchQuery: '', searchResults: [] })
   },
 
   onSearchInput(event: WechatMiniprogram.Input) {

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { HttpError } from './http'
-import { createMockPapersApi, type MockPapersStorage, type MockTopicsStorage } from './mock-papers'
+import {
+  createMockPapersApi,
+  type MockPaperMetadataStorage,
+  type MockPapersStorage,
+  type MockTopicsStorage,
+} from './mock-papers'
 
 function createMemoryStorage(initial: unknown = undefined): MockPapersStorage {
   let value = initial
@@ -22,8 +27,18 @@ function createTopicStorage(initial: unknown = undefined): MockTopicsStorage {
   }
 }
 
+function createMetadataStorage(initial: unknown = undefined): MockPaperMetadataStorage {
+  let value = initial
+  return {
+    read: () => value,
+    write: (nextValue) => {
+      value = nextValue
+    },
+  }
+}
+
 describe('mock papers api', () => {
-  it('lists contract-compatible inbox papers in reverse chronological order', async () => {
+  it('按创建时间倒序返回符合契约的待整理纸页', async () => {
     const api = createMockPapersApi({ storage: createMemoryStorage() })
 
     const page = await api.list({ status: 'inbox' })
@@ -36,7 +51,7 @@ describe('mock papers api', () => {
     expect(page.pageInfo).toEqual({ hasNextPage: false, nextCursor: null })
   })
 
-  it('trims and creates a new inbox paper', async () => {
+  it('去掉首尾空格后创建待整理纸页', async () => {
     const api = createMockPapersApi({
       storage: createMemoryStorage(),
       now: () => new Date('2026-08-27T10:00:00.000Z'),
@@ -55,7 +70,7 @@ describe('mock papers api', () => {
     })
   })
 
-  it('organizes a paper and increments its version', async () => {
+  it('整理纸页后递增版本号', async () => {
     const api = createMockPapersApi({ storage: createMemoryStorage() })
     const paper = (await api.list({ status: 'inbox' })).items[0]!
 
@@ -73,7 +88,7 @@ describe('mock papers api', () => {
     })
   })
 
-  it('returns a conflict when a command uses a stale version', async () => {
+  it('使用过期版本整理纸页时返回冲突', async () => {
     const api = createMockPapersApi({ storage: createMemoryStorage() })
     const paper = (await api.list({ status: 'inbox' })).items[0]!
 
@@ -93,7 +108,7 @@ describe('mock papers api', () => {
     ).rejects.toMatchObject({ serialized: { code: 'CONFLICT' } })
   })
 
-  it('recovers from invalid stored data instead of crashing the page', async () => {
+  it('存储数据损坏时恢复种子数据而不崩溃', async () => {
     const api = createMockPapersApi({ storage: createMemoryStorage({ broken: true }) })
 
     await expect(api.list({ status: 'inbox' })).resolves.toMatchObject({
@@ -101,7 +116,7 @@ describe('mock papers api', () => {
     })
   })
 
-  it('lists seeded topics and creates a trimmed topic', async () => {
+  it('返回种子主题并去掉新主题名称首尾空格', async () => {
     const api = createMockPapersApi({
       storage: createMemoryStorage(),
       topicStorage: createTopicStorage(),
@@ -115,7 +130,7 @@ describe('mock papers api', () => {
     })
   })
 
-  it('rejects duplicate topics with a conflict', async () => {
+  it('创建重名主题时返回冲突', async () => {
     const api = createMockPapersApi({
       storage: createMemoryStorage(),
       topicStorage: createTopicStorage(),
@@ -125,5 +140,57 @@ describe('mock papers api', () => {
     await expect(api.createTopic({ name: '学习方法' })).rejects.toMatchObject({
       serialized: { code: 'CONFLICT' },
     })
+  })
+
+  it('创建纸页时保存图片和问题标记元数据', async () => {
+    const metadataStorage = createMetadataStorage()
+    const api = createMockPapersApi({
+      storage: createMemoryStorage(),
+      metadataStorage,
+      delayMs: 0,
+    })
+
+    const paper = await api.create({
+      content: '带图片的问题',
+      hasQuestion: true,
+      photoPath: '/saved/photo.jpg',
+    })
+
+    await expect(api.listPaperMetadata()).resolves.toContainEqual({
+      paperId: paper.id,
+      hasQuestion: true,
+      isQuestionResolved: false,
+      photoPath: '/saved/photo.jpg',
+    })
+  })
+
+  it('只能解决已标记的问题并持久化状态', async () => {
+    const api = createMockPapersApi({
+      storage: createMemoryStorage(),
+      metadataStorage: createMetadataStorage(),
+      delayMs: 0,
+    })
+    const question = await api.create({ content: '一个问题', hasQuestion: true })
+    const normalPaper = await api.create({ content: '普通纸页' })
+
+    await expect(api.resolveQuestion(question.id)).resolves.toMatchObject({
+      paperId: question.id,
+      isQuestionResolved: true,
+    })
+    await expect(api.resolveQuestion(normalPaper.id)).rejects.toMatchObject({
+      serialized: { code: 'INVALID_RESPONSE' },
+    })
+  })
+
+  it('元数据损坏时恢复安全的种子数据', async () => {
+    const api = createMockPapersApi({
+      storage: createMemoryStorage(),
+      metadataStorage: createMetadataStorage([{ broken: true }]),
+      delayMs: 0,
+    })
+
+    await expect(api.listPaperMetadata()).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ hasQuestion: true })]),
+    )
   })
 })

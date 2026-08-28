@@ -1,0 +1,7 @@
+<view class="row-shell {{selected ? 'is-selected' : ''}}" role="button" bindtap="handleTap" hover-class="row-shell-pressed" hover-start-time="0" hover-stay-time="80" aria-label="{{label}}，{{countLabel}} 张纸页">
+  <view class="row-content">
+    <image class="row-icon" src="{{icon}}" mode="aspectFit" />
+    <text class="row-label">{{label}}</text>
+    <text class="row-count">{{countLabel}}</text>
+  </view>
+</view>
