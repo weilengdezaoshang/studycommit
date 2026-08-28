@@ -212,10 +212,6 @@ button::after {
   line-height: 28rpx;
   text-align: center;
 }
-  height: 10rpx;
-  border-radius: 50%;
-  background: var(--sc-line);
-}
 .timeline-heading {
   justify-content: space-between;
   margin: 24rpx 0 16rpx;
