@@ -54,8 +54,14 @@ export const studyCommitColors = {
   accent: '#F1DC7A',
   action: '#53635A',
   actionSurface: '#DCE9D8',
+  actionSurfaceStrong: '#E2ECE0',
+  selectedSurface: '#EDF3E9',
   surfaceSoft: '#FBFCF7',
   surfaceWarm: '#F1F5EF',
+  lineStrong: '#B9C8BC',
+  timeline: '#AEBBB1',
+  mutedSoft: '#96958B',
+  mutedFaint: '#AAA99F',
   scrim: '#34423B99',
 } as const
 
