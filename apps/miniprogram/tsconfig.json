@@ -7,7 +7,7 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["miniprogram-api-typings"],
+    "types": ["miniprogram-api-typings", "node"],
     "allowJs": false,
     "baseUrl": ".",
     "paths": {

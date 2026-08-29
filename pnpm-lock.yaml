@@ -239,6 +239,9 @@ importers:
         specifier: workspace:*
         version: link:../../packages/rpc-contracts
     devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
       miniprogram-api-typings:
         specifier: ^4.0.0
         version: 4.1.3

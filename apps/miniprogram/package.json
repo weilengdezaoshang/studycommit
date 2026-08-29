@@ -8,6 +8,7 @@
     "check": "node scripts/check-project.mjs"
   },
   "devDependencies": {
+    "@types/node": "^24.13.3",
     "miniprogram-api-typings": "^4.0.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.10"
