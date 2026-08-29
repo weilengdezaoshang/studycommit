@@ -32,7 +32,49 @@ export const refreshInputSchema = z.object({
   refreshToken: z.string().min(1),
 })
 
+export const deviceTypeSchema = z.enum(['desktop', 'mobile', 'miniprogram'])
+export const phoneSchema = z.string().regex(/^1\d{10}$/)
+
+export const sendPhoneCodeInputSchema = z.object({
+  phone: phoneSchema,
+})
+
+export const sendPhoneCodeOutputSchema = z.object({
+  expiresInSeconds: z.number().int().positive(),
+})
+
+export const verifyPhoneInputSchema = z.object({
+  phone: phoneSchema,
+  code: z.string().regex(/^\d{6}$/),
+  deviceType: deviceTypeSchema,
+})
+
+export const currentUserSchema = z.object({
+  id: z.uuid(),
+  nickname: z.string().min(1).max(50),
+  avatarUrl: z.string().url().nullable(),
+  status: z.enum(['active', 'disabled', 'merged']),
+})
+
+export const authTokensSchema = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
+  expiresAt: z.iso.datetime({ offset: true }),
+})
+
+export const verifyPhoneOutputSchema = z.object({
+  user: currentUserSchema,
+  tokens: authTokensSchema,
+})
+
 export type AuthUser = z.infer<typeof authUserSchema>
 export type TokenPair = z.infer<typeof tokenPairSchema>
 export type LoginInput = z.infer<typeof loginInputSchema>
 export type AuthSession = z.infer<typeof authSessionSchema>
+export type DeviceType = z.infer<typeof deviceTypeSchema>
+export type SendPhoneCodeInput = z.infer<typeof sendPhoneCodeInputSchema>
+export type SendPhoneCodeOutput = z.infer<typeof sendPhoneCodeOutputSchema>
+export type VerifyPhoneInput = z.infer<typeof verifyPhoneInputSchema>
+export type CurrentUser = z.infer<typeof currentUserSchema>
+export type AuthTokens = z.infer<typeof authTokensSchema>
+export type VerifyPhoneOutput = z.infer<typeof verifyPhoneOutputSchema>
