@@ -20,4 +20,8 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv({ ...valid, DATABASE_URL: 'mysql://localhost/studycommit_test' }),
     ).toThrow('PostgreSQL'))
+  it('生产环境禁止设置演示验证码', () =>
+    expect(() =>
+      validateEnv({ ...valid, NODE_ENV: 'production', AUTH_OTP_STUB: '123456' }),
+    ).toThrow('AUTH_OTP_STUB'))
 })

@@ -12,6 +12,8 @@ const REDACTED_PATHS = [
   'req.headers.cookie',
   'req.body.password',
   'req.body.token',
+  'req.body.code',
+  'req.body.phone',
   'req.body.accessToken',
   'req.body.refreshToken',
   'res.headers["set-cookie"]',

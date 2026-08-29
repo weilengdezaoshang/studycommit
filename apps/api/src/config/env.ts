@@ -15,6 +15,12 @@ export const envSchema = z.object({
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: postgresUrl,
   REDIS_URL: redisUrl,
+  AUTH_OTP_STUB: z
+    .string()
+    .regex(/^\d{6}$/)
+    .optional(),
+  AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
+  AUTH_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
 })
 export type AppEnv = z.infer<typeof envSchema>
 
@@ -33,6 +39,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
     throw new Error(
       'Environment validation failed: DATABASE_URL must reference a _test database when NODE_ENV=test',
     )
+  }
+  if (result.data.NODE_ENV === 'production' && result.data.AUTH_OTP_STUB) {
+    throw new Error('Environment validation failed: AUTH_OTP_STUB cannot be set in production')
   }
   return result.data
 }

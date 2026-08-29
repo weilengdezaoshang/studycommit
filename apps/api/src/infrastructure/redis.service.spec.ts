@@ -13,6 +13,30 @@ function createService(client: RedisClientStub): RedisService {
   return service
 }
 
+describe('RedisService connect', () => {
+  it('并发首次命令只建立一次连接', async () => {
+    let status = 'wait'
+    const client = {
+      get status() {
+        return status
+      },
+      connect: vi.fn().mockImplementation(async () => {
+        status = 'ready'
+      }),
+      get: vi.fn().mockResolvedValue(null),
+      on: vi.fn(),
+      quit: vi.fn(),
+      disconnect: vi.fn(),
+    }
+    const service = createService(client)
+
+    await Promise.all([service.get('a'), service.get('b')])
+
+    expect(client.connect).toHaveBeenCalledOnce()
+    expect(client.get).toHaveBeenCalledTimes(2)
+  })
+})
+
 describe('RedisService shutdown', () => {
   it('正常关闭已初始化的 Redis 连接', async () => {
     const client = {
