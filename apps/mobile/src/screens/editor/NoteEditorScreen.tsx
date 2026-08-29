@@ -37,7 +37,7 @@ export function NoteEditorScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.page}
     >
-      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
         <Pressable
           accessibilityRole="button"
           onPress={() => navigation.goBack()}
@@ -72,7 +72,7 @@ export function NoteEditorScreen() {
         {photoAttached && <View style={styles.photoPlaceholder} />}
       </View>
 
-      <View style={[styles.tools, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[styles.tools, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={photoAttached ? '重新选择图片' : '添加图片'}
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    height: 44 + 8,
+    minHeight: 44,
   },
   topButton: { minWidth: 56, height: 40, alignItems: 'center', justifyContent: 'center' },
   cancelText: { color: paperColors.muted, fontSize: 14 },
@@ -140,6 +140,7 @@ const styles = StyleSheet.create({
   sheet: {
     flex: 1,
     margin: 12,
+    marginBottom: 16,
     backgroundColor: paperColors.paper,
     borderRadius: 14,
     padding: 16,
@@ -159,13 +160,18 @@ const styles = StyleSheet.create({
   },
   dateText: { color: paperColors.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1 },
   input: { flex: 1, color: paperColors.ink, fontSize: 15, lineHeight: 24, padding: 0 },
-  photoPlaceholder: { height: 110, borderRadius: 10, backgroundColor: paperColors.actionSurface },
+  photoPlaceholder: {
+    height: 110,
+    marginTop: 10,
+    borderRadius: 10,
+    backgroundColor: paperColors.actionSurface,
+  },
   tools: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 12,
-    paddingTop: 10,
+    paddingBottom: 6,
   },
   tool: {
     flexDirection: 'row',
