@@ -252,34 +252,37 @@ function Timeline({ vm, onOpenPaper }: { vm: HomeViewModel; onOpenPaper: (id: st
     )
   }
   return (
-    <ScrollView contentContainerStyle={styles.timeline} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      contentContainerStyle={[styles.timeline, styles.timelineBody]}
+      showsVerticalScrollIndicator={false}
+    >
+      {vm.papersOfDate.length > 0 && <View style={styles.timelineRailLine} />}
       {vm.papersOfDate.map((entry) => (
         <View key={entry.paper.id} style={styles.timelineEntry}>
-          <View style={styles.timelineRail}>
+          <View style={styles.timelineMarker}>
             <View style={styles.timelineDot} />
-            <Text style={styles.timelineTime}>{entry.timeLabel}</Text>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`${entry.paper.content}${entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved ? ',仍有未解决的问题' : ''}`}
-            onPress={() => onOpenPaper(entry.paper.id)}
-            style={({ pressed }) => [
-              styles.paperCard,
-              { borderLeftColor: entry.topicColor },
-              pressed && styles.paperCardPressed,
-            ]}
-          >
-            {entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved && (
-              <View style={questionFoldStyle.fold} />
-            )}
-            <Text style={styles.paperContent}>{entry.paper.content}</Text>
-            <View style={styles.paperMeta}>
-              <Text style={styles.paperLabel}>{entry.topicName}</Text>
+          <View style={styles.timelineMain}>
+            <Text style={styles.timelineTime}>{entry.timeLabel}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`${entry.paper.content}${entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved ? ',仍有未解决的问题' : ''}`}
+              onPress={() => onOpenPaper(entry.paper.id)}
+              style={({ pressed }) => [
+                styles.paperCard,
+                { borderLeftColor: entry.topicColor },
+                pressed && styles.paperCardPressed,
+              ]}
+            >
               {entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved && (
-                <Text style={styles.paperHint}>继续弄懂</Text>
+                <View style={questionFoldStyle.fold} aria-label="仍有未解决的问题" />
               )}
-            </View>
-          </Pressable>
+              <Text style={styles.paperContent}>{entry.paper.content}</Text>
+              <View style={styles.paperMeta}>
+                <Text style={styles.paperLabel}>{entry.topicName}</Text>
+              </View>
+            </Pressable>
+          </View>
         </View>
       ))}
     </ScrollView>
@@ -562,19 +565,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   stackMoreText: { color: paperColors.paper, fontSize: 8, lineHeight: 14 },
-  timeline: { flex: 1, paddingTop: 14, paddingHorizontal: 16, paddingBottom: 96 },
-  timelineEntry: { flexDirection: 'row', marginBottom: 18 },
-  timelineRail: { width: 52, alignItems: 'flex-start' },
+  timeline: { flex: 1, paddingTop: 6, paddingHorizontal: 16, paddingBottom: 96 },
+  timelineBody: { position: 'relative' },
+  timelineRailLine: {
+    position: 'absolute',
+    left: 21,
+    top: 8,
+    bottom: 30,
+    width: 2,
+    backgroundColor: paperColors.timeline,
+  },
+  timelineEntry: { flexDirection: 'row', marginBottom: 20 },
+  timelineMarker: { width: 12, alignItems: 'center' },
   timelineDot: {
-    width: 9,
-    height: 9,
+    width: 10,
+    height: 10,
     borderRadius: 5,
     borderWidth: 2,
     borderColor: paperColors.action,
     backgroundColor: paperColors.paper,
-    marginTop: 4,
+    marginTop: 2,
   },
-  timelineTime: { color: paperColors.muted, fontSize: 11, marginTop: 2, marginLeft: 8 },
+  timelineMain: { flex: 1, paddingLeft: 8 },
+  timelineTime: { color: paperColors.muted, fontSize: 12, marginBottom: 6 },
   paperCard: {
     flex: 1,
     minHeight: 66,
