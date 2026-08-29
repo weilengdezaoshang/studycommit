@@ -1,5 +1,5 @@
 <view class="editor-page" style="padding-top: {{statusBarHeight}}px;">
-  <view class="editor-bar">
+  <view class="editor-bar" style="height: {{navigationBarHeight}}px; flex-basis: {{navigationBarHeight}}px;">
     <button class="editor-cancel" aria-label="取消并返回" bindtap="cancelWriting">取消</button>
     <text class="editor-title">新记录</text>
     <button class="editor-save" aria-label="保存这张纸页" loading="{{isSaving}}" disabled="{{isSaving}}" bindtap="saveNote">记下</button>

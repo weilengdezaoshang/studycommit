@@ -1,0 +1,8 @@
+<view class="navigation" style="height: {{height}}px;">
+  <button class="navigation-back" hover-class="none" aria-label="{{backLabel}}" bindtap="onBack">
+    <image src="{{leadingIcon}}" mode="aspectFit" />
+  </button>
+  <text class="navigation-title">{{title}}</text>
+  <button wx:if="{{rightText}}" class="navigation-action" hover-class="none" bindtap="onRightAction">{{rightText}}</button>
+  <view wx:else class="navigation-spacer"></view>
+</view>

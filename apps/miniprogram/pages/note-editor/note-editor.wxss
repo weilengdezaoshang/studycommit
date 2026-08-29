@@ -12,18 +12,21 @@
 }
 
 .editor-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: 104rpx minmax(0, 1fr) 104rpx;
   align-items: center;
-  justify-content: space-between;
   flex: 0 0 var(--sc-control-height, 88rpx);
   height: var(--sc-control-height, 88rpx);
   margin-bottom: 16rpx;
 }
 
 .editor-title {
+  grid-column: 2;
+  width: 100%;
   color: var(--sc-muted);
   font-size: 28rpx;
   font-weight: 500;
+  text-align: center;
 }
 
 .editor-cancel,
@@ -39,6 +42,8 @@
 }
 
 .editor-cancel {
+  grid-column: 1;
+  justify-self: start;
   background: transparent;
   color: var(--sc-muted);
 }
@@ -48,6 +53,8 @@
 }
 
 .editor-save {
+  grid-column: 3;
+  justify-self: end;
   background: var(--sc-action);
   color: var(--sc-paper);
 }
@@ -124,7 +131,7 @@
   box-sizing: border-box;
   border: 1rpx solid var(--sc-line);
   border-radius: 20rpx;
-  background: rgba(255, 254, 249, 0.9);
+  background: var(--sc-surface-soft, rgba(255, 254, 249, 0.9));
 }
 
 .tool {

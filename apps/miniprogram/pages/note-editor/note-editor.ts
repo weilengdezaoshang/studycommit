@@ -2,6 +2,7 @@ import { MONITOR_EVENTS } from '../../constants/events'
 import { monitor } from '../../services/monitor-adapter'
 import { getMockPapersApi } from '../../services/mock-papers'
 import { formatEditorDate, parseNoteDraft, type NoteDraft } from './note-editor-utils'
+import { getCustomNavigationMetrics } from '../../utils/navigation'
 
 const NOTE_DRAFT_STORAGE_KEY = 'studycommit.note-editor.draft'
 let navigateBackTimer: ReturnType<typeof setTimeout> | undefined
@@ -9,6 +10,7 @@ let navigateBackTimer: ReturnType<typeof setTimeout> | undefined
 Page({
   data: {
     statusBarHeight: 0,
+    navigationBarHeight: 44,
     content: '',
     editorDate: '',
     editorSignature: '',
@@ -18,11 +20,11 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync()
+    const navigationMetrics = getCustomNavigationMetrics()
     const draft = parseNoteDraft(wx.getStorageSync(NOTE_DRAFT_STORAGE_KEY))
     const editorDate = formatEditorDate(new Date())
     this.setData({
-      statusBarHeight: systemInfo.statusBarHeight ?? 0,
+      ...navigationMetrics,
       content: draft.content,
       isQuestionActive: draft.isQuestionActive,
       photoPath: draft.photoPath,

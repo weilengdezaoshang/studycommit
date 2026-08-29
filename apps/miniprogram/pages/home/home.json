@@ -3,6 +3,7 @@
   "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "drawer-list-row": "/components/drawer-list-row/index"
+    "drawer-list-row": "/components/drawer-list-row/index",
+    "custom-navigation": "/components/custom-navigation/index"
   }
 }
