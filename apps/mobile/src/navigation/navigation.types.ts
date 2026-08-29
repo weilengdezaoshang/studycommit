@@ -1,32 +1,27 @@
-import type { NavigatorScreenParams } from '@react-navigation/native'
+import type { Paper } from '@studycommit/rpc-contracts/papers'
 
-export type TodayStackParamList = {
-  TodayHome: undefined
-}
-
-export type TopicsStackParamList = {
-  TopicsHome: undefined
-}
-
-export type RecordsStackParamList = {
-  RecordsHome: undefined
-}
-
-export type ReviewStackParamList = {
-  ReviewHome: undefined
-}
-
-export type MainTabParamList = {
-  TodayTab: NavigatorScreenParams<TodayStackParamList>
-  TopicsTab: NavigatorScreenParams<TopicsStackParamList>
-  RecordsTab: NavigatorScreenParams<RecordsStackParamList>
-  ReviewTab: NavigatorScreenParams<ReviewStackParamList>
-}
-
+/**
+ * 移动端 PRD:应用不使用底部 Tab,首页是唯一一级页面;
+ * 抽屉、搜索、箱子、装订、问题、详情与 Agent 都从首页进入。
+ */
 export type RootStackParamList = {
-  MainTabs: NavigatorScreenParams<MainTabParamList>
-  Profile: undefined
+  Home: undefined
+  NoteEditor: undefined
+  PaperDetail: { paperId: string }
+  Agent: { paperId: string }
+  Review: undefined
+  Problems: undefined
+  Search: undefined
+  Topics: undefined
 }
+
+export type PaperExtra = {
+  hasQuestion: boolean
+  isQuestionResolved: boolean
+  photoPath: string | null
+}
+
+export type PaperWithExtra = Paper & { extra: PaperExtra }
 
 declare global {
   // React Navigation 官方类型合并写法。

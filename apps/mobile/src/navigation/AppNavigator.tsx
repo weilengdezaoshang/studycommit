@@ -1,76 +1,66 @@
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import type { StudySessionController } from '@studycommit/common/study-session-react'
-import { ProfileScreen } from '../screens/profile/ProfileScreen'
-import { TodayScreen } from '../screens/today/TodayScreen'
-import { useAppTheme } from '../theme/ThemeProvider'
-import { APP_TAB_MODULES } from './app-modules'
-import { createNavigationTheme } from './navigation.theme'
+import { AgentScreen } from '../screens/agent/AgentScreen'
+import { HomeScreen } from '../screens/home/HomeScreen'
+import { NoteEditorScreen } from '../screens/editor/NoteEditorScreen'
+import { PaperDetailScreen } from '../screens/detail/PaperDetailScreen'
+import { ProblemsScreen } from '../screens/problems/ProblemsScreen'
+import { ReviewScreen } from '../screens/review/ReviewScreen'
+import { SearchScreen } from '../screens/search/SearchScreen'
+import { TopicsScreen } from '../screens/topics/TopicsScreen'
+import { studyCommitColors } from '@studycommit/design-tokens'
 import type { RootStackParamList } from './navigation.types'
-import {
-  RegisteredRecordsStack,
-  RegisteredReviewStack,
-  RegisteredTodayStack,
-  RegisteredTopicsStack,
-  Tabs,
-  tabScreenOptions,
-  useMainTabScreenOptions,
-} from './register-app-navigation'
 
-const RootStack = createNativeStackNavigator<RootStackParamList>()
+const Stack = createNativeStackNavigator<RootStackParamList>()
 
-const TAB_STACKS = {
-  TopicsTab: RegisteredTopicsStack,
-  RecordsTab: RegisteredRecordsStack,
-  ReviewTab: RegisteredReviewStack,
+const MODAL_PRESENTATION = {
+  presentation: 'modal',
+  headerShown: false,
+  animation: 'slide_from_bottom',
 } as const
 
-export function AppNavigator({ study }: { study: StudySessionController }) {
-  const theme = useAppTheme()
-
+/** 移动端 PRD:首页是唯一一级页面,其余界面均为覆盖层。 */
+export function AppNavigator() {
   return (
-    <NavigationContainer theme={createNavigationTheme(theme)}>
-      <RootStack.Navigator>
-        <RootStack.Screen name="MainTabs" options={{ headerShown: false }}>
-          {() => <MainTabs study={study} />}
-        </RootStack.Screen>
-        <RootStack.Screen
-          component={ProfileScreen}
-          name="Profile"
-          options={{ presentation: 'card', title: '我的' }}
+    <NavigationContainer theme={createNavigationTheme()}>
+      <Stack.Navigator>
+        <Stack.Screen component={HomeScreen} name="Home" options={{ headerShown: false }} />
+        <Stack.Screen component={NoteEditorScreen} name="NoteEditor" options={MODAL_PRESENTATION} />
+        <Stack.Screen
+          component={PaperDetailScreen}
+          name="PaperDetail"
+          options={MODAL_PRESENTATION}
         />
-      </RootStack.Navigator>
+        <Stack.Screen
+          component={AgentScreen}
+          name="Agent"
+          options={{ ...MODAL_PRESENTATION, presentation: 'fullScreenModal' }}
+        />
+        <Stack.Screen component={ReviewScreen} name="Review" options={MODAL_PRESENTATION} />
+        <Stack.Screen component={ProblemsScreen} name="Problems" options={MODAL_PRESENTATION} />
+        <Stack.Screen component={SearchScreen} name="Search" options={MODAL_PRESENTATION} />
+        <Stack.Screen component={TopicsScreen} name="Topics" options={MODAL_PRESENTATION} />
+      </Stack.Navigator>
     </NavigationContainer>
   )
 }
 
-function MainTabs({ study }: { study: StudySessionController }) {
-  const screenOptions = useMainTabScreenOptions()
-
-  return (
-    <Tabs.Navigator initialRouteName="TodayTab" screenOptions={screenOptions}>
-      {APP_TAB_MODULES.map((module) => {
-        if (module.name === 'TodayTab') {
-          return (
-            <Tabs.Screen key={module.name} name={module.name} options={tabScreenOptions(module)}>
-              {() => (
-                <RegisteredTodayStack>
-                  <TodayScreen study={study} />
-                </RegisteredTodayStack>
-              )}
-            </Tabs.Screen>
-          )
-        }
-        const Stack = TAB_STACKS[module.name]
-        return (
-          <Tabs.Screen
-            component={Stack}
-            key={module.name}
-            name={module.name}
-            options={tabScreenOptions(module)}
-          />
-        )
-      })}
-    </Tabs.Navigator>
-  )
+function createNavigationTheme() {
+  return {
+    dark: false,
+    colors: {
+      primary: studyCommitColors.action,
+      background: studyCommitColors.paper,
+      card: studyCommitColors.paper,
+      text: studyCommitColors.ink,
+      border: studyCommitColors.line,
+      notification: studyCommitColors.accent,
+    },
+    fonts: {
+      regular: { fontFamily: 'System', fontWeight: '400' },
+      medium: { fontFamily: 'System', fontWeight: '500' },
+      bold: { fontFamily: 'System', fontWeight: '600' },
+      heavy: { fontFamily: 'System', fontWeight: '700' },
+    },
+  } as const
 }
