@@ -353,9 +353,7 @@ function MonthNav({
         iconSize={16}
         buttonSize={16}
       />
-      <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.monthLabelWrap}>
-        <Text style={styles.monthLabel}>{label}</Text>
-      </Pressable>
+      <Text style={styles.monthLabel}>{label}</Text>
       <IconButton
         name="chevron-forward"
         label="下一个月"
@@ -363,6 +361,7 @@ function MonthNav({
         iconSize={16}
         buttonSize={16}
       />
+      <View style={styles.monthNavSpacer} />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
         <Text style={styles.reviewLinkText}>查看装订</Text>
         <Ionicons name="chevron-forward" size={12} color={paperColors.muted} />
@@ -689,8 +688,8 @@ const styles = StyleSheet.create({
   profileName: { color: paperColors.ink, fontSize: 14, fontWeight: '500', flex: 1 },
   drawerActions: { flexDirection: 'row' },
   monthNav: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  monthLabelWrap: { flex: 1 },
-  monthLabel: { color: paperColors.ink, fontSize: 14, fontWeight: '500' },
+  monthLabel: { color: paperColors.ink, fontSize: 14, fontWeight: '500', marginHorizontal: 2 },
+  monthNavSpacer: { flex: 1 },
   reviewLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 4 },
   reviewLinkText: { color: paperColors.muted, fontSize: 12 },
   weekdayRow: { flexDirection: 'row' },
