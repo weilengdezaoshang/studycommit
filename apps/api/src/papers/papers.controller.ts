@@ -1,11 +1,13 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
   Inject,
   Param,
+  Patch,
   Post,
   Query,
   Res,
@@ -16,6 +18,8 @@ import {
   createPaperInputSchema,
   listPapersInputSchema,
   organizePaperInputSchema,
+  paperCommandSchema,
+  updatePaperInputSchema,
 } from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
 import { CurrentUserId } from '../common/current-user'
@@ -62,6 +66,16 @@ export class PapersController {
     return this.papers.get(userId, id)
   }
 
+  @Patch(':id')
+  update(
+    @CurrentUserId() userId: string,
+    @Param('id', new ZodPipe(z.uuid())) id: string,
+    @Body(new ZodPipe(updatePaperInputSchema.omit({ id: true })))
+    body: { content: string; version: number },
+  ) {
+    return this.papers.update(userId, { id, ...body })
+  }
+
   @Post(':id/organize')
   @HttpCode(200)
   organize(
@@ -71,5 +85,27 @@ export class PapersController {
     body: { topicId: string; version: number },
   ) {
     return this.papers.organize(userId, { id, ...body })
+  }
+
+  @Post(':id/move-to-inbox')
+  @HttpCode(200)
+  moveToInbox(
+    @CurrentUserId() userId: string,
+    @Param('id', new ZodPipe(z.uuid())) id: string,
+    @Body(new ZodPipe(paperCommandSchema.omit({ id: true })))
+    body: { version: number },
+  ) {
+    return this.papers.moveToInbox(userId, { id, ...body })
+  }
+
+  @Delete(':id')
+  @HttpCode(200)
+  remove(
+    @CurrentUserId() userId: string,
+    @Param('id', new ZodPipe(z.uuid())) id: string,
+    @Body(new ZodPipe(paperCommandSchema.omit({ id: true })))
+    body: { version: number },
+  ) {
+    return this.papers.remove(userId, { id, ...body })
   }
 }

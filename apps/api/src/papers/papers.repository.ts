@@ -4,12 +4,19 @@ import type {
   CreatePaperInput,
   ListPapersInput,
   OrganizePaperInput,
+  PaperCommandInput,
+  UpdatePaperInput,
 } from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
 import { DatabaseService } from '../database/database.service'
 import { idempotencyRecords, papers, topics } from '../database/schema'
 import { TOPIC_STATUS } from '../topics/topic.constants'
-import { PAPER_CREATE_KIND, PAPER_ORGANIZE_KIND, PAPER_RESOURCE_TYPE } from './papers.constants'
+import {
+  PAPER_COMMAND_KIND,
+  PAPER_CREATE_KIND,
+  PAPER_ORGANIZE_KIND,
+  PAPER_RESOURCE_TYPE,
+} from './papers.constants'
 
 export type Paper = typeof papers.$inferSelect
 export type PaperCreateResult =
@@ -22,6 +29,11 @@ export type PaperOrganizeResult =
   | { kind: typeof PAPER_ORGANIZE_KIND.topicNotFound }
   | { kind: typeof PAPER_ORGANIZE_KIND.topicArchived }
   | { kind: typeof PAPER_ORGANIZE_KIND.versionConflict; paper: Paper }
+
+export type PaperCommandResult =
+  | { kind: typeof PAPER_COMMAND_KIND.ok; paper: Paper }
+  | { kind: typeof PAPER_COMMAND_KIND.notFound }
+  | { kind: typeof PAPER_COMMAND_KIND.versionConflict; paper: Paper }
 
 type Cursor = { createdAt: string; id: string }
 
@@ -163,6 +175,166 @@ export class PapersRepository {
         return { kind: PAPER_ORGANIZE_KIND.ok, paper: latest }
       }
       return { kind: PAPER_ORGANIZE_KIND.versionConflict, paper: latest }
+    })
+  }
+
+  async update(userId: string, input: UpdatePaperInput): Promise<PaperCommandResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (paper.content === input.content) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_COMMAND_KIND.versionConflict, paper }
+      }
+
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          content: input.content,
+          version: sql`${papers.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            isNull(papers.deletedAt),
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (latest.content === input.content) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: latest }
+      }
+      return { kind: PAPER_COMMAND_KIND.versionConflict, paper: latest }
+    })
+  }
+
+  async moveToInbox(userId: string, input: PaperCommandInput): Promise<PaperCommandResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (paper.topicId === null) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_COMMAND_KIND.versionConflict, paper }
+      }
+
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          topicId: null,
+          version: sql`${papers.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            isNull(papers.deletedAt),
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (latest.topicId === null) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: latest }
+      }
+      return { kind: PAPER_COMMAND_KIND.versionConflict, paper: latest }
+    })
+  }
+
+  async remove(userId: string, input: PaperCommandInput): Promise<PaperCommandResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (paper.deletedAt) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_COMMAND_KIND.versionConflict, paper }
+      }
+
+      const now = new Date()
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          deletedAt: now,
+          version: sql`${papers.version} + 1`,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            isNull(papers.deletedAt),
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (latest.deletedAt) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: latest }
+      }
+      return { kind: PAPER_COMMAND_KIND.versionConflict, paper: latest }
     })
   }
 

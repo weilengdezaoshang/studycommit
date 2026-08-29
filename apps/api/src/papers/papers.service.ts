@@ -11,11 +11,22 @@ import type {
   ListPapersInput,
   OrganizePaperInput,
   Paper,
+  PaperCommandInput,
+  UpdatePaperInput,
 } from '@studycommit/rpc-contracts/papers'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY, isConstraint } from '../common/idempotency'
 import { TOPIC_ERROR } from '../topics/topic.constants'
-import { PAPER_CREATE_KIND, PAPER_ERROR, PAPER_ORGANIZE_KIND } from './papers.constants'
-import { PapersRepository, type PaperOrganizeResult } from './papers.repository'
+import {
+  PAPER_COMMAND_KIND,
+  PAPER_CREATE_KIND,
+  PAPER_ERROR,
+  PAPER_ORGANIZE_KIND,
+} from './papers.constants'
+import {
+  PapersRepository,
+  type PaperCommandResult,
+  type PaperOrganizeResult,
+} from './papers.repository'
 
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 
@@ -83,6 +94,35 @@ export class PapersService {
     throw organizeErrors[result.kind]()
   }
 
+  async update(userId: string, input: UpdatePaperInput) {
+    return this.mapWrite(await this.repository.update(userId, input))
+  }
+
+  async moveToInbox(userId: string, input: PaperCommandInput) {
+    return this.mapWrite(await this.repository.moveToInbox(userId, input))
+  }
+
+  async remove(userId: string, input: PaperCommandInput) {
+    const result = await this.repository.remove(userId, input)
+    if (result.kind === PAPER_COMMAND_KIND.ok) {
+      if (!result.paper.deletedAt) {
+        throw new NotFoundException(PAPER_ERROR.notFound)
+      }
+      return {
+        id: result.paper.id,
+        version: result.paper.version,
+        deletedAt: result.paper.deletedAt.toISOString(),
+      }
+    }
+    if (result.kind === PAPER_COMMAND_KIND.versionConflict) {
+      throw new ConflictException({
+        ...PAPER_ERROR.versionConflict,
+        details: { paper: this.toPaper(result.paper) },
+      })
+    }
+    throw new NotFoundException(PAPER_ERROR.notFound)
+  }
+
   async list(userId: string, input: ListPapersInput) {
     try {
       const page = await this.repository.list(userId, input)
@@ -100,6 +140,19 @@ export class PapersService {
       return { paper: this.toPaper(result.paper), replayed: result.replayed }
     }
     throw new ConflictException(IDEMPOTENCY_ERROR.keyReused)
+  }
+
+  private mapWrite(result: PaperCommandResult): Paper {
+    if (result.kind === PAPER_COMMAND_KIND.ok) {
+      return this.toPaper(result.paper)
+    }
+    if (result.kind === PAPER_COMMAND_KIND.versionConflict) {
+      throw new ConflictException({
+        ...PAPER_ERROR.versionConflict,
+        details: { paper: this.toPaper(result.paper) },
+      })
+    }
+    throw new NotFoundException(PAPER_ERROR.notFound)
   }
 
   private toPaper(row: PaperRow): Paper {

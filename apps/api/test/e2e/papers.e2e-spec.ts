@@ -112,6 +112,30 @@ describe('Papers API', () => {
       payload: body,
     })
 
+  const update = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'PATCH',
+      url: `/api/papers/${paperId}`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
+  const moveToInbox = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'POST',
+      url: `/api/papers/${paperId}/move-to-inbox`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
+  const remove = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'DELETE',
+      url: `/api/papers/${paperId}`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
   it('归入箱子后变为已整理并增加版本', async () => {
     const topic = (await createTopic()).json()
     const paper = (await create()).json()
@@ -231,5 +255,244 @@ describe('Papers API', () => {
     expect(new Set([first.json().version, second.json().version])).toEqual(new Set([2]))
     expect(first.json().topicId).toBe(topic.id)
     expect(second.json().topicId).toBe(topic.id)
+  })
+
+  it('去掉首尾空格后更新正文并增加版本，不改创建时间和所属箱子', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    const organized = (await organize(paper.id, { topicId: topic.id, version: 1 })).json()
+    const updated = await update(paper.id, {
+      content: '  改过的内容  ',
+      version: organized.version,
+    })
+    expect(updated.statusCode).toBe(200)
+    expect(updated.json()).toMatchObject({
+      id: paper.id,
+      content: '改过的内容',
+      status: 'organized',
+      topicId: topic.id,
+      version: 3,
+      createdAt: paper.createdAt,
+    })
+    expect(updated.json().updatedAt).not.toBe(organized.updatedAt)
+  })
+
+  it('重复提交相同正文直接返回且不增加版本', async () => {
+    const paper = (await create()).json()
+    await update(paper.id, { content: '同一段内容', version: 1 })
+    const replay = await update(paper.id, { content: '  同一段内容  ', version: 1 })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json()).toMatchObject({ content: '同一段内容', version: 2, topicId: null })
+  })
+
+  it('空白或超长内容拒绝更新', async () => {
+    const paper = (await create()).json()
+    expect((await update(paper.id, { content: '   ', version: 1 })).statusCode).toBe(400)
+    expect((await update(paper.id, { content: 'a'.repeat(20_001), version: 1 })).statusCode).toBe(
+      400,
+    )
+  })
+
+  it('更新时版本不一致返回记录版本冲突', async () => {
+    const paper = (await create()).json()
+    const conflict = await update(paper.id, { content: '另一段内容', version: 9 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().error.details.paper).toMatchObject({
+      id: paper.id,
+      version: 1,
+      content: paper.content,
+    })
+  })
+
+  it('其他用户或已删除记录无法更新', async () => {
+    const paper = (await create()).json()
+    const foreign = await update(paper.id, { content: '别人改', version: 1 }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().error.code).toBe('PAPER_NOT_FOUND')
+
+    await pool.query('update papers set deleted_at = now() where id = $1', [paper.id])
+    const deleted = await update(paper.id, { content: '已删除还改', version: 1 })
+    expect(deleted.statusCode).toBe(404)
+    expect(deleted.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('并发提交相同正文只升一次版本', async () => {
+    const paper = (await create()).json()
+    const [first, second] = await Promise.all([
+      update(paper.id, { content: '并发同一段', version: 1 }),
+      update(paper.id, { content: '并发同一段', version: 1 }),
+    ])
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(new Set([first.json().version, second.json().version])).toEqual(new Set([2]))
+    expect(first.json().content).toBe('并发同一段')
+    expect(second.json().content).toBe('并发同一段')
+  })
+
+  it('移回待整理后清空箱子并增加版本', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: topic.id, version: 1 })
+    const moved = await moveToInbox(paper.id, { version: 2 })
+    expect(moved.statusCode).toBe(200)
+    expect(moved.json()).toMatchObject({
+      id: paper.id,
+      content: paper.content,
+      status: 'inbox',
+      topicId: null,
+      version: 3,
+      createdAt: paper.createdAt,
+    })
+    expect(moved.json().updatedAt).not.toBe(paper.updatedAt)
+  })
+
+  it('已经在待整理时直接返回且不增加版本', async () => {
+    const paper = (await create()).json()
+    const replay = await moveToInbox(paper.id, { version: 1 })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json()).toMatchObject({
+      id: paper.id,
+      status: 'inbox',
+      topicId: null,
+      version: 1,
+    })
+  })
+
+  it('移回待整理时版本不一致返回记录版本冲突', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: topic.id, version: 1 })
+    const conflict = await moveToInbox(paper.id, { version: 1 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().error.details.paper).toMatchObject({
+      topicId: topic.id,
+      version: 2,
+    })
+  })
+
+  it('其他用户或已删除记录无法移回待整理', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: topic.id, version: 1 })
+    const foreign = await moveToInbox(paper.id, { version: 2 }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().error.code).toBe('PAPER_NOT_FOUND')
+
+    await pool.query('update papers set deleted_at = now() where id = $1', [paper.id])
+    const deleted = await moveToInbox(paper.id, { version: 2 })
+    expect(deleted.statusCode).toBe(404)
+    expect(deleted.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('并发移回待整理只升一次版本', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: topic.id, version: 1 })
+    const [first, second] = await Promise.all([
+      moveToInbox(paper.id, { version: 2 }),
+      moveToInbox(paper.id, { version: 2 }),
+    ])
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(new Set([first.json().version, second.json().version])).toEqual(new Set([3]))
+    expect(first.json().topicId).toBeNull()
+    expect(second.json().topicId).toBeNull()
+  })
+
+  it('整理后再移回待整理可以重新归入', async () => {
+    const first = (await createTopic()).json()
+    const second = (await createTopic(userA, { name: '前端架构', color: '#0F766E' })).json()
+    const paper = (await create()).json()
+    await organize(paper.id, { topicId: first.id, version: 1 })
+    const inbox = (await moveToInbox(paper.id, { version: 2 })).json()
+    const reorganized = await organize(paper.id, { topicId: second.id, version: inbox.version })
+    expect(reorganized.statusCode).toBe(200)
+    expect(reorganized.json()).toMatchObject({
+      topicId: second.id,
+      status: 'organized',
+      version: 4,
+    })
+  })
+
+  it('软删除后返回新版本和删除时间', async () => {
+    const paper = (await create()).json()
+    const deleted = await remove(paper.id, { version: 1 })
+    expect(deleted.statusCode).toBe(200)
+    expect(deleted.json()).toMatchObject({
+      id: paper.id,
+      version: 2,
+    })
+    expect(deleted.json().deletedAt).toEqual(expect.any(String))
+
+    const missing = await app.inject({
+      method: 'GET',
+      url: `/api/papers/${paper.id}`,
+      headers: { 'x-user-id': userA },
+    })
+    expect(missing.statusCode).toBe(404)
+    expect(missing.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('重复删除已删除记录直接返回', async () => {
+    const paper = (await create()).json()
+    const first = await remove(paper.id, { version: 1 })
+    const replay = await remove(paper.id, { version: 1 })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json()).toEqual(first.json())
+  })
+
+  it('删除时版本不一致返回记录版本冲突', async () => {
+    const paper = (await create()).json()
+    await update(paper.id, { content: '先改一版', version: 1 })
+    const conflict = await remove(paper.id, { version: 1 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().error.code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().error.details.paper).toMatchObject({
+      content: '先改一版',
+      version: 2,
+    })
+  })
+
+  it('其他用户无法删除不属于自己的记录', async () => {
+    const paper = (await create()).json()
+    const foreign = await remove(paper.id, { version: 1 }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('记录不存在时删除返回不存在', async () => {
+    const missing = await remove(crypto.randomUUID(), { version: 1 })
+    expect(missing.statusCode).toBe(404)
+    expect(missing.json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('已删除记录不能再编辑、归类或移回待整理', async () => {
+    const topic = (await createTopic()).json()
+    const paper = (await create()).json()
+    await remove(paper.id, { version: 1 })
+    expect((await update(paper.id, { content: '删了还改', version: 2 })).json().error.code).toBe(
+      'PAPER_NOT_FOUND',
+    )
+    expect((await organize(paper.id, { topicId: topic.id, version: 2 })).json().error.code).toBe(
+      'PAPER_NOT_FOUND',
+    )
+    expect((await moveToInbox(paper.id, { version: 2 })).json().error.code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('并发删除只升一次版本', async () => {
+    const paper = (await create()).json()
+    const [first, second] = await Promise.all([
+      remove(paper.id, { version: 1 }),
+      remove(paper.id, { version: 1 }),
+    ])
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(new Set([first.json().version, second.json().version])).toEqual(new Set([2]))
+    expect(first.json().id).toBe(paper.id)
+    expect(second.json().id).toBe(paper.id)
+    expect(first.json().deletedAt).toEqual(expect.any(String))
+    expect(second.json().deletedAt).toEqual(expect.any(String))
   })
 })

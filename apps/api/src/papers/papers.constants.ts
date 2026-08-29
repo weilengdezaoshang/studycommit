@@ -13,6 +13,14 @@ export const PAPER_ORGANIZE_KIND = {
 
 export type PaperOrganizeKind = (typeof PAPER_ORGANIZE_KIND)[keyof typeof PAPER_ORGANIZE_KIND]
 
+export const PAPER_COMMAND_KIND = {
+  ok: 'ok',
+  notFound: 'not_found',
+  versionConflict: 'version_conflict',
+} as const
+
+export type PaperCommandKind = (typeof PAPER_COMMAND_KIND)[keyof typeof PAPER_COMMAND_KIND]
+
 export const PAPER_RESOURCE_TYPE = 'paper'
 
 export const PAPER_ERROR = {

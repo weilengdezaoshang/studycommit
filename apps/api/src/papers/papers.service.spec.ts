@@ -3,7 +3,12 @@ import { NotFoundException } from '@nestjs/common'
 import { BadRequestException } from '@nestjs/common'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY } from '../common/idempotency'
 import { TOPIC_ERROR } from '../topics/topic.constants'
-import { PAPER_CREATE_KIND, PAPER_ERROR, PAPER_ORGANIZE_KIND } from './papers.constants'
+import {
+  PAPER_COMMAND_KIND,
+  PAPER_CREATE_KIND,
+  PAPER_ERROR,
+  PAPER_ORGANIZE_KIND,
+} from './papers.constants'
 import { PapersService } from './papers.service'
 
 const userId = crypto.randomUUID()
@@ -148,5 +153,103 @@ describe('PapersService', () => {
         version: 1,
       }),
     ).rejects.toMatchObject({ response: { code: TOPIC_ERROR.archived.code } })
+  })
+
+  it('修改正文后保持箱子并增加版本', async () => {
+    const topicId = crypto.randomUUID()
+    const repository = {
+      update: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.ok,
+        paper: { ...row, content: '改后的内容', topicId, version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).update(userId, {
+        id: paperId,
+        content: '改后的内容',
+        version: 1,
+      }),
+    ).resolves.toMatchObject({
+      content: '改后的内容',
+      topicId,
+      status: 'organized',
+      version: 2,
+    })
+  })
+
+  it('修改正文版本冲突时带上当前记录', async () => {
+    const repository = {
+      update: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.versionConflict,
+        paper: { ...row, version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).update(userId, {
+        id: paperId,
+        content: '另一段内容',
+        version: 1,
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: PAPER_ERROR.versionConflict.code,
+        details: { paper: expect.objectContaining({ version: 2 }) },
+      },
+    })
+  })
+
+  it('移回待整理后映射为待整理状态', async () => {
+    const repository = {
+      moveToInbox: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.ok,
+        paper: { ...row, topicId: null, version: 3 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).moveToInbox(userId, { id: paperId, version: 2 }),
+    ).resolves.toMatchObject({ status: 'inbox', topicId: null, version: 3 })
+  })
+
+  it('移回待整理时记录不存在', async () => {
+    const repository = {
+      moveToInbox: vi.fn().mockResolvedValue({ kind: PAPER_COMMAND_KIND.notFound }),
+    }
+    await expect(
+      new PapersService(repository as never).moveToInbox(userId, { id: paperId, version: 1 }),
+    ).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it('删除成功后返回删除时间与新版本', async () => {
+    const deletedAt = new Date('2026-01-01T01:00:00.000Z')
+    const repository = {
+      remove: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.ok,
+        paper: { ...row, version: 2, deletedAt },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).remove(userId, { id: paperId, version: 1 }),
+    ).resolves.toEqual({
+      id: paperId,
+      version: 2,
+      deletedAt: deletedAt.toISOString(),
+    })
+  })
+
+  it('删除版本冲突时带上当前记录', async () => {
+    const repository = {
+      remove: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.versionConflict,
+        paper: { ...row, version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).remove(userId, { id: paperId, version: 1 }),
+    ).rejects.toMatchObject({
+      response: {
+        code: PAPER_ERROR.versionConflict.code,
+        details: { paper: expect.objectContaining({ version: 2 }) },
+      },
+    })
   })
 })
