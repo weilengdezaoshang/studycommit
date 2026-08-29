@@ -31,21 +31,21 @@ export function PaperDetailScreen() {
 
   return (
     <View style={styles.page}>
-      <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
+      <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="关闭纸页详情"
           onPress={() => navigation.goBack()}
-          style={styles.backButton}
+          style={styles.sideButton}
         >
-          <Ionicons name="chevron-back" size={22} color={paperColors.ink} />
+          <Ionicons name="chevron-back" size={20} color={paperColors.ink} />
         </Pressable>
         <Text style={styles.title}>纸页</Text>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="整理"
           onPress={() => setManageOpen(true)}
-          style={styles.backButton}
+          style={styles.sideButton}
         >
           <Text style={styles.manageText}>整理</Text>
         </Pressable>
@@ -177,12 +177,18 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 8,
-    height: 52,
+    paddingHorizontal: 4,
+    minHeight: 44,
+    backgroundColor: paperColors.canvas,
   },
-  backButton: { minWidth: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: paperColors.muted, fontSize: 14, fontWeight: '500' },
+  sideButton: { width: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    color: paperColors.muted,
+    fontSize: 14,
+    fontWeight: '500',
+  },
   manageText: { color: paperColors.action, fontSize: 14 },
   sheet: {
     flex: 1,
