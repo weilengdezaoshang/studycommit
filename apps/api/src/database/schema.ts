@@ -27,6 +27,65 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
 ])
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
 export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
+export const userStatus = pgEnum('user_status', ['active', 'disabled', 'merged'])
+export const authProvider = pgEnum('auth_provider', ['phone', 'wechat_unionid', 'wechat_mini'])
+export const authDeviceType = pgEnum('auth_device_type', ['desktop', 'mobile', 'miniprogram'])
+
+export const users = pgTable(
+  'users',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    nickname: varchar('nickname', { length: 50 }).notNull().default('学习者'),
+    avatarUrl: text('avatar_url'),
+    status: userStatus('status').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check('users_nickname_not_blank', sql`length(trim(${table.nickname})) > 0`),
+    index('users_status_created_idx').on(table.status, table.createdAt, table.id),
+  ],
+)
+
+export const authIdentities = pgTable(
+  'auth_identities',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    provider: authProvider('provider').notNull(),
+    providerSubject: varchar('provider_subject', { length: 128 }).notNull(),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('auth_identities_provider_subject_unique').on(
+      table.provider,
+      table.providerSubject,
+    ),
+    index('auth_identities_user_idx').on(table.userId),
+  ],
+)
+
+export const authSessions = pgTable(
+  'auth_sessions',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    refreshTokenHash: varchar('refresh_token_hash', { length: 64 }).notNull(),
+    deviceType: authDeviceType('device_type').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('auth_sessions_refresh_hash_unique').on(table.refreshTokenHash),
+    index('auth_sessions_user_idx').on(table.userId, table.createdAt),
+  ],
+)
 
 export const templates = pgTable(
   'templates',
