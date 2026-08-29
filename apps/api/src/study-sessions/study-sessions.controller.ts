@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Headers, Inject, Param, Post, Res, UseGuards } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
-import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
+import { CurrentUserId } from '../common/current-user'
+import { IdentityGuard } from '../auth/identity.guard'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'
 import { ZodPipe } from '../common/zod.pipe'
 import {
@@ -15,7 +16,7 @@ import {
 import { StudySessionsService } from './study-sessions.service'
 
 @Controller('study-sessions')
-@UseGuards(TestIdentityGuard)
+@UseGuards(IdentityGuard)
 export class StudySessionsController {
   constructor(@Inject(StudySessionsService) private readonly sessions: StudySessionsService) {}
 

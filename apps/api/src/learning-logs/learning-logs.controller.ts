@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Patch, Query, UseGuards } from '@nestjs/common'
-import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
+import { CurrentUserId } from '../common/current-user'
+import { IdentityGuard } from '../auth/identity.guard'
 import { ZodPipe } from '../common/zod.pipe'
 import {
   learningLogIdSchema,
@@ -12,7 +13,7 @@ import {
 import { LearningLogsService } from './learning-logs.service'
 
 @Controller()
-@UseGuards(TestIdentityGuard)
+@UseGuards(IdentityGuard)
 export class LearningLogsController {
   constructor(@Inject(LearningLogsService) private readonly logs: LearningLogsService) {}
 

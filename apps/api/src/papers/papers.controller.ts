@@ -18,13 +18,14 @@ import {
   organizePaperInputSchema,
 } from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
-import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
+import { CurrentUserId } from '../common/current-user'
+import { IdentityGuard } from '../auth/identity.guard'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'
 import { ZodPipe } from '../common/zod.pipe'
 import { PapersService } from './papers.service'
 
 @Controller('papers')
-@UseGuards(TestIdentityGuard)
+@UseGuards(IdentityGuard)
 export class PapersController {
   constructor(@Inject(PapersService) private readonly papers: PapersService) {}
 

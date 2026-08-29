@@ -15,14 +15,18 @@ export type AuthedRequest = FastifyRequest & {
   accessToken: string
 }
 
+export function readBearerToken(header: string | string[] | undefined) {
+  const value = Array.isArray(header) ? header[0] : header
+  return /^Bearer (.+)$/.exec(value ?? '')?.[1]
+}
+
 @Injectable()
 export class AccessTokenGuard implements CanActivate {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest<AuthedRequest>()
-    const header = request.headers.authorization
-    const token = /^Bearer (.+)$/.exec(Array.isArray(header) ? header[0] : (header ?? ''))?.[1]
+    const token = readBearerToken(request.headers.authorization)
     if (!token) {
       throw new UnauthorizedException(AUTH_ERROR.unauthenticated)
     }

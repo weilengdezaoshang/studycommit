@@ -15,7 +15,8 @@ import {
   UseGuards,
 } from '@nestjs/common'
 import type { FastifyReply } from 'fastify'
-import { CurrentUserId, TestIdentityGuard } from '../common/current-user'
+import { CurrentUserId } from '../common/current-user'
+import { IdentityGuard } from '../auth/identity.guard'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'
 import { ZodPipe } from '../common/zod.pipe'
 import {
@@ -30,7 +31,7 @@ import {
 import { TopicsService } from './topics.service'
 
 @Controller('topics')
-@UseGuards(TestIdentityGuard)
+@UseGuards(IdentityGuard)
 export class TopicsController {
   constructor(@Inject(TopicsService) private readonly topics: TopicsService) {}
 
