@@ -1,16 +1,45 @@
-/* 与 packages/design-tokens/src/colors.ts 中 studyCommitColors 对齐。 */
-:root {
+/* 与 packages/design-tokens/src/colors.ts 中 studyCommitColors 对齐。
+   WXSS 不支持 :root 选择器，CSS 变量必须挂在 page 上才能生效。 */
+page {
   --sc-ink: #34423b;
   --sc-muted: #7b867e;
+  --sc-muted-soft: #96958b;
+  --sc-muted-faint: #aaa99f;
   --sc-paper: #fffef9;
   --sc-canvas: #e8eee8;
   --sc-line: #ccd6cc;
   --sc-accent: #f1dc7a;
   --sc-action: #53635a;
   --sc-action-surface: #dce9d8;
+  --sc-action-surface-strong: #e2ece0;
+  --sc-selected-surface: #edf3e9;
+  --sc-line-strong: #b9c8bc;
+  --sc-timeline: #aebbb1;
   --sc-surface-soft: #fbfcf7;
   --sc-surface-warm: #f1f5ef;
   --sc-scrim: #34423b99;
   --sc-page-gutter: 32rpx;
   --sc-control-height: 88rpx;
+}
+
+@media (prefers-color-scheme: dark) {
+  page {
+    --sc-ink: #edf3ee;
+    --sc-muted: #aebbb2;
+    --sc-muted-soft: #96a39a;
+    --sc-muted-faint: #7f8c83;
+    --sc-paper: #18211b;
+    --sc-canvas: #111813;
+    --sc-line: #3a4a40;
+    --sc-line-strong: #52655a;
+    --sc-accent: #d8c568;
+    --sc-action: #a9bcae;
+    --sc-action-surface: #29382e;
+    --sc-action-surface-strong: #314337;
+    --sc-selected-surface: #2d3d32;
+    --sc-surface-soft: #1d2821;
+    --sc-surface-warm: #222e26;
+    --sc-timeline: #687a6f;
+    --sc-scrim: #050806b3;
+  }
 }

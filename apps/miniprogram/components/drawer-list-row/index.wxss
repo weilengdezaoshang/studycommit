@@ -12,12 +12,11 @@
 }
 
 .row-shell.is-selected {
-  background: #e2ece0;
-  background: var(--sc-action-surface, #e2ece0);
+  background: var(--sc-action-surface-strong, var(--sc-action-surface));
 }
 
 .row-shell-pressed {
-  background: rgba(220, 233, 216, 0.45);
+  background: var(--sc-action-surface-strong, #e8f0e6);
 }
 
 .row-content {
@@ -29,7 +28,6 @@
   padding: 0 var(--drawer-gutter, 32rpx);
   gap: 12rpx;
   box-sizing: border-box;
-  color: #34423b;
   color: var(--sc-ink, #34423b);
   font-size: 26rpx;
   text-align: left;
@@ -57,10 +55,10 @@
   padding: 0 8rpx;
   overflow: hidden;
   box-sizing: border-box;
-  border: 1rpx solid #b9c8bc;
+  border: 1rpx solid var(--sc-line-strong);
   border-radius: 20rpx;
-  background: #e2ece0;
-  color: #53645a;
+  background: var(--sc-action-surface-strong);
+  color: var(--sc-action, #53645a);
   font-size: 22rpx;
   font-variant-numeric: tabular-nums;
   line-height: 1;
