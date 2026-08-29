@@ -351,7 +351,7 @@ function MonthNav({
         label="上一个月"
         onPress={onPrev}
         iconSize={16}
-        buttonSize={32}
+        buttonSize={16}
       />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.monthLabelWrap}>
         <Text style={styles.monthLabel}>{label}</Text>
@@ -361,7 +361,7 @@ function MonthNav({
         label="下一个月"
         onPress={onNext}
         iconSize={16}
-        buttonSize={32}
+        buttonSize={16}
       />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
         <Text style={styles.reviewLinkText}>查看装订</Text>
