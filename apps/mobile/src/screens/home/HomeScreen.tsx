@@ -364,7 +364,7 @@ function MonthNav({
       <View style={styles.monthNavSpacer} />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
         <Text style={styles.reviewLinkText}>查看装订</Text>
-        <Ionicons name="chevron-forward" size={12} color={paperColors.muted} />
+        <Ionicons name="chevron-forward" size={11} color={paperColors.mutedFaint} />
       </Pressable>
     </View>
   )
@@ -688,10 +688,15 @@ const styles = StyleSheet.create({
   profileName: { color: paperColors.ink, fontSize: 14, fontWeight: '500', flex: 1 },
   drawerActions: { flexDirection: 'row' },
   monthNav: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  monthLabel: { color: paperColors.ink, fontSize: 14, fontWeight: '500', marginHorizontal: 2 },
+  monthLabel: {
+    color: paperColors.mutedSoft,
+    fontSize: 12,
+    fontWeight: '500',
+    marginHorizontal: 2,
+  },
   monthNavSpacer: { flex: 1 },
   reviewLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 4 },
-  reviewLinkText: { color: paperColors.muted, fontSize: 12 },
+  reviewLinkText: { color: paperColors.mutedFaint, fontSize: 11 },
   weekdayRow: { flexDirection: 'row' },
   weekdayCell: {
     flex: 1,
