@@ -14,6 +14,19 @@ import {
   getHomeLoadErrorMessage,
   getNextDefaultTopicName,
 } from './home-utils'
+import { getCustomNavigationMetrics } from '../../utils/navigation'
+import {
+  pad,
+  toDateKeyFromDate,
+  buildMonthCells,
+  buildWeekCells,
+  chunkIntoWeeks,
+  formatDateLabel,
+  formatMonthTitle,
+  parseDateKey,
+  shiftDateKey,
+  type CalendarCell,
+} from '../../utils/calendar'
 
 type PaperViewModel = Paper & {
   dateKey: string
@@ -43,15 +56,6 @@ type WeekDayViewModel = {
   isSelected: boolean
 }
 
-type MonthDayViewModel = {
-  dateKey: string
-  dayLabel: string
-  paperCount: number
-  level: number
-  isSelected: boolean
-  isBlank: boolean
-}
-
 type SearchResultViewModel = {
   type: 'paper' | 'topic'
   id: string
@@ -73,13 +77,19 @@ type DrawerRowEvent = {
   }
 }
 
-type DateParts = { year: number; month: number; day: number }
-
 const INBOX_TOPIC_ID = '__inbox__'
 const DEFAULT_DATE = '2026-08-25'
 const DEMO_TODAY_DATE = '2026-08-25'
 let timelineSwapTimer: ReturnType<typeof setTimeout> | undefined
 let agentTransitionTimer: ReturnType<typeof setTimeout> | undefined
+let lastAgentFrameAt = 0
+let lastAgentOffsetX = 0
+let lastAgentMoveAt = 0
+let agentVelocity = 0
+/* PRD：拖动超过卡片宽度 22% 或快速甩动时确认选择。 */
+const AGENT_SWIPE_RATIO = 0.22
+const AGENT_FLICK_VELOCITY = 0.5
+const AGENT_FLICK_MIN_OFFSET = 24
 let loadSequence = 0
 const PAPER_PRESENTATION = {
   '11111111-1111-4111-8111-111111111111': {
@@ -103,12 +113,13 @@ const PAPER_PRESENTATION = {
 Page({
   data: {
     statusBarHeight: 0,
+    navigationBarHeight: 44,
     papers: [] as PaperViewModel[],
     timelinePapers: [] as PaperViewModel[],
     topics: [] as TopicViewModel[],
     visibleTopics: [] as TopicViewModel[],
     weekDays: [] as WeekDayViewModel[],
-    monthDays: [] as MonthDayViewModel[],
+    calendarWeeks: [] as CalendarCell[][],
     searchResults: [] as SearchResultViewModel[],
     problemPapers: [] as PaperViewModel[],
     selectedPaper: null as PaperViewModel | null,
@@ -127,6 +138,8 @@ Page({
     problemCountLabel: '0',
     paperCount: 0,
     topicCount: 0,
+    resolvedCount: 0,
+    weekPaperCount: 0,
     hasMoreTopics: false,
     topicOverflowLabel: '',
     isLoading: false,
@@ -150,6 +163,7 @@ Page({
     agentCardBody: '',
     agentCardExample: '',
     agentTouchStartX: 0,
+    agentCardWidth: 0,
     isTopicFormOpen: false,
     isCreatingTopic: false,
     organizingId: '',
@@ -162,8 +176,7 @@ Page({
   },
 
   onLoad() {
-    const systemInfo = wx.getSystemInfoSync()
-    this.setData({ statusBarHeight: systemInfo.statusBarHeight ?? 0 })
+    this.setData(getCustomNavigationMetrics())
   },
 
   onUnload() {
@@ -234,6 +247,18 @@ Page({
   closeDrawer() {
     monitor.track(MONITOR_EVENTS.HOME_DRAWER_CLOSE)
     this.setData({ isDrawerOpen: false })
+  },
+
+  /* 抽屉热力图切换年月：保留原选中日，目标月没有该日时取当月最后一天。 */
+  shiftMonth(event: PageEvent) {
+    const delta = Number(event.currentTarget.dataset.delta)
+    if (!Number.isInteger(delta) || delta === 0) {
+      return
+    }
+    const dateKey = shiftDateKey(this.data.selectedDate || DEFAULT_DATE, delta)
+    monitor.track(MONITOR_EVENTS.HOME_DATE_SELECT, { dateKey, shift: delta })
+    this.setData({ selectedDate: dateKey })
+    this.applyDerivedData(this.data.topics)
   },
 
   selectDate(event: PageEvent) {
@@ -385,6 +410,17 @@ Page({
       agentCardBody: explanation.body,
       agentCardExample: explanation.example,
     })
+    wx.nextTick(() => {
+      this.createSelectorQuery()
+        .select('.explain-card')
+        .boundingClientRect((rect) => {
+          const width = Array.isArray(rect) ? rect[0]?.width : rect?.width
+          if (width) {
+            this.setData({ agentCardWidth: width })
+          }
+        })
+        .exec()
+    })
   },
 
   closeAgent() {
@@ -397,13 +433,27 @@ Page({
   },
 
   onAgentTouchStart(event: WechatMiniprogram.TouchEvent) {
+    agentVelocity = 0
+    lastAgentOffsetX = 0
+    lastAgentMoveAt = Date.now()
     this.setData({ agentTouchStartX: event.touches[0]?.clientX ?? 0, agentOffsetX: 0 })
   },
 
   onAgentTouchMove(event: WechatMiniprogram.TouchEvent) {
+    const frameStartedAt = Date.now()
+    if (frameStartedAt - lastAgentFrameAt < 16) {
+      return
+    }
+    lastAgentFrameAt = frameStartedAt
     const startX = this.data.agentTouchStartX
     const currentX = event.touches[0]?.clientX ?? startX
     const offsetX = Math.max(-180, Math.min(180, currentX - startX))
+    const elapsed = frameStartedAt - lastAgentMoveAt
+    if (elapsed > 0) {
+      agentVelocity = (offsetX - lastAgentOffsetX) / elapsed
+    }
+    lastAgentOffsetX = offsetX
+    lastAgentMoveAt = frameStartedAt
     this.setData({
       agentOffsetX: offsetX,
       agentTransform: `translate3d(${offsetX}px, 0, 0) rotate(${offsetX / 24}deg)`,
@@ -413,11 +463,18 @@ Page({
 
   onAgentTouchEnd() {
     const offsetX = this.data.agentOffsetX
-    if (Math.abs(offsetX) < 80) {
+    const cardWidth = this.data.agentCardWidth || 300
+    const swipeThreshold = cardWidth * AGENT_SWIPE_RATIO
+    const flicked =
+      Math.abs(agentVelocity) >= AGENT_FLICK_VELOCITY && Math.abs(offsetX) >= AGENT_FLICK_MIN_OFFSET
+    if (Math.abs(offsetX) < swipeThreshold && !flicked) {
       this.setData({ agentOffsetX: 0, agentTransform: 'translate3d(0, 0, 0)', agentOpacity: 1 })
       return
     }
-    const direction = offsetX < 0 ? 'left' : 'right'
+    this.finishAgentDecision(offsetX < 0 ? 'left' : 'right')
+  },
+
+  finishAgentDecision(direction: 'left' | 'right') {
     this.setData({
       agentTransform: `translate3d(${direction === 'left' ? '-120%' : '120%'}, 0, 0) rotate(${direction === 'left' ? '-8deg' : '8deg'})`,
       agentOpacity: 0,
@@ -551,6 +608,9 @@ Page({
 
   async organizePaper(event: PageEvent) {
     const { id, version, topicId } = event.currentTarget.dataset
+    const destinationTopicId = String(topicId ?? MOCK_TOPIC_ID)
+    const destinationTopicName =
+      this.data.topics.find((topic) => topic.id === destinationTopicId)?.name ?? '所选箱子'
     if (this.data.organizingId) {
       return
     }
@@ -560,10 +620,10 @@ Page({
       await getMockPapersApi().organize({
         id: String(id),
         version: Number(version),
-        topicId: String(topicId ?? MOCK_TOPIC_ID),
+        topicId: destinationTopicId,
       })
       monitor.track(MONITOR_EVENTS.HOME_ORGANIZE_SUCCESS)
-      wx.showToast({ title: '已归入学习方法', icon: 'success' })
+      wx.showToast({ title: `已归入${destinationTopicName}`, icon: 'success' })
       await this.loadHome()
     } catch (error) {
       monitor.captureError(error, { action: MONITOR_EVENTS.HOME_ORGANIZE_FAILED })
@@ -571,10 +631,6 @@ Page({
     } finally {
       this.setData({ organizingId: '' })
     }
-  },
-
-  noop() {
-    wx.showToast({ title: '问题契约将在后续接入', icon: 'none' })
   },
 
   applyDerivedData(topics: MockTopic[]) {
@@ -599,14 +655,26 @@ Page({
       return !selectedTopicId || paper.topicId === selectedTopicId
     })
     const selected = parseDateKey(selectedDate)
-    const weekDays = buildWeekDays(selectedDate, papers)
+    const countByDate = papers.reduce<Record<string, number>>((result, paper) => {
+      result[paper.dateKey] = (result[paper.dateKey] ?? 0) + 1
+      return result
+    }, {})
+    const weekDays = buildWeekCells(selectedDate, selectedDate, countByDate).map((cell) => ({
+      ...cell,
+      paperCount: cell.count,
+      stack: Array.from({ length: Math.min(cell.count, 3) }, (_, stackIndex) => stackIndex),
+      hasMore: cell.count > 3,
+      isToday: cell.dateKey === DEMO_TODAY_DATE,
+    }))
     this.setData({
       topics: viewTopics,
       visibleTopics: drawerTopics.visibleTopics,
       hasMoreTopics: drawerTopics.hasMoreTopics,
       topicOverflowLabel: drawerTopics.topicOverflowLabel,
       weekDays,
-      monthDays: buildMonthDays(selected, papers),
+      calendarWeeks: chunkIntoWeeks(
+        buildMonthCells(selected.year, selected.month, selectedDate, countByDate),
+      ),
       timelinePapers,
       problemPapers: papers.filter((paper) => paper.hasQuestion && !paper.isQuestionResolved),
       selectedDateLabel: formatDateLabel(selected),
@@ -623,6 +691,8 @@ Page({
       ),
       paperCount: papers.length,
       topicCount: topics.length,
+      resolvedCount: papers.filter((paper) => paper.hasQuestion && paper.isQuestionResolved).length,
+      weekPaperCount: weekDays.reduce((sum, day) => sum + day.paperCount, 0),
     })
   },
 
@@ -645,7 +715,7 @@ function toPaperViewModel(
   const metadata = metadataByPaperId.get(paper.id)
   return {
     ...paper,
-    dateKey: toDateKey(date),
+    dateKey: toDateKeyFromDate(date),
     dateLabel: `${date.getMonth() + 1}月${date.getDate()}日`,
     timeLabel: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     topicLabel: presentation?.topicLabel ?? (paper.topicId ? '已归入主题' : '待整理'),
@@ -692,56 +762,6 @@ function getAgentExplanation(
   }
 }
 
-function buildWeekDays(selectedDate: string, papers: PaperViewModel[]): WeekDayViewModel[] {
-  const selected = parseDateKey(selectedDate)
-  const selectedDateObject = new Date(selected.year, selected.month - 1, selected.day, 12)
-  const mondayOffset = (selectedDateObject.getDay() + 6) % 7
-  const start = new Date(selectedDateObject)
-  start.setDate(start.getDate() - mondayOffset)
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(start)
-    date.setDate(start.getDate() + index)
-    const dateKey = toDateKey(date)
-    const paperCount = papers.filter((paper) => paper.dateKey === dateKey).length
-    return {
-      dateKey,
-      dayLabel: String(date.getDate()),
-      paperCount,
-      stack: Array.from({ length: Math.min(paperCount, 3) }, (_, stackIndex) => stackIndex),
-      hasMore: paperCount > 3,
-      isToday: dateKey === DEMO_TODAY_DATE,
-      isSelected: dateKey === selectedDate,
-    }
-  })
-}
-
-function buildMonthDays(selected: DateParts, papers: PaperViewModel[]): MonthDayViewModel[] {
-  const firstDay = new Date(selected.year, selected.month - 1, 1)
-  const blanks = (firstDay.getDay() + 6) % 7
-  const lastDay = new Date(selected.year, selected.month, 0).getDate()
-  const days: MonthDayViewModel[] = Array.from({ length: blanks }, (_, index) => ({
-    dateKey: `blank-${index}`,
-    dayLabel: '',
-    paperCount: 0,
-    level: 0,
-    isSelected: false,
-    isBlank: true,
-  }))
-  for (let day = 1; day <= lastDay; day += 1) {
-    const dateKey = `${selected.year}-${pad(selected.month)}-${pad(day)}`
-    const paperCount = papers.filter((paper) => paper.dateKey === dateKey).length
-    days.push({
-      dateKey,
-      dayLabel: String(day),
-      paperCount,
-      level: Math.min(paperCount, 3),
-      isSelected: dateKey === `${selected.year}-${pad(selected.month)}-${pad(selected.day)}`,
-      isBlank: false,
-    })
-  }
-  return days
-}
-
 function buildSearchResults(
   query: string,
   papers: PaperViewModel[],
@@ -773,15 +793,6 @@ function buildSearchResults(
   return [...topicResults, ...paperResults].slice(0, 20)
 }
 
-function parseDateKey(value: string): DateParts {
-  const [year, month, day] = value.split('-').map(Number)
-  return {
-    year: Number.isInteger(year) ? year : 2026,
-    month: Number.isInteger(month) ? month : 8,
-    day: Number.isInteger(day) ? day : 27,
-  }
-}
-
 function countPapersByTopic(papers: PaperViewModel[]): Record<string, number> {
   return papers.reduce<Record<string, number>>((result, paper) => {
     if (paper.topicId) {
@@ -789,35 +800,4 @@ function countPapersByTopic(papers: PaperViewModel[]): Record<string, number> {
     }
     return result
   }, {})
-}
-
-function formatDateLabel(date: DateParts): string {
-  return `${date.month}月${date.day}日`
-}
-
-function formatMonthTitle(month: number): string {
-  const monthNames = [
-    '',
-    '一月',
-    '二月',
-    '三月',
-    '四月',
-    '五月',
-    '六月',
-    '七月',
-    '八月',
-    '九月',
-    '十月',
-    '十一月',
-    '十二月',
-  ]
-  return monthNames[month] ?? `${month}月`
-}
-
-function toDateKey(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
-}
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0')
 }

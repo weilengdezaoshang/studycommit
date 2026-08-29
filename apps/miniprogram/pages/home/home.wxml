@@ -1,11 +1,6 @@
 <view class="home-page" style="padding-top: {{statusBarHeight}}px;">
-  <view class="topbar">
-    <button class="icon-button menu-button" aria-label="打开学习抽屉" bindtap="openDrawer">
-      <image class="menu-image" src="/assets/icons/menu.svg" mode="aspectFit" />
-    </button>
-    <text class="month-title">{{monthTitle}}</text>
-    <view class="topbar-spacer"></view>
-  </view>
+  <custom-navigation title="{{monthTitle}}" height="{{navigationBarHeight}}" leading-icon="/assets/icons/menu.svg" back-label="打开学习抽屉" bindback="openDrawer" />
+  <view class="week-summary"><text class="week-summary-label">本周纸页</text><text class="week-summary-value">本周 {{weekPaperCount}} 张</text></view>
 
   <view class="week-strip">
     <view class="week-days">
@@ -34,9 +29,10 @@
     <block wx:for="{{timelinePapers}}" wx:key="id">
       <view class="timeline-entry">
         <view class="timeline-rail"><view class="timeline-dot"></view><text>{{item.timeLabel}}</text></view>
-        <view class="paper-card {{item.templateClass}}" data-id="{{item.id}}" bindtap="openPaper" hover-class="paper-card-pressed" hover-start-time="0" hover-stay-time="80">
+        <view class="paper-card {{item.templateClass}}" data-id="{{item.id}}" bindtap="openPaper" hover-class="paper-card-pressed" hover-start-time="0" hover-stay-time="80" aria-label="{{item.content}}{{item.hasQuestion && !item.isQuestionResolved ? '，仍有未解决的问题' : ''}}">
+          <view wx:if="{{item.hasQuestion && !item.isQuestionResolved}}" class="question-fold" aria-label="仍有未解决的问题"></view>
           <text class="paper-content">{{item.content}}</text>
-          <view class="paper-meta"><text class="paper-label">{{item.topicLabel}}</text><text wx:if="{{item.hasQuestion && !item.isQuestionResolved}}" class="agent-hint">继续弄懂</text></view>
+          <view class="paper-meta"><text class="paper-label">{{item.topicLabel}}</text></view>
         </view>
       </view>
     </block>
@@ -49,23 +45,34 @@
   <button class="fab" aria-label="记下一张纸页" bindtap="startWriting"><image class="plus-icon" src="/assets/icons/plus.svg" mode="aspectFit" /></button>
 
   <view wx:if="{{isDrawerOpen}}" class="scrim" catchtap="closeDrawer"></view>
-  <view wx:if="{{isDrawerOpen}}" class="drawer drawer-v2 drawer-open" style="padding-top: calc({{statusBarHeight}}px + 32rpx);" aria-label="个人学习抽屉">
+  <view wx:if="{{isDrawerOpen}}" class="drawer drawer-open" style="padding-top: calc({{statusBarHeight}}px + 32rpx);" aria-label="个人学习抽屉">
     <view class="drawer-profile">
       <view class="drawer-profile-main"><view class="avatar">hi</view><text class="profile-name">我的学习</text></view>
       <view class="drawer-profile-actions">
         <button class="drawer-icon-button" aria-label="搜索纸页与主题" bindtap="openSearch"><image class="drawer-action-icon" src="/assets/icons/search.svg" mode="aspectFit" /></button>
-        <button class="drawer-icon-button drawer-close" aria-label="关闭学习抽屉" bindtap="closeDrawer"><image class="drawer-action-icon" src="/assets/icons/close.svg" mode="aspectFit" /></button>
+        <button class="drawer-icon-button" aria-label="关闭学习抽屉" bindtap="closeDrawer"><image class="drawer-action-icon" src="/assets/icons/close.svg" mode="aspectFit" /></button>
       </view>
     </view>
 
     <view class="drawer-calendar">
-      <button class="review-entry" aria-label="查看月份装订" bindtap="openReview"><view class="review-month">{{monthDisplayLabel}}</view><view class="review-binding"><text>查看装订</text><image src="/assets/icons/chevron-right.svg" mode="aspectFit" /></view></button>
-      <view class="calendar-weekdays"><text wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</text></view>
-      <view class="calendar-grid">
-        <block wx:for="{{monthDays}}" wx:key="dateKey">
-          <view wx:if="{{item.isBlank}}" class="calendar-day is-blank"></view>
-          <button wx:else class="calendar-day level-{{item.level}} {{item.isSelected ? 'is-selected' : ''}}" data-date="{{item.dateKey}}" bindtap="selectDate" hover-class="none" aria-label="{{item.dateKey}}，{{item.paperCount}} 张纸页"><image wx:if="{{item.paperCount}}" class="calendar-paper-icon" src="/assets/icons/paper.svg" mode="aspectFit" /><view wx:else class="calendar-dot"></view></button>
-        </block>
+      <button class="review-entry" aria-label="查看月份装订" bindtap="openReview">
+        <view class="review-month-group">
+          <view class="month-shift-button" catchtap="shiftMonth" data-delta="-1" aria-label="上一个月" role="button"><image class="month-shift-icon" src="/assets/icons/chevron-left.svg" mode="aspectFit" /></view>
+          <view class="review-month">{{monthDisplayLabel}}</view>
+          <view class="month-shift-button" catchtap="shiftMonth" data-delta="1" aria-label="下一个月" role="button"><image class="month-shift-icon" src="/assets/icons/chevron-right.svg" mode="aspectFit" /></view>
+        </view>
+        <view class="review-binding"><text>查看装订</text><image src="/assets/icons/chevron-right.svg" mode="aspectFit" /></view>
+      </button>
+      <view class="calendar" aria-label="本月学习热力图">
+        <view class="calendar-row">
+          <text class="calendar-weekday" wx:for="{{['一','二','三','四','五','六','日']}}" wx:key="*this">{{item}}</text>
+        </view>
+        <view class="calendar-row" wx:for="{{calendarWeeks}}" wx:for-item="week" wx:for-index="weekIndex" wx:key="weekIndex">
+          <block wx:for="{{week}}" wx:for-item="day" wx:key="dateKey">
+            <view wx:if="{{day.isBlank}}" class="calendar-day is-blank" aria-hidden="true"></view>
+            <button wx:else class="calendar-day {{day.count ? 'has-records' : ''}} level-{{day.level}} {{day.isSelected ? 'is-selected' : ''}}" data-date="{{day.dateKey}}" bindtap="selectDate" hover-class="none" aria-label="{{day.dateKey}}，{{day.paperCount}} 张纸页"><image wx:if="{{day.count}}" class="calendar-paper-icon" src="/assets/icons/paper.svg" mode="aspectFit" /><view wx:else class="calendar-dot"></view></button>
+          </block>
+        </view>
       </view>
       <view class="heat-legend">
         <text>少</text>
@@ -103,8 +110,8 @@
     </view>
   </view>
 
-  <view wx:if="{{isTopicsOpen}}" class="overlay-panel topics-panel" style="padding-top: calc({{statusBarHeight}}px + 24rpx);">
-    <view class="overlay-header"><button class="back-button" aria-label="关闭主题列表" bindtap="closeTopics"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><text class="overlay-title">全部箱子</text><view class="header-spacer"></view></view>
+  <view wx:if="{{isTopicsOpen}}" class="overlay-panel topics-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="全部箱子">
+    <custom-navigation title="全部箱子" height="{{navigationBarHeight}}" back-label="关闭主题列表" bindback="closeTopics" />
     <view wx:if="{{topics.length}}" class="topics-panel-list">
       <block wx:for="{{topics}}" wx:key="id">
         <button class="topics-panel-row {{item.isSelected ? 'is-selected' : ''}}" data-id="{{item.id}}" bindtap="selectTopic" aria-label="{{item.name}}，{{item.paperCountLabel}} 张纸页">
@@ -117,40 +124,36 @@
     <view wx:else class="overlay-empty"><text>还没有箱子</text><small>返回抽屉创建第一个箱子。</small></view>
   </view>
 
-  <view wx:if="{{isSearchOpen}}" class="overlay-panel search-panel" style="padding-top: calc({{statusBarHeight}}px + 24rpx);">
-    <view class="overlay-header"><button class="back-button" aria-label="关闭搜索" bindtap="closeSearch"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><input class="search-input" focus="{{isSearchOpen}}" value="{{searchQuery}}" placeholder="搜索纸页与主题" bindinput="onSearchInput" /><button class="clear-button" wx:if="{{searchQuery}}" bindtap="clearSearch" aria-label="清空搜索关键词">清空</button></view>
+  <view wx:if="{{isSearchOpen}}" class="overlay-panel search-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="搜索纸页与主题">
+    <custom-navigation title="搜索" height="{{navigationBarHeight}}" back-label="关闭搜索" bindback="closeSearch" />
+    <view class="search-field-row"><input class="search-input" focus="{{isSearchOpen}}" value="{{searchQuery}}" placeholder="搜索纸页与主题" bindinput="onSearchInput" /><button class="clear-button" wx:if="{{searchQuery}}" bindtap="clearSearch" aria-label="清空搜索关键词">清空</button></view>
     <text wx:if="{{!searchQuery}}" class="overlay-hint">输入关键词，找回过去的记录</text>
     <view wx:elif="{{searchResults.length}}" class="search-results"><block wx:for="{{searchResults}}" wx:key="id"><button class="search-result" data-type="{{item.type}}" data-id="{{item.id}}" bindtap="selectSearchResult"><text class="result-title">{{item.title}}</text><text class="result-detail">{{item.detail}}</text></button></block></view>
     <view wx:else class="overlay-empty"><text>没有找到相关内容</text></view>
   </view>
 
-  <view wx:if="{{isReviewOpen}}" class="overlay-panel review-panel" style="padding-top: calc({{statusBarHeight}}px + 24rpx);">
-    <view class="overlay-header"><button class="back-button" aria-label="关闭月份回顾" bindtap="closeReview"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><text class="overlay-title">{{monthLabel}}装订</text><view class="header-spacer"></view></view>
+  <view wx:if="{{isReviewOpen}}" class="overlay-panel review-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="月份装订">
+    <custom-navigation title="{{monthLabel}}装订" height="{{navigationBarHeight}}" back-label="关闭月份回顾" bindback="closeReview" />
     <view class="bound-book"><text class="book-kicker">{{monthLabel}}</text><text class="book-title">学习装订</text><text class="book-copy">理解不是一次完成的，它在记录、整理与追问之间慢慢变厚。</text></view>
-    <view class="review-stats"><view><text>{{paperCount}}</text><small>纸页</small></view><view><text>{{topicCount}}</text><small>主题</small></view><view><text>{{inboxCount}}</text><small>待整理</small></view></view>
+    <view class="review-stats"><view><text>{{paperCount}}</text><small>纸页</small></view><view><text>{{topicCount}}</text><small>主题</small></view><view><text>{{resolvedCount}}</text><small>解决</small></view></view>
   </view>
 
-  <view wx:if="{{isProblemsOpen}}" class="overlay-panel problems-panel" style="padding-top: calc({{statusBarHeight}}px + 24rpx);">
-    <view class="overlay-header"><button class="back-button" aria-label="关闭问题" bindtap="closeProblems"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><text class="overlay-title">还在思考的问题</text><view class="header-spacer"></view></view>
+  <view wx:if="{{isProblemsOpen}}" class="overlay-panel problems-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="还在思考的问题">
+    <custom-navigation title="还在思考的问题" height="{{navigationBarHeight}}" back-label="关闭问题" bindback="closeProblems" />
     <view wx:if="{{problemPapers.length}}" class="problem-list"><button wx:for="{{problemPapers}}" wx:key="id" class="search-result" data-id="{{item.id}}" bindtap="openPaper"><text class="result-title">{{item.dateLabel}}</text><text class="result-detail">{{item.content}}</text></button></view>
     <view wx:else class="overlay-empty"><text>暂时没有未解决的问题</text><small>记录时可以主动标记问题，之后再回来继续弄懂。</small></view>
   </view>
 
-  <view wx:if="{{isDetailOpen && selectedPaper}}" class="detail-panel" style="padding-top: {{statusBarHeight}}px;">
-    <view class="detail-bar">
-      <button class="detail-back-button" aria-label="关闭纸页详情" bindtap="closePaper"><image src="/assets/icons/back.svg" mode="aspectFit" /></button>
-      <text class="detail-bar-title">纸页</text>
-      <view class="detail-bar-spacer"></view>
-    </view>
-    <view class="detail-paper {{selectedPaper.templateClass}}">
+  <view wx:if="{{isDetailOpen && selectedPaper}}" class="detail-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="纸页详情">
+    <custom-navigation title="纸页" height="{{navigationBarHeight}}" right-text="整理" back-label="关闭纸页详情" bindback="closePaper" bindrightaction="openDetailManage" />
+    <view class="detail-paper {{selectedPaper.templateClass}} {{selectedPaper.photoPath ? 'has-photo' : ''}}">
       <view class="detail-meta"><text class="detail-time">{{selectedPaper.dateLabel}} · {{selectedPaper.timeLabel}}</text><text wx:if="{{selectedPaper.hasQuestion}}" class="detail-state">{{selectedPaper.isQuestionResolved ? '已解决' : '还在思考'}}</text></view>
       <text class="detail-topic">{{selectedPaper.topicLabel}}</text>
       <text class="detail-content">{{selectedPaper.content}}</text>
       <image wx:if="{{selectedPaper.photoPath}}" class="detail-photo" src="{{selectedPaper.photoPath}}" mode="aspectFill" />
     </view>
-    <view class="detail-actions">
-      <button wx:if="{{selectedPaper.hasQuestion && !selectedPaper.isQuestionResolved}}" class="understand-button" bindtap="openAgent">继续弄懂</button>
-      <button class="detail-action-button" bindtap="openDetailManage">整理</button>
+    <view wx:if="{{selectedPaper.hasQuestion && !selectedPaper.isQuestionResolved}}" class="detail-actions">
+      <button class="understand-button" bindtap="openAgent">继续弄懂</button>
     </view>
 
     <view wx:if="{{isDetailManageOpen}}" class="detail-manage-scrim" catchtap="closeDetailManage"></view>
@@ -164,8 +167,8 @@
     </view>
   </view>
 
-  <view wx:if="{{isAgentOpen && selectedPaper}}" class="agent-panel" style="padding-top: {{statusBarHeight}}px;">
-    <view class="agent-bar"><button class="agent-back-button" aria-label="返回纸页详情" bindtap="closeAgent"><image src="/assets/icons/back.svg" mode="aspectFit" /></button><text>继续弄懂</text><button class="agent-exit-button" bindtap="closeAgent">结束</button></view>
+  <view wx:if="{{isAgentOpen && selectedPaper}}" class="agent-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="继续弄懂">
+    <custom-navigation title="继续弄懂" height="{{navigationBarHeight}}" right-text="结束" back-label="返回纸页详情" bindback="closeAgent" bindrightaction="closeAgent" />
     <view class="agent-context"><text class="agent-context-topic">{{selectedPaper.topicLabel}}</text><text class="agent-context-source">{{selectedPaper.content}}</text></view>
     <view class="agent-body">
       <view class="explain-deck">
