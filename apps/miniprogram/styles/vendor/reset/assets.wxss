@@ -1,0 +1,13 @@
+/*
+ * 来源: @weapp-tailwindcss/reset@0.1.3 (uni-app/sanitize/assets.css)
+ * 仓库: https://github.com/sonofmagic/weapp-tailwindcss
+ * 协议: MIT
+ * 媒体与输入类组件尺寸归一(原文件为 :where() 零特异性形式,此处展开)。
+ */
+
+image,
+input,
+textarea {
+  height: auto;
+  max-width: 100%;
+}

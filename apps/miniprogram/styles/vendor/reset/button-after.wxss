@@ -1,0 +1,13 @@
+/*
+ * 来源: @weapp-tailwindcss/reset@0.1.3 (uni-app/button-after.css)
+ * 仓库: https://github.com/sonofmagic/weapp-tailwindcss
+ * 协议: MIT
+ *
+ * 原文件为 button::after { all: unset };`all` 属性原生 WXSS 编译器
+ * 不支持,此处展开为显式等价规则:清除微信按钮由伪元素绘制的默认边框。
+ */
+
+button::after {
+  content: none;
+  display: none;
+}

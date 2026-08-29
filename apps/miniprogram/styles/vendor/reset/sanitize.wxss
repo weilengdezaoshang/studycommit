@@ -1,0 +1,123 @@
+/*
+ * 来源: @weapp-tailwindcss/reset@0.1.3 (uni-app/sanitize/sanitize.css)
+ * 仓库: https://github.com/sonofmagic/weapp-tailwindcss
+ * 协议: MIT
+ *
+ * 原生 WXSS 适配版:原文件面向 uni-app/Taro 编译管线,含 :where()、
+ * [type='button' i] 等原生 WXSS 编译器不支持的语法,以及大量仅 HTML
+ * 存在的元素规则(body/h1/table/dialog 等)。此处仅做机械转换,规则
+ * 语义与原文件保持一致:
+ *   1. :where(A, B) 展开为 A, B(特异性从 0 升为元素级,恰好用于压过
+ *      基础库注入的同特异性默认样式);
+ *   2. 移除小程序中不存在的 HTML 元素规则与 [attr i] 大小写标志;
+ *   3. 原文件的条件编译块按"非 H5 生效"处理。
+ */
+
+/**
+ * 1. 统一盒模型(opinionated)。
+ * 2. 背景默认不重复(opinionated)。
+ */
+
+page,
+cover-image,
+cover-view,
+grid-view,
+list-view,
+match-media,
+movable-area,
+movable-view,
+page-container,
+root-portal,
+scroll-view,
+share-element,
+snapshot,
+sticky-header,
+sticky-section,
+swiper,
+swiper-item,
+view,
+icon,
+progress,
+rich-text,
+text,
+button,
+checkbox,
+checkbox-group,
+editor,
+form,
+input,
+keyboard-accessory,
+label,
+picker,
+picker-view,
+picker-view-column,
+radio,
+radio-group,
+slider,
+switch,
+textarea,
+functional-page-navigator,
+navigator,
+::before,
+::after {
+  box-sizing: border-box; /* 1 */
+  background-repeat: no-repeat; /* 2 */
+}
+
+/**
+ * 伪元素继承文本装饰与垂直对齐(opinionated)。
+ */
+
+::before,
+::after {
+  text-decoration: inherit;
+  vertical-align: inherit;
+}
+
+/**
+ * 根节点默认光标、行高与断词(opinionated)。
+ */
+
+page {
+  cursor: default;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/**
+ * 清零控件外边距。
+ */
+
+button,
+input {
+  margin: 0;
+}
+
+/**
+ * 媒体与输入类组件尺寸交给页面控制。
+ */
+
+image,
+input,
+textarea {
+  height: auto;
+  max-width: 100%;
+}
+
+/**
+ * progress 基线对齐。
+ */
+
+progress {
+  vertical-align: baseline;
+}
+
+/**
+ * textarea 清零外边距。
+ */
+
+textarea {
+  margin: 0;
+}

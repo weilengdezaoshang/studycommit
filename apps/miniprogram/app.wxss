@@ -1,5 +1,20 @@
 @import './styles/tokens.wxss';
 
+/* ---------- 全局默认样式重置 ----------
+   采用社区开源方案 @weapp-tailwindcss/reset@0.1.3 (MIT),文件位于
+   styles/vendor/reset/(原生 WXSS 适配版,来源见各文件头):
+   - sanitize.css 基于 sanitize.css 的小程序适配版,统一盒模型、
+     清零控件默认边距等;原文件的 :where() 零特异性已机械展开为
+     普通选择器(原生 WXSS 编译器不支持 :where)。
+   - button-after.css 中和微信按钮由伪元素绘制的默认边框。
+   配合 app.json 不启用 "style": "v2",从源头关闭 v2 基础样式库注入的
+   强化默认样式(如 button 的 width:184px / margin:auto)。
+   升级基础库后如再出现官方默认样式干扰,优先确认 v2 是否被重新开启,
+   其次在下方"元素级归一"补充,不要在页面样式里打补丁。 */
+@import './styles/vendor/reset/sanitize.wxss';
+@import './styles/vendor/reset/assets.wxss';
+@import './styles/vendor/reset/button-after.wxss';
+
 page {
   background-color: #fffef9;
   background-color: var(--sc-paper, #fffef9);
@@ -8,12 +23,18 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
 }
 
+/* ---------- 元素级归一(社区通用写法) ----------
+   基础库仍会注入元素选择器(0,0,1)级别的组件默认值
+   (button 的块级布局/内边距/行高/圆角/灰底,image 的 320x240,
+   textarea 的半透明白文字),sanitize 的 :where 无法覆盖这些,
+   需要用同特异性、更晚加载的规则归一;display 保持 flex 仅为
+   让按钮内容默认居中,页面可随时覆盖。 */
 button {
   position: relative;
-  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: auto;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -22,18 +43,28 @@ button {
   background: transparent;
   color: inherit;
   font: inherit;
+  font-weight: inherit;
   line-height: inherit;
   text-align: center;
+  text-decoration: none;
   overflow: visible;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* 微信 button 的默认边框由伪元素绘制，必须在全局基础层清除。 */
 button::after {
   border: 0;
 }
 
-/* 未显式指定 hover-class 的按钮也不应出现微信默认灰色覆盖层。 */
+image {
+  width: auto;
+  height: auto;
+}
+
+textarea {
+  color: inherit;
+}
+
+/* 未显式指定 hover-class 的按钮不出现微信默认灰色覆盖层。 */
 .button-hover {
   background: transparent;
   color: inherit;
