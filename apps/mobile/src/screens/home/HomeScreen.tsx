@@ -4,6 +4,7 @@ import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
 import { paperColors, questionFoldStyle } from '../../features/papers/paper-visual'
 import { papersActions, usePapersState } from '../../features/papers/papers-store'
 import {
@@ -182,12 +183,14 @@ function IconButton({
   onPress,
   iconSize = 20,
   buttonSize = 44,
+  color = paperColors.ink,
 }: {
   name: keyof typeof Ionicons.glyphMap
   label: string
   onPress: () => void
   iconSize?: number
   buttonSize?: number
+  color?: string
 }) {
   return (
     <Pressable
@@ -197,7 +200,7 @@ function IconButton({
       hitSlop={8}
       style={[styles.iconButton, { width: buttonSize, height: buttonSize }]}
     >
-      <Ionicons name={name} size={iconSize} color={paperColors.ink} />
+      <Ionicons name={name} size={iconSize} color={color} />
     </Pressable>
   )
 }
@@ -229,7 +232,7 @@ function WeekStrip({
                   key={layer}
                   style={[
                     styles.paperSheet,
-                    { transform: [{ translateX: -layer * 3 }, { translateY: layer * 3 }] },
+                    { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
                   ]}
                 />
               ))
@@ -250,6 +253,7 @@ function Timeline({ vm, onOpenPaper }: { vm: HomeViewModel; onOpenPaper: (id: st
   if (vm.papersOfDate.length === 0) {
     return (
       <View style={styles.emptyDay}>
+        <PaperEmptyIllustration />
         <Text style={styles.emptyTitle}>这天还没有纸页</Text>
         <Text style={styles.emptyCopy}>空白只是留白，不是中断。</Text>
       </View>
@@ -350,16 +354,18 @@ function MonthNav({
         name="chevron-back"
         label="上一个月"
         onPress={onPrev}
-        iconSize={16}
+        iconSize={14}
         buttonSize={16}
+        color={paperColors.mutedSoft}
       />
       <Text style={styles.monthLabel}>{label}</Text>
       <IconButton
         name="chevron-forward"
         label="下一个月"
         onPress={onNext}
-        iconSize={16}
+        iconSize={14}
         buttonSize={16}
+        color={paperColors.mutedSoft}
       />
       <View style={styles.monthNavSpacer} />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
@@ -400,7 +406,17 @@ function CalendarGrid({
                 style={[styles.calendarCell, cell.isSelected && styles.calendarCellSelected]}
               >
                 {cell.count > 0 ? (
-                  <View style={styles.calendarPaper} />
+                  <View style={styles.calendarPaperVisual}>
+                    {Array.from({ length: Math.min(cell.count, 3) }, (_, layer) => (
+                      <View
+                        key={layer}
+                        style={[
+                          styles.calendarPaper,
+                          { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
+                        ]}
+                      />
+                    ))}
+                  </View>
                 ) : (
                   <View style={styles.paperDot} />
                 )}
@@ -412,9 +428,31 @@ function CalendarGrid({
       <View style={styles.legend}>
         <Text style={styles.legendText}>少</Text>
         <View style={styles.legendDot} />
-        <View style={[styles.legendPaper, { width: 10, height: 13 }]} />
-        <View style={[styles.legendPaper, { width: 12, height: 15 }]} />
-        <View style={[styles.legendPaper, { width: 14, height: 17 }]} />
+        <View style={styles.calendarPaperVisual}>
+          <View style={styles.calendarPaper} />
+        </View>
+        <View style={styles.calendarPaperVisual}>
+          {[0, 1].map((layer) => (
+            <View
+              key={layer}
+              style={[
+                styles.calendarPaper,
+                { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
+              ]}
+            />
+          ))}
+        </View>
+        <View style={styles.calendarPaperVisual}>
+          {[0, 1, 2].map((layer) => (
+            <View
+              key={layer}
+              style={[
+                styles.calendarPaper,
+                { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
+              ]}
+            />
+          ))}
+        </View>
         <Text style={styles.legendText}>多</Text>
       </View>
     </View>
@@ -592,13 +630,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   stackMoreText: { color: paperColors.paper, fontSize: 8, lineHeight: 14 },
-  timeline: { flex: 1, paddingTop: 6, paddingHorizontal: 16, paddingBottom: 96 },
+  timelineScroll: { flex: 1 },
+  timeline: { paddingTop: 6, paddingHorizontal: 16, paddingBottom: 24 },
   timelineBody: { position: 'relative' },
   timelineRailLine: {
     position: 'absolute',
     left: 21,
     top: 8,
-    bottom: 30,
+    bottom: 22,
     width: 2,
     backgroundColor: paperColors.timeline,
   },
@@ -616,16 +655,16 @@ const styles = StyleSheet.create({
   timelineMain: { flex: 1, paddingLeft: 8 },
   timelineTime: { color: paperColors.muted, fontSize: 12, marginBottom: 6 },
   paperCard: {
-    flex: 1,
     minHeight: 66,
     backgroundColor: paperColors.surfaceSoft,
     borderColor: paperColors.line,
     borderWidth: StyleSheet.hairlineWidth,
-    borderLeftWidth: 3,
     borderRadius: 8,
     padding: 12,
+    paddingLeft: 14,
     overflow: 'hidden',
   },
+  cardTag: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: 2 },
   paperCardPressed: { backgroundColor: paperColors.selectedSurface },
   paperContent: { color: paperColors.ink, fontSize: 14, lineHeight: 21, paddingRight: 4 },
   paperMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
@@ -718,9 +757,11 @@ const styles = StyleSheet.create({
     borderColor: paperColors.action,
     backgroundColor: paperColors.actionSurface,
   },
+  calendarPaperVisual: { width: 22, height: 26, alignItems: 'center', justifyContent: 'center' },
   calendarPaper: {
-    width: 16,
-    height: 20,
+    position: 'absolute',
+    width: 14,
+    height: 18,
     borderRadius: 2,
     borderWidth: 1,
     borderColor: paperColors.lineStrong,
