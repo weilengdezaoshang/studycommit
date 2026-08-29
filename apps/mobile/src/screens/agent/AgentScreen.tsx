@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
@@ -49,13 +49,16 @@ export function AgentScreen() {
   const topic = paper?.topicId ? state.topics.find((item) => item.id === paper.topicId) : undefined
   const explanation = EXPLANATION_TEMPLATES[Math.min(step, EXPLANATION_TEMPLATES.length - 1)]
 
-  const finish = (direction: 'left' | 'right') => {
-    Animated.timing(translateX, {
-      toValue: direction === 'left' ? -500 : 500,
-      duration: 220,
-      useNativeDriver: true,
-    }).start(() => navigation.goBack())
-  }
+  const finish = useCallback(
+    (direction: 'left' | 'right') => {
+      Animated.timing(translateX, {
+        toValue: direction === 'left' ? -500 : 500,
+        duration: 220,
+        useNativeDriver: true,
+      }).start(() => navigation.goBack())
+    },
+    [navigation, translateX],
+  )
 
   const panResponder = useMemo(
     () =>
@@ -170,6 +173,7 @@ const styles = StyleSheet.create({
     height: 52,
   },
   backButton: { minWidth: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
+  endButton: { width: 48 },
   title: { color: paperColors.muted, fontSize: 14, fontWeight: '500' },
   endText: { color: paperColors.action, fontSize: 14 },
   context: {

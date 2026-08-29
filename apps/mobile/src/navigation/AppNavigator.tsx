@@ -13,8 +13,10 @@ import type { RootStackParamList } from './navigation.types'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
 
+/* 覆盖层页面均为满屏:自绘顶栏并自行处理状态栏内边距,
+   不用 iOS 页签式 modal(顶部会露出一段下层页面的空隙)。 */
 const MODAL_PRESENTATION = {
-  presentation: 'modal',
+  presentation: 'fullScreenModal',
   headerShown: false,
   animation: 'slide_from_bottom',
 } as const
