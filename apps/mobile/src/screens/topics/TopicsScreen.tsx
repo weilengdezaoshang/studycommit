@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
 import { paperColors } from '../../features/papers/paper-visual'
 import { usePapersState } from '../../features/papers/papers-store'
 
@@ -60,6 +61,7 @@ export function TopicsScreen() {
         </ScrollView>
       ) : (
         <View style={styles.empty}>
+          <PaperEmptyIllustration />
           <Text style={styles.emptyTitle}>还没有箱子</Text>
           <Text style={styles.emptyCopy}>返回抽屉创建第一个箱子。</Text>
         </View>
@@ -102,7 +104,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   countText: { color: paperColors.action, fontSize: 11, fontVariant: ['tabular-nums'] },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyTitle: { color: paperColors.muted, fontSize: 15 },
   emptyCopy: { color: paperColors.muted, fontSize: 12 },
 })

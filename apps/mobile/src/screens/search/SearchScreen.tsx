@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
 import { paperColors } from '../../features/papers/paper-visual'
 import { usePapersState } from '../../features/papers/papers-store'
 
@@ -101,6 +102,7 @@ export function SearchScreen() {
         </ScrollView>
       ) : (
         <View style={styles.empty}>
+          <PaperEmptyIllustration />
           <Text style={styles.emptyText}>没有找到相关内容</Text>
         </View>
       )}

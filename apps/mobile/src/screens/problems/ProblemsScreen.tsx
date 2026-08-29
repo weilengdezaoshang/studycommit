@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
 import { paperColors } from '../../features/papers/paper-visual'
 import { usePapersState } from '../../features/papers/papers-store'
 
@@ -50,6 +51,7 @@ export function ProblemsScreen() {
         </ScrollView>
       ) : (
         <View style={styles.empty}>
+          <PaperEmptyIllustration />
           <Text style={styles.emptyTitle}>暂时没有未解决的问题</Text>
           <Text style={styles.emptyCopy}>记录时可以主动标记问题，之后再回来继续弄懂。</Text>
         </View>
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   },
   itemDate: { color: paperColors.action, fontSize: 12 },
   itemContent: { color: paperColors.ink, fontSize: 14, lineHeight: 21 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 8 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   emptyTitle: { color: paperColors.muted, fontSize: 15 },
   emptyCopy: {
     color: paperColors.mutedFaint ?? paperColors.muted,
