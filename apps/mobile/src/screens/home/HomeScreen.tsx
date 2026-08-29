@@ -180,10 +180,14 @@ function IconButton({
   name,
   label,
   onPress,
+  iconSize = 20,
+  buttonSize = 44,
 }: {
   name: keyof typeof Ionicons.glyphMap
   label: string
   onPress: () => void
+  iconSize?: number
+  buttonSize?: number
 }) {
   return (
     <Pressable
@@ -191,9 +195,9 @@ function IconButton({
       accessibilityRole="button"
       onPress={onPress}
       hitSlop={8}
-      style={styles.iconButton}
+      style={[styles.iconButton, { width: buttonSize, height: buttonSize }]}
     >
-      <Ionicons name={name} size={22} color={paperColors.ink} />
+      <Ionicons name={name} size={iconSize} color={paperColors.ink} />
     </Pressable>
   )
 }
@@ -310,8 +314,20 @@ function DrawerProfile({ onSearch, onClose }: { onSearch: () => void; onClose: (
       </View>
       <Text style={styles.profileName}>我的学习</Text>
       <View style={styles.drawerActions}>
-        <IconButton name="search" label="搜索纸页与主题" onPress={onSearch} />
-        <IconButton name="close" label="关闭学习抽屉" onPress={onClose} />
+        <IconButton
+          name="search"
+          label="搜索纸页与主题"
+          onPress={onSearch}
+          iconSize={16}
+          buttonSize={32}
+        />
+        <IconButton
+          name="close"
+          label="关闭学习抽屉"
+          onPress={onClose}
+          iconSize={16}
+          buttonSize={32}
+        />
       </View>
     </View>
   )
@@ -330,11 +346,23 @@ function MonthNav({
 }) {
   return (
     <View style={styles.monthNav}>
-      <IconButton name="chevron-back" label="上一个月" onPress={onPrev} />
+      <IconButton
+        name="chevron-back"
+        label="上一个月"
+        onPress={onPrev}
+        iconSize={16}
+        buttonSize={32}
+      />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.monthLabelWrap}>
         <Text style={styles.monthLabel}>{label}</Text>
       </Pressable>
-      <IconButton name="chevron-forward" label="下一个月" onPress={onNext} />
+      <IconButton
+        name="chevron-forward"
+        label="下一个月"
+        onPress={onNext}
+        iconSize={16}
+        buttonSize={32}
+      />
       <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
         <Text style={styles.reviewLinkText}>查看装订</Text>
         <Ionicons name="chevron-forward" size={12} color={paperColors.muted} />
@@ -421,7 +449,7 @@ function TopicSection({
           onPress={() => papersActions.createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)}
           style={styles.sectionAction}
         >
-          <Ionicons name="add" size={20} color={paperColors.muted} />
+          <Ionicons name="add" size={16} color={paperColors.muted} />
         </Pressable>
       </View>
       {visible.map((row) => (
@@ -501,7 +529,7 @@ function DrawerRow({
         pressed && styles.drawerRowPressed,
       ]}
     >
-      <Ionicons name={icon} size={18} color={paperColors.muted} />
+      <Ionicons name={icon} size={16} color={paperColors.muted} />
       <Text style={styles.drawerRowLabel}>{label}</Text>
       <View style={styles.countPill}>
         <Text style={styles.countPillText}>{count > 99 ? '99+' : count}</Text>
@@ -717,7 +745,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   sectionTitle: { color: paperColors.mutedSoft, fontSize: 12, flex: 1 },
-  sectionAction: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  sectionAction: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   drawerRow: {
     flexDirection: 'row',
     alignItems: 'center',
