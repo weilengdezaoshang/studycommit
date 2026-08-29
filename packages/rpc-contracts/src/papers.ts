@@ -39,7 +39,7 @@ export const paperPageSchema = z.object({
 })
 
 const paperIdSchema = z.object({ id: z.uuid() })
-const paperCommandSchema = z.object({ id: z.uuid(), version: z.number().int().min(1) })
+export const paperCommandSchema = z.object({ id: z.uuid(), version: z.number().int().min(1) })
 
 export const updatePaperInputSchema = paperCommandSchema.extend({
   content: z.string().trim().min(1).max(20_000),
