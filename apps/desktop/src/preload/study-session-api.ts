@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { authIpcChannels } from '../shared/auth-channels'
 import { learningLogIpcChannels } from '../shared/learning-log-channels'
 import { studySessionIpcChannels } from '../shared/study-session-channels'
 import { topicIpcChannels } from '../shared/topic-channels'
@@ -23,9 +24,15 @@ export const learningLogPreloadApi = {
   update: (input: unknown) => ipcRenderer.invoke(learningLogIpcChannels.update, input),
 }
 
+export const authPreloadApi = {
+  sendPhoneCode: (input: unknown) => ipcRenderer.invoke(authIpcChannels.sendPhoneCode, input),
+  verifyPhone: (input: unknown) => ipcRenderer.invoke(authIpcChannels.verifyPhone, input),
+}
+
 export const studyCommitPreloadApi = {
   platform: process.platform,
   studySessions: studySessionPreloadApi,
   topics: topicPreloadApi,
   learningLogs: learningLogPreloadApi,
+  auth: authPreloadApi,
 }

@@ -33,11 +33,31 @@ export interface StudyCommitLearningLogsApi {
   update: (input: UpdateLearningLogInput) => Promise<IpcResult<LearningLog>>
 }
 
+export interface StudyCommitAuthApi {
+  sendPhoneCode: (input: { phone: string }) => Promise<IpcResult<{ expiresInSeconds: number }>>
+  verifyPhone: (input: {
+    phone: string
+    code: string
+    deviceType: 'desktop'
+  }) => Promise<IpcResult<AuthVerifyPhoneOutput>>
+}
+
+export type AuthVerifyPhoneOutput = {
+  user: {
+    id: string
+    nickname: string
+    avatarUrl: string | null
+    status: 'active' | 'disabled' | 'merged'
+  }
+  tokens: { accessToken: string; refreshToken: string; expiresAt: string }
+}
+
 export interface StudyCommitApi {
   platform: NodeJS.Platform
   studySessions: StudyCommitStudySessionsApi
   topics: StudyCommitTopicsApi
   learningLogs: StudyCommitLearningLogsApi
+  auth: StudyCommitAuthApi
 }
 
 declare global {

@@ -159,6 +159,9 @@ importers:
       '@studycommit/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@studycommit/rpc-contracts':
+        specifier: workspace:*
+        version: link:../../packages/rpc-contracts
       animejs:
         specifier: ^4.5.0
         version: 4.5.0(@types/three@0.185.4)(three@0.185.1)

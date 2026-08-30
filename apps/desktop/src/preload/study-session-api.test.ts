@@ -9,12 +9,13 @@ vi.mock('electron', () => ({
 import { studyCommitPreloadApi, studySessionPreloadApi } from './study-session-api'
 
 describe('study session preload api', () => {
-  it('exposes only the six session methods and fixed channels', async () => {
+  it('exposes session methods and the fixed channel set', async () => {
     expect(Object.keys(studyCommitPreloadApi)).toEqual([
       'platform',
       'studySessions',
       'topics',
       'learningLogs',
+      'auth',
     ])
     expect(Object.keys(studySessionPreloadApi)).toEqual([
       'create',

@@ -1,12 +1,14 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
 import { createServices } from '@studycommit/common/services'
 import type { LearningLogApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
+import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
 import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
   studySessions: StudySessionApi
   topics: TopicApi
   learningLogs: LearningLogApi
+  auth: DesktopAuthApiPort
 }
 
 export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): DesktopServices {
@@ -27,6 +29,7 @@ export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): Des
   })
   return {
     ...createServices({ transport: 'rest', httpTransport: transport }),
+    auth: new DesktopAuthApi(transport),
   }
 }
 
@@ -67,6 +70,10 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       getBySession: reject,
       update: reject,
     },
+    auth: {
+      sendPhoneCode: reject,
+      verifyPhone: reject,
+    } as unknown as DesktopAuthApiPort,
   }
 }
 

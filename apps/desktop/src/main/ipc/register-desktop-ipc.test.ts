@@ -16,6 +16,7 @@ vi.mock('electron', () => ({
 }))
 
 import { learningLogIpcChannels } from '../../shared/learning-log-channels'
+import { authIpcChannels } from './auth-ipc'
 import { registerDesktopIpc } from './register-desktop-ipc'
 import { studySessionIpcChannels } from './study-session-ipc'
 import { topicIpcChannels } from './topic-ipc'
@@ -45,6 +46,10 @@ describe('registerDesktopIpc', () => {
       getBySession: vi.fn(),
       update: vi.fn(),
     },
+    auth: {
+      sendPhoneCode: vi.fn(),
+      verifyPhone: vi.fn(),
+    },
   }
 
   beforeEach(() => {
@@ -68,6 +73,7 @@ describe('registerDesktopIpc', () => {
       [
         ...Object.values(studySessionIpcChannels),
         ...Object.values(topicIpcChannels),
+        ...Object.values(authIpcChannels),
         ...Object.values(learningLogIpcChannels),
       ].sort(),
     )
