@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
 import { isConstraint } from '../common/idempotency'
 import { DatabaseService } from '../database/database.service'
-import { idempotencyRecords, studySessions, templates, topics } from '../database/schema'
+import { idempotencyRecords, papers, studySessions, templates, topics } from '../database/schema'
 import { SESSION_STATUS } from '../study-sessions/study-session.constants'
 import { DEFAULT_TEMPLATE_ID } from '../templates/template.constants'
 import {
@@ -22,7 +22,11 @@ export type TemplateSummary = {
   paperBackground: TopicTemplateBackground
 }
 type TopicTemplateBackground = 'plain' | 'dot' | 'rule' | 'grid'
-export type TopicWithTemplate = Topic & { template: TemplateSummary }
+export type TopicWithTemplate = Topic & {
+  template: TemplateSummary
+  paperCount: number
+  lastPaperAt: Date | null
+}
 export type TopicCreateResult =
   | { kind: typeof TOPIC_CREATE_KIND.ok; topic: TopicWithTemplate; replayed: boolean }
   | { kind: typeof TOPIC_CREATE_KIND.idempotencyConflict }
@@ -37,8 +41,39 @@ const templateSummary = {
   paperBackground: templates.paperBackground,
 }
 
-function toTopicWithTemplate(row: { topic: Topic; template: TemplateSummary }): TopicWithTemplate {
-  return { ...row.topic, template: row.template }
+const paperCountSql = sql<number>`coalesce((
+  select count(*)::int from ${papers}
+  where ${papers.topicId} = ${topics.id}
+    and ${papers.userId} = ${topics.userId}
+    and ${papers.deletedAt} is null
+), 0)`.mapWith(Number)
+
+const lastPaperAtSql = sql<Date | null>`(
+  select max(${papers.updatedAt}) from ${papers}
+  where ${papers.topicId} = ${topics.id}
+    and ${papers.userId} = ${topics.userId}
+    and ${papers.deletedAt} is null
+)`
+
+const topicQueryColumns = {
+  topic: topics,
+  template: templateSummary,
+  paperCount: paperCountSql,
+  lastPaperAt: lastPaperAtSql,
+}
+
+function toTopicWithTemplate(row: {
+  topic: Topic
+  template: TemplateSummary
+  paperCount: number
+  lastPaperAt: Date | null
+}): TopicWithTemplate {
+  return {
+    ...row.topic,
+    template: row.template,
+    paperCount: row.paperCount,
+    lastPaperAt: row.lastPaperAt ? new Date(row.lastPaperAt) : null,
+  }
 }
 
 type Cursor = { updatedAt: string; id: string }
@@ -70,7 +105,7 @@ export class TopicsRepository {
       conditions.push(isNull(topics.deletedAt))
     }
     const [row] = await this.database.db
-      .select({ topic: topics, template: templateSummary })
+      .select(topicQueryColumns)
       .from(topics)
       .innerJoin(templates, eq(templates.id, topics.templateId))
       .where(and(...conditions))
@@ -100,7 +135,7 @@ export class TopicsRepository {
           return { kind: TOPIC_CREATE_KIND.idempotencyConflict }
         }
         const [row] = await tx
-          .select({ topic: topics, template: templateSummary })
+          .select(topicQueryColumns)
           .from(topics)
           .innerJoin(templates, eq(templates.id, topics.templateId))
           .where(and(eq(topics.userId, userId), eq(topics.id, record.resourceId)))
@@ -140,7 +175,7 @@ export class TopicsRepository {
         })
         return {
           kind: TOPIC_CREATE_KIND.ok,
-          topic: { ...topic, template },
+          topic: { ...topic, template, paperCount: 0, lastPaperAt: null },
           replayed: false,
         }
       } catch (error) {
@@ -168,7 +203,7 @@ export class TopicsRepository {
       )
     }
     const rows = await this.database.db
-      .select({ topic: topics, template: templateSummary })
+      .select(topicQueryColumns)
       .from(topics)
       .innerJoin(templates, eq(templates.id, topics.templateId))
       .where(and(...conditions))
@@ -208,7 +243,7 @@ export class TopicsRepository {
   async remove(userId: string, id: string, version: number): Promise<TopicRemoveResult> {
     return this.database.db.transaction(async (tx) => {
       const [topic] = await tx
-        .select({ id: topics.id })
+        .select({ id: topics.id, version: topics.version })
         .from(topics)
         .where(and(eq(topics.userId, userId), eq(topics.id, id), isNull(topics.deletedAt)))
         .for('update')
@@ -234,6 +269,24 @@ export class TopicsRepository {
       if (active) {
         return { kind: TOPIC_REMOVE_KIND.activeSession }
       }
+      if (topic.version !== version) {
+        return { kind: TOPIC_REMOVE_KIND.versionConflict }
+      }
+
+      await tx
+        .select({ id: papers.id })
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.topicId, id), isNull(papers.deletedAt)))
+        .orderBy(asc(papers.id))
+        .for('update')
+      await tx
+        .update(papers)
+        .set({
+          topicId: null,
+          version: sql`${papers.version} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(papers.userId, userId), eq(papers.topicId, id), isNull(papers.deletedAt)))
 
       const [removed] = await tx
         .update(topics)

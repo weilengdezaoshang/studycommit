@@ -210,4 +210,102 @@ describe('Topics API', () => {
     expect(missing.statusCode).toBe(404)
     expect(missing.json().error.code).toBe('TEMPLATE_NOT_FOUND')
   })
+
+  const createPaper = (user = userA, body: object = { content: '一段记录' }) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/papers',
+      headers: { 'x-user-id': user, 'idempotency-key': crypto.randomUUID() },
+      payload: body,
+    })
+
+  it('新箱子纸页数量为零，归入后返回数量和最近更新时间', async () => {
+    const topic = (await create(userA, crypto.randomUUID(), { name: '系统设计' })).json()
+    expect(topic).toMatchObject({ paperCount: 0, lastPaperAt: null })
+    const paper = (await createPaper()).json()
+    const organized = (
+      await app.inject({
+        method: 'POST',
+        url: `/api/papers/${paper.id}/organize`,
+        headers: { 'x-user-id': userA },
+        payload: { topicId: topic.id, version: paper.version },
+      })
+    ).json()
+    const latest = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/topics/${topic.id}`,
+        headers: { 'x-user-id': userA },
+      })
+    ).json()
+    expect(latest.paperCount).toBe(1)
+    expect(latest.lastPaperAt).toBe(organized.updatedAt)
+  })
+
+  it('已删除纸页不计入箱子数量', async () => {
+    const topic = (await create(userA, crypto.randomUUID(), { name: '系统设计' })).json()
+    const first = (await createPaper()).json()
+    const second = (await createPaper(userA, { content: '另一段记录' })).json()
+    await app.inject({
+      method: 'POST',
+      url: `/api/papers/${first.id}/organize`,
+      headers: { 'x-user-id': userA },
+      payload: { topicId: topic.id, version: first.version },
+    })
+    const organized = (
+      await app.inject({
+        method: 'POST',
+        url: `/api/papers/${second.id}/organize`,
+        headers: { 'x-user-id': userA },
+        payload: { topicId: topic.id, version: second.version },
+      })
+    ).json()
+    await app.inject({
+      method: 'DELETE',
+      url: `/api/papers/${second.id}`,
+      headers: { 'x-user-id': userA },
+      payload: { version: organized.version },
+    })
+    const latest = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/topics/${topic.id}`,
+        headers: { 'x-user-id': userA },
+      })
+    ).json()
+    expect(latest.paperCount).toBe(1)
+  })
+
+  it('删除箱子后纸页回到待整理', async () => {
+    const topic = (await create(userA, crypto.randomUUID(), { name: '系统设计' })).json()
+    const paper = (await createPaper()).json()
+    const organized = (
+      await app.inject({
+        method: 'POST',
+        url: `/api/papers/${paper.id}/organize`,
+        headers: { 'x-user-id': userA },
+        payload: { topicId: topic.id, version: paper.version },
+      })
+    ).json()
+    const removed = await app.inject({
+      method: 'DELETE',
+      url: `/api/topics/${topic.id}`,
+      headers: { 'x-user-id': userA, 'if-match': `"${topic.version}"` },
+    })
+    expect(removed.statusCode).toBe(204)
+    const inbox = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/papers/${paper.id}`,
+        headers: { 'x-user-id': userA },
+      })
+    ).json()
+    expect(inbox).toMatchObject({
+      id: paper.id,
+      status: 'inbox',
+      topicId: null,
+      version: organized.version + 1,
+      createdAt: paper.createdAt,
+    })
+  })
 })
