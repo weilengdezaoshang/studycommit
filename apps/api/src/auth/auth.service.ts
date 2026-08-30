@@ -20,9 +20,11 @@ import {
   AUTH_CODE_TTL_SECONDS,
   AUTH_ERROR,
   AUTH_OTP_MAX_FAILURES,
+  AUTH_PROVIDER,
   DEFAULT_NICKNAME,
 } from './auth.constants'
 import { AuthRepository, type User } from './auth.repository'
+import { WechatMiniClient } from './wechat-mini.client'
 
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
 const phoneSubject = (phone: string) => sha256(`phone:${phone}`)
@@ -60,6 +62,7 @@ export class AuthService {
     @Inject(AuthRepository) private readonly repository: AuthRepository,
     @Inject(RedisService) private readonly redis: RedisService,
     @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(WechatMiniClient) private readonly wechatMini: WechatMiniClient,
   ) {}
 
   async sendPhoneCode(phone: string): Promise<SendPhoneCodeOutput> {
@@ -84,6 +87,13 @@ export class AuthService {
       ? await this.requireActiveUser(identity.userId)
       : await this.repository.createPhoneUser(subject)
     const tokens = await this.issueTokens(user.id, input.deviceType)
+    return { user: this.toCurrentUser(user), tokens }
+  }
+
+  async loginWechatMiniprogram(code: string): Promise<VerifyPhoneOutput> {
+    const session = await this.wechatMini.exchangeCode(code)
+    const user = await this.findOrCreateWechatUser(session.openid, session.unionid)
+    const tokens = await this.issueTokens(user.id, 'miniprogram')
     return { user: this.toCurrentUser(user), tokens }
   }
 
@@ -143,6 +153,24 @@ export class AuthService {
       throw new BadRequestException(AUTH_ERROR.codeInvalid)
     }
     throw new BadRequestException(AUTH_ERROR.codeExpired)
+  }
+
+  private async findOrCreateWechatUser(openid: string, unionid: string | null) {
+    const mini = await this.repository.findIdentity(AUTH_PROVIDER.wechatMini, openid)
+    if (mini) {
+      if (unionid) {
+        await this.repository.attachIdentity(mini.userId, AUTH_PROVIDER.wechatUnionid, unionid)
+      }
+      return this.requireActiveUser(mini.userId)
+    }
+    if (unionid) {
+      const union = await this.repository.findIdentity(AUTH_PROVIDER.wechatUnionid, unionid)
+      if (union) {
+        await this.repository.attachIdentity(union.userId, AUTH_PROVIDER.wechatMini, openid)
+        return this.requireActiveUser(union.userId)
+      }
+    }
+    return this.requireActiveUser((await this.repository.createWechatUser(openid, unionid)).id)
   }
 
   private async requireActiveUser(userId: string) {

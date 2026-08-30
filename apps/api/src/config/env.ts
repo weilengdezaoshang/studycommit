@@ -19,6 +19,9 @@ export const envSchema = z.object({
     .string()
     .regex(/^\d{6}$/)
     .optional(),
+  AUTH_WECHAT_STUB: z.string().min(1).optional(),
+  WECHAT_MINI_APP_ID: z.string().min(1).optional(),
+  WECHAT_MINI_APP_SECRET: z.string().min(1).optional(),
   AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   AUTH_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
 })
@@ -42,6 +45,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   }
   if (result.data.NODE_ENV === 'production' && result.data.AUTH_OTP_STUB) {
     throw new Error('Environment validation failed: AUTH_OTP_STUB cannot be set in production')
+  }
+  if (result.data.NODE_ENV === 'production' && result.data.AUTH_WECHAT_STUB) {
+    throw new Error('Environment validation failed: AUTH_WECHAT_STUB cannot be set in production')
   }
   return result.data
 }

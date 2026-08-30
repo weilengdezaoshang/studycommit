@@ -1,5 +1,7 @@
 export const AUTH_PROVIDER = {
   phone: 'phone',
+  wechatMini: 'wechat_mini',
+  wechatUnionid: 'wechat_unionid',
 } as const
 
 export const AUTH_CODE_TTL_SECONDS = 600
@@ -12,6 +14,8 @@ export const AUTH_ERROR = {
   codeInvalid: { code: 'AUTH_CODE_INVALID', message: '验证码不正确，请重新输入' },
   codeExpired: { code: 'AUTH_CODE_EXPIRED', message: '验证码已失效，请重新获取' },
   codeCooldown: { code: 'AUTH_CODE_COOLDOWN', message: '请稍后再获取验证码' },
+  wechatCodeInvalid: { code: 'AUTH_WECHAT_CODE_INVALID', message: '微信登录失败，请重试' },
+  wechatUnavailable: { code: 'AUTH_WECHAT_UNAVAILABLE', message: '微信登录暂不可用' },
   unauthenticated: { code: 'UNAUTHENTICATED', message: '缺少有效身份' },
   accountDisabled: { code: 'AUTH_ACCOUNT_DISABLED', message: '账户不可用' },
 } as const

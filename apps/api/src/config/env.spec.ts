@@ -24,4 +24,9 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv({ ...valid, NODE_ENV: 'production', AUTH_OTP_STUB: '123456' }),
     ).toThrow('AUTH_OTP_STUB'))
+
+  it('生产环境禁止设置微信登录桩', () =>
+    expect(() => validateEnv({ ...valid, NODE_ENV: 'production', AUTH_WECHAT_STUB: '1' })).toThrow(
+      'AUTH_WECHAT_STUB',
+    ))
 })

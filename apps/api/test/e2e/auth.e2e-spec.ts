@@ -177,4 +177,46 @@ describe('Auth API', () => {
     expect(sessions.rows[0].count).toBe(1)
     expect(succeeded.json().user.id).toEqual(expect.any(String))
   })
+
+  const wechatLogin = (code: string) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/auth/wechat/miniprogram',
+      payload: { code },
+    })
+
+  it('小程序微信登录即注册，相同身份再次登录复用账户', async () => {
+    const first = await wechatLogin('openid-aaa')
+    expect(first.statusCode).toBe(200)
+    expect(first.json().user).toMatchObject({
+      nickname: '学习者',
+      avatarUrl: null,
+      status: 'active',
+    })
+    expect(first.json().tokens.accessToken).toEqual(expect.any(String))
+
+    const me = await app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: { authorization: `Bearer ${first.json().tokens.accessToken}` },
+    })
+    expect(me.statusCode).toBe(200)
+    expect(me.json().id).toBe(first.json().user.id)
+
+    const second = await wechatLogin('openid-aaa')
+    expect(second.statusCode).toBe(200)
+    expect(second.json().user.id).toBe(first.json().user.id)
+  })
+
+  it('同一 unionid 的不同 openid 归入同一账户', async () => {
+    const first = await wechatLogin('openid-ccc|union-1')
+    const second = await wechatLogin('openid-ddd|union-1')
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(second.json().user.id).toBe(first.json().user.id)
+  })
+
+  it('空白微信登录码拒绝', async () => {
+    expect((await wechatLogin('   ')).statusCode).toBe(400)
+  })
 })

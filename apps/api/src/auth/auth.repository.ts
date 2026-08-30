@@ -19,14 +19,18 @@ export class AuthRepository {
   }
 
   async findPhoneIdentity(subject: string) {
+    return this.findIdentity(AUTH_PROVIDER.phone, subject)
+  }
+
+  async findIdentity(
+    provider: (typeof AUTH_PROVIDER)[keyof typeof AUTH_PROVIDER],
+    subject: string,
+  ) {
     const [identity] = await this.database.db
       .select()
       .from(authIdentities)
       .where(
-        and(
-          eq(authIdentities.provider, AUTH_PROVIDER.phone),
-          eq(authIdentities.providerSubject, subject),
-        ),
+        and(eq(authIdentities.provider, provider), eq(authIdentities.providerSubject, subject)),
       )
       .limit(1)
     return identity ?? null
@@ -54,6 +58,63 @@ export class AuthRepository {
         throw error
       }
       return user
+    }
+  }
+
+  async createWechatUser(openid: string, unionid: string | null) {
+    try {
+      return await this.database.db.transaction(async (tx) => {
+        const [user] = await tx.insert(users).values({}).returning()
+        await tx.insert(authIdentities).values({
+          userId: user.id,
+          provider: AUTH_PROVIDER.wechatMini,
+          providerSubject: openid,
+          verifiedAt: new Date(),
+        })
+        if (unionid) {
+          await tx.insert(authIdentities).values({
+            userId: user.id,
+            provider: AUTH_PROVIDER.wechatUnionid,
+            providerSubject: unionid,
+            verifiedAt: new Date(),
+          })
+        }
+        return user
+      })
+    } catch (error) {
+      if (!isConstraint(error, AUTH_IDENTITIES_PROVIDER_SUBJECT_UNIQUE)) {
+        throw error
+      }
+      const mini = await this.findIdentity(AUTH_PROVIDER.wechatMini, openid)
+      const union = unionid ? await this.findIdentity(AUTH_PROVIDER.wechatUnionid, unionid) : null
+      const user = mini
+        ? await this.findUserById(mini.userId)
+        : union
+          ? await this.findUserById(union.userId)
+          : null
+      if (!user) {
+        throw error
+      }
+      return user
+    }
+  }
+
+  async attachIdentity(
+    userId: string,
+    provider: (typeof AUTH_PROVIDER)[keyof typeof AUTH_PROVIDER],
+    subject: string,
+  ) {
+    try {
+      await this.database.db.insert(authIdentities).values({
+        userId,
+        provider,
+        providerSubject: subject,
+        verifiedAt: new Date(),
+      })
+    } catch (error) {
+      if (!isConstraint(error, AUTH_IDENTITIES_PROVIDER_SUBJECT_UNIQUE)) {
+        throw error
+      }
     }
   }
 

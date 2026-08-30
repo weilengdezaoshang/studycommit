@@ -3,6 +3,7 @@ import {
   refreshInputSchema,
   sendPhoneCodeInputSchema,
   verifyPhoneInputSchema,
+  wechatMiniprogramLoginInputSchema,
 } from '@studycommit/rpc-contracts/auth'
 import { ZodPipe } from '../common/zod.pipe'
 import { AccessTokenGuard, type AuthedRequest } from './access-token.guard'
@@ -29,6 +30,14 @@ export class AuthController {
     },
   ) {
     return this.auth.verifyPhone(body)
+  }
+
+  @Post('wechat/miniprogram')
+  @HttpCode(200)
+  loginWechatMiniprogram(
+    @Body(new ZodPipe(wechatMiniprogramLoginInputSchema)) body: { code: string },
+  ) {
+    return this.auth.loginWechatMiniprogram(body.code)
   }
 
   @Post('token/refresh')
