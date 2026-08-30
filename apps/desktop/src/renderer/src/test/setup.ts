@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
+import { beforeEach } from 'vitest'
 
 const emptyActive = {
   ok: true as const,
@@ -29,6 +30,10 @@ function createDefaultStudyCommit() {
       getBySession: async () => ({ ok: false as const, error: configurationError() }),
       update: async () => ({ ok: false as const, error: configurationError() }),
     },
+    auth: {
+      sendPhoneCode: async () => ({ ok: false as const, error: configurationError() }),
+      verifyPhone: async () => ({ ok: false as const, error: configurationError() }),
+    },
   }
 }
 
@@ -43,14 +48,39 @@ function configurationError() {
   }
 }
 
+// 工作区测试默认处于已登录状态;登录页相关测试自行清除会话。
+const DEFAULT_SESSION = {
+  user: { id: 'test-user', nickname: '测试用户', avatarUrl: null, status: 'active' },
+  tokens: {
+    accessToken: 'test-access',
+    refreshToken: 'test-refresh',
+    expiresAt: '2026-12-31T00:00:00.000Z',
+  },
+}
+
+function seedAuthSession() {
+  window.localStorage.setItem(
+    'studycommit.desktop.auth.session.v1',
+    JSON.stringify(DEFAULT_SESSION),
+  )
+}
+
 if (typeof window !== 'undefined') {
   window.studyCommit = createDefaultStudyCommit()
+  seedAuthSession()
 }
+
+beforeEach(() => {
+  if (typeof window !== 'undefined') {
+    seedAuthSession()
+  }
+})
 
 afterEach(() => {
   cleanup()
   if (typeof window !== 'undefined') {
     window.localStorage.clear()
     window.studyCommit = createDefaultStudyCommit()
+    seedAuthSession()
   }
 })

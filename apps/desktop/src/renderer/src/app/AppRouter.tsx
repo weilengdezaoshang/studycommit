@@ -9,7 +9,8 @@ import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
 import { MockDraftsPage, MockReviewPage, MockTopicsPage } from '../features/mock/MockWorkspacePages'
-import { MockAuthPage } from '../features/auth/MockAuthPage'
+import { AuthPage } from '../features/auth/AuthPage'
+import { setAuthSession, useAuthSession } from '../features/auth/session'
 
 const DeskDemoPage = lazy(() =>
   import('../features/desk/DeskDemoPage').then((module) => ({ default: module.DeskDemoPage })),
@@ -75,11 +76,34 @@ export function AppRoutes({
 }: {
   workspaceMode?: 'mock' | 'study-session'
 }): React.JSX.Element {
+  // PRD:未登录只允许停留在登录页;登录后进入工作区。
+  const session = useAuthSession()
+
   return (
     <DesktopServicesProvider>
       <ToastProvider renderToast={(toast) => <Toast {...toast} />}>
         <Routes>
-          <Route element={<AppShell workspaceMode={workspaceMode} />}>
+          <Route
+            path="auth"
+            element={
+              session ? (
+                <Navigate to={routes.today()} replace />
+              ) : (
+                <div className="auth-viewport">
+                  <AuthPage api={window.studyCommit.auth} onSession={setAuthSession} />
+                </div>
+              )
+            }
+          />
+          <Route
+            element={
+              session ? (
+                <AppShell workspaceMode={workspaceMode} />
+              ) : (
+                <Navigate to={routes.auth()} replace />
+              )
+            }
+          >
             <Route index element={<LandingRedirect />} />
             <Route path="today" element={null} />
             <Route path="drafts" element={<MockDraftsPage />} />
@@ -153,7 +177,6 @@ export function AppRoutes({
                 />
               }
             />
-            <Route path="auth" element={<MockAuthPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

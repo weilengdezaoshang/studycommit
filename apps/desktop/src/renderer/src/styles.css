@@ -5223,3 +5223,137 @@ button:focus-visible {
     width: calc(100% - 44px);
   }
 }
+
+/* ---------- 登录页(扫码优先 + 手机号) ---------- */
+.qr-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 0;
+}
+
+.qr-placeholder {
+  width: 168px;
+  height: 168px;
+  border: 1px dashed var(--line, #ccd6cc);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--muted, #7b867e);
+  font-size: 13px;
+  background: var(--paper, #fffef9);
+}
+
+.qr-hint {
+  margin: 0;
+  color: var(--ink, #34423b);
+  font-size: 14px;
+}
+
+.qr-pending {
+  margin: 0;
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+}
+
+.auth-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-code-row .auth-field__inner {
+  flex: 1;
+  height: 44px;
+  border: 1px solid var(--line, #ccd6cc);
+  border-radius: 10px;
+  background: var(--surface-soft, #fbfcf7);
+  padding: 0 12px;
+  color: var(--ink, #34423b);
+  font-size: 14px;
+}
+
+.auth-code-button {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--action-surface, #dce9d8);
+  color: var(--action, #53635a);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.auth-code-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-form__submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* 登录卡头部纵向堆叠:标题独占整行,Tab 药丸在其下 */
+.auth-form__heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.auth-form__kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--color-on-primary-surface);
+}
+
+.auth-tabs {
+  gap: 8px;
+}
+
+.auth-tabs button {
+  white-space: nowrap;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+/* 手机号表单:统一 44px 控件高度与留白 */
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.auth-fields .auth-field {
+  margin-top: 0;
+}
+
+.auth-fields .auth-field input,
+.auth-fields .auth-field__inner {
+  height: 44px;
+  min-height: 44px;
+}
+
+.auth-code-button {
+  height: 44px;
+  min-height: 44px;
+}
+
+.auth-code-row {
+  gap: 12px;
+}
+
+/* 登录路由视口:整屏居中,避免登录卡贴顶 */
+.auth-viewport {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
