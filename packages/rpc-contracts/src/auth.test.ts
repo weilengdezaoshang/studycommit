@@ -3,6 +3,7 @@ import {
   sendPhoneCodeInputSchema,
   verifyPhoneInputSchema,
   verifyPhoneOutputSchema,
+  wechatMiniprogramLoginInputSchema,
 } from './auth.js'
 
 describe('phone auth contract', () => {
@@ -43,5 +44,15 @@ describe('phone auth contract', () => {
       },
     })
     expect(parsed.user).not.toHaveProperty('phone')
+  })
+
+  it('小程序登录只接受微信登录码', () => {
+    expect(wechatMiniprogramLoginInputSchema.parse({ code: '  wxcode  ' })).toEqual({
+      code: 'wxcode',
+    })
+    expect(wechatMiniprogramLoginInputSchema.safeParse({ code: '' }).success).toBe(false)
+    expect(wechatMiniprogramLoginInputSchema.safeParse({ code: 'a'.repeat(129) }).success).toBe(
+      false,
+    )
   })
 })

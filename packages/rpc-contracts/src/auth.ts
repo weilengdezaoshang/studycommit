@@ -67,6 +67,10 @@ export const verifyPhoneOutputSchema = z.object({
   tokens: authTokensSchema,
 })
 
+export const wechatMiniprogramLoginInputSchema = z.object({
+  code: z.string().trim().min(1).max(128),
+})
+
 export type AuthUser = z.infer<typeof authUserSchema>
 export type TokenPair = z.infer<typeof tokenPairSchema>
 export type LoginInput = z.infer<typeof loginInputSchema>
@@ -78,3 +82,4 @@ export type VerifyPhoneInput = z.infer<typeof verifyPhoneInputSchema>
 export type CurrentUser = z.infer<typeof currentUserSchema>
 export type AuthTokens = z.infer<typeof authTokensSchema>
 export type VerifyPhoneOutput = z.infer<typeof verifyPhoneOutputSchema>
+export type WechatMiniprogramLoginInput = z.infer<typeof wechatMiniprogramLoginInputSchema>
