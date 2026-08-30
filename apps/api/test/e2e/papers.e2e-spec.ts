@@ -41,6 +41,13 @@ describe('Papers API', () => {
       payload: body,
     })
 
+  const list = (query = '', user = userA) =>
+    app.inject({
+      method: 'GET',
+      url: `/api/papers${query}`,
+      headers: { 'x-user-id': user },
+    })
+
   it('去掉首尾空格后创建待整理记录', async () => {
     const created = await create()
     expect(created.statusCode).toBe(201)
@@ -494,5 +501,34 @@ describe('Papers API', () => {
     expect(second.json().id).toBe(paper.id)
     expect(first.json().deletedAt).toEqual(expect.any(String))
     expect(second.json().deletedAt).toEqual(expect.any(String))
+  })
+
+  it('时间线按创建时间从新到旧返回', async () => {
+    await create(userA, crypto.randomUUID(), { content: '较早的记录' })
+    await create(userA, crypto.randomUUID(), { content: '较新的记录' })
+    const listed = await list()
+    expect(listed.statusCode).toBe(200)
+    const items = listed.json().items as { createdAt: string; id: string }[]
+    expect(items).toHaveLength(2)
+    expect(
+      items[0].createdAt > items[1].createdAt ||
+        (items[0].createdAt === items[1].createdAt && items[0].id > items[1].id),
+    ).toBe(true)
+  })
+
+  it('分页游标按从新到旧继续且不重复', async () => {
+    await create(userA, crypto.randomUUID(), { content: '最旧' })
+    await create(userA, crypto.randomUUID(), { content: '中间' })
+    await create(userA, crypto.randomUUID(), { content: '最新' })
+    const all = ((await list()).json().items as { id: string }[]).map((item) => item.id)
+    expect(all).toHaveLength(3)
+    const page1 = (await list('?limit=2')).json()
+    expect(page1.items.map((item: { id: string }) => item.id)).toEqual(all.slice(0, 2))
+    expect(page1.pageInfo.hasNextPage).toBe(true)
+    const page2 = (
+      await list(`?limit=2&cursor=${encodeURIComponent(page1.pageInfo.nextCursor)}`)
+    ).json()
+    expect(page2.items.map((item: { id: string }) => item.id)).toEqual(all.slice(2))
+    expect(page2.pageInfo.hasNextPage).toBe(false)
   })
 })

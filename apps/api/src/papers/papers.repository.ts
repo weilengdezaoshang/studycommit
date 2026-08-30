@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import type {
   CreatePaperInput,
   ListPapersInput,
@@ -112,16 +112,6 @@ export class PapersRepository {
 
   async organize(userId: string, input: OrganizePaperInput): Promise<PaperOrganizeResult> {
     return this.database.db.transaction(async (tx) => {
-      const [paper] = await tx
-        .select()
-        .from(papers)
-        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
-        .for('update')
-        .limit(1)
-      if (!paper) {
-        return { kind: PAPER_ORGANIZE_KIND.notFound }
-      }
-
       const [topic] = await tx
         .select()
         .from(topics)
@@ -135,6 +125,16 @@ export class PapersRepository {
       }
       if (topic.status === TOPIC_STATUS.archived) {
         return { kind: PAPER_ORGANIZE_KIND.topicArchived }
+      }
+
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_ORGANIZE_KIND.notFound }
       }
       if (paper.topicId === input.topicId) {
         return { kind: PAPER_ORGANIZE_KIND.ok, paper }
@@ -354,8 +354,8 @@ export class PapersRepository {
       const createdAt = sql<Date>`date_trunc('milliseconds', ${papers.createdAt})`
       conditions.push(
         or(
-          gt(createdAt, new Date(cursor.createdAt)),
-          and(eq(createdAt, new Date(cursor.createdAt)), gt(papers.id, cursor.id)),
+          lt(createdAt, new Date(cursor.createdAt)),
+          and(eq(createdAt, new Date(cursor.createdAt)), lt(papers.id, cursor.id)),
         )!,
       )
     }
@@ -364,7 +364,7 @@ export class PapersRepository {
       .select()
       .from(papers)
       .where(and(...conditions))
-      .orderBy(asc(createdAt), asc(papers.id))
+      .orderBy(desc(createdAt), desc(papers.id))
       .limit(input.limit + 1)
     const hasNextPage = rows.length > input.limit
     const items = rows.slice(0, input.limit)
