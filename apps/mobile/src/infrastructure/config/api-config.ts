@@ -55,3 +55,19 @@ export function createDevelopmentHeaderProvider(
     return headers
   }
 }
+
+/** 仅本地与内网联调来源允许明文 HTTP;生产域名必须使用 HTTPS。 */
+export function allowsInsecureHttpFor(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin)
+    return (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '10.0.2.2' ||
+      /^192\.168\./.test(hostname) ||
+      /^10\./.test(hostname)
+    )
+  } catch {
+    return false
+  }
+}

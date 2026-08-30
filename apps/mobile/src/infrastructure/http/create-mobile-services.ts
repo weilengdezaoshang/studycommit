@@ -2,11 +2,13 @@ import { HttpError, createHttpError } from '@studycommit/common/http'
 import { createServices } from '@studycommit/common/services'
 import type { LearningLogApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
 import {
+  allowsInsecureHttpFor,
   createDevelopmentHeaderProvider,
   getMobileApiOrigin,
   getMobileApiPrefix,
   getMobileDevelopmentUserId,
 } from '../config/api-config'
+import { getAuthHeaders } from '../auth/session-store'
 import { ReactNativeFetchTransport } from './react-native-fetch-transport'
 
 export interface MobileServices {
@@ -24,11 +26,16 @@ export function createMobileServices(options?: {
     origin: getMobileApiOrigin(),
     apiPrefix: getMobileApiPrefix(),
     fetchImpl: options?.fetchImpl,
-    allowInsecureHttp: true,
+    allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
     defaultTimeoutMs: 10_000,
     getHeaders:
       options?.getHeaders ??
-      createDevelopmentHeaderProvider(options?.developmentUserId ?? getMobileDevelopmentUserId()),
+      (async () => {
+        const developmentHeaders = await createDevelopmentHeaderProvider(
+          options?.developmentUserId ?? getMobileDevelopmentUserId(),
+        )()
+        return { ...developmentHeaders, ...(await getAuthHeaders()) }
+      }),
   })
   return {
     ...createServices({ transport: 'rest', httpTransport: transport }),
