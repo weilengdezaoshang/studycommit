@@ -670,7 +670,14 @@ const styles = StyleSheet.create({
   paperMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   paperLabel: { color: paperColors.muted, fontSize: 11 },
   paperHint: { color: paperColors.action, fontSize: 11, fontWeight: '500' },
-  emptyDay: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
+  emptyDay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 24,
+    paddingBottom: 96,
+  },
   emptyTitle: { color: paperColors.ink, fontSize: 16, fontWeight: '600' },
   emptyCopy: { color: paperColors.muted, fontSize: 13, marginTop: 8 },
   fab: {

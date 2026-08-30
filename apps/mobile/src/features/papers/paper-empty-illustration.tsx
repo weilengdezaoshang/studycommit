@@ -4,7 +4,7 @@ import { paperColors } from './paper-visual'
 /** 空态插画:软圆底上一叠散页,其中一张带黄色折角。纯 View 绘制,不依赖图片资源。 */
 export function PaperEmptyIllustration({ size = 120 }: { size?: number }) {
   return (
-    <View style={[styles.wrap, { width: size, height: size * 0.8 }]} accessibilityHidden>
+    <View style={[styles.wrap, { width: size, height: size * 0.8 }]} aria-hidden>
       <View style={styles.circle} />
       {/* 后层纸页 */}
       <View style={[styles.sheet, styles.sheetBack]}>
@@ -50,8 +50,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
-  sheetBack: { transform: [{ rotate: '-8deg' }, { translateX: -16 }, { translateY: 4 }] },
-  sheetFront: { transform: [{ rotate: '6deg' }, { translateX: 12 }, { translateY: -2 }] },
+  sheetBack: { transform: [{ rotate: '-8deg' }, { translateX: -16 }] },
+  sheetFront: { transform: [{ rotate: '6deg' }, { translateX: 12 }, { translateY: -6 }] },
   sheetLine: { height: 3, borderRadius: 2, backgroundColor: paperColors.line },
   fold: {
     position: 'absolute',
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   accentDot: {
     position: 'absolute',
     right: 14,
-    bottom: 8,
+    top: 10,
     width: 8,
     height: 8,
     borderRadius: 4,

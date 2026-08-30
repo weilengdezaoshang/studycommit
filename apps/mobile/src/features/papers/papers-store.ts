@@ -123,6 +123,8 @@ export const papersActions = {
       template: templateSummaryOf(template.id),
       status: 'active',
       totalDurationSeconds: 0,
+      paperCount: 0,
+      lastPaperAt: null,
       version: 1,
       createdAt: now,
       updatedAt: now,

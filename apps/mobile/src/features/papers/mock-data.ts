@@ -222,21 +222,30 @@ const PAPER_SEEDS: PaperSeed[] = [
 
 export function buildSeedTopics(): Topic[] {
   const now = iso(0, 12, 0)
-  return TOPIC_SEEDS.map((seed) => ({
-    id: seed.id,
-    userId: MOCK_USER_ID,
-    name: seed.name,
-    description: seed.description,
-    color: seed.color,
-    templateId: seed.templateId,
-    template: templateSummaryOf(seed.templateId),
-    status: 'active' as const,
-    totalDurationSeconds: 0,
-    version: 1,
-    createdAt: now,
-    updatedAt: now,
-    deletedAt: null,
-  }))
+  return TOPIC_SEEDS.map((seed) => {
+    const topicPapers = PAPER_SEEDS.filter((paper) => paper.topicId === seed.id)
+    const lastPaperAt = topicPapers.reduce<string | null>((latest, paper) => {
+      const createdAt = iso(paper.daysAgo, paper.hour, paper.minute)
+      return !latest || createdAt > latest ? createdAt : latest
+    }, null)
+    return {
+      id: seed.id,
+      userId: MOCK_USER_ID,
+      name: seed.name,
+      description: seed.description,
+      color: seed.color,
+      templateId: seed.templateId,
+      template: templateSummaryOf(seed.templateId),
+      status: 'active' as const,
+      totalDurationSeconds: 0,
+      paperCount: topicPapers.length,
+      lastPaperAt,
+      version: 1,
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null,
+    }
+  })
 }
 
 export function buildSeedPapers(): Paper[] {
