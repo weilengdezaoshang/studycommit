@@ -11,6 +11,8 @@ export const topicSchema = z.object({
   template: templateSummarySchema,
   status: z.enum(['active', 'archived']),
   totalDurationSeconds: z.number().int().nonnegative(),
+  paperCount: z.number().int().nonnegative(),
+  lastPaperAt: z.iso.datetime({ offset: true }).nullable(),
   version: z.number().int().min(1),
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
