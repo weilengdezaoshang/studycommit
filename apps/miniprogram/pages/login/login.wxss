@@ -1,0 +1,49 @@
+.login-page {
+  min-height: 100vh;
+  padding: 128rpx 56rpx 48rpx;
+  background: var(--sc-paper);
+  box-sizing: border-box;
+}
+
+.headline {
+  display: block;
+  color: var(--sc-ink);
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.subline {
+  display: block;
+  margin-top: 16rpx;
+  margin-bottom: 64rpx;
+  color: var(--sc-muted);
+  font-size: 28rpx;
+}
+
+.login-button {
+  height: 96rpx;
+  border-radius: 28rpx;
+  background: var(--sc-action);
+  color: var(--sc-paper);
+  font-size: 30rpx;
+  font-weight: 500;
+}
+
+.login-button.is-disabled {
+  opacity: 0.45;
+}
+
+.error {
+  display: block;
+  margin-top: 24rpx;
+  color: #b42318;
+  font-size: 24rpx;
+}
+
+.hint {
+  display: block;
+  margin-top: 32rpx;
+  color: var(--sc-muted-faint);
+  font-size: 22rpx;
+  text-align: center;
+}

@@ -1,5 +1,7 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { ROUTES } from '../../constants/routes'
+import { ensureFreshSession, getAccessToken } from '../../services/auth-session'
+import { waitForMiniprogramAuth } from '../../services/auth-bootstrap'
 import { monitor } from '../../services/monitor-adapter'
 import {
   getMockPapersApi,
@@ -170,13 +172,40 @@ Page({
     isTimelineSwapping: false,
   },
 
+  redirectingToLogin: false,
+
   onShow() {
     monitor.track(MONITOR_EVENTS.HOME_VIEW)
+    void this.ensureAuthThenLoad()
+  },
+
+  async ensureAuthThenLoad() {
+    await waitForMiniprogramAuth()
+    await ensureFreshSession()
+    if (!getAccessToken()) {
+      this.redirectToLogin()
+      return
+    }
     void this.loadHome()
   },
 
-  onLoad() {
+  async onLoad() {
     this.setData(getCustomNavigationMetrics())
+    // 只等待鉴权就绪;未登录的跳转统一由 onShow 处理,避免双重 redirectTo
+    await waitForMiniprogramAuth()
+  },
+
+  redirectToLogin() {
+    if (this.redirectingToLogin) {
+      return
+    }
+    this.redirectingToLogin = true
+    wx.redirectTo({
+      url: ROUTES.LOGIN,
+      complete: () => {
+        this.redirectingToLogin = false
+      },
+    })
   },
 
   onUnload() {

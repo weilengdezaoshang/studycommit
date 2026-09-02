@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from './services/api-config'
+import { bootstrapMiniprogramAuth } from './services/auth-bootstrap'
 import { monitor } from './services/monitor-adapter'
 import { MONITOR_EVENTS } from './constants/events'
 
@@ -6,9 +7,11 @@ App({
   globalData: {
     apiBaseUrl: getApiBaseUrl(),
   },
+  authReady: undefined as unknown as Promise<boolean>,
 
   onLaunch() {
     monitor.track(MONITOR_EVENTS.APP_LAUNCH)
+    this.authReady = bootstrapMiniprogramAuth()
   },
 
   onError(error: string) {

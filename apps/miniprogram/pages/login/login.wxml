@@ -1,0 +1,14 @@
+<view class="login-page">
+  <text class="headline">登录 StudyCommit</text>
+  <text class="subline">用微信继续整理你的学习记录</text>
+  <button
+    class="login-button {{loggingIn ? 'is-disabled' : ''}}"
+    disabled="{{loggingIn}}"
+    bindtap="onWechatLogin"
+    hover-class="none"
+  >
+    {{loggingIn ? '登录中' : '微信一键登录'}}
+  </button>
+  <text wx:if="{{error}}" class="error" role="alert">{{error}}</text>
+  <text class="hint">首次登录将自动创建账户</text>
+</view>
