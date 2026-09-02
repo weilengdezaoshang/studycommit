@@ -28,7 +28,12 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
 export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
 export const userStatus = pgEnum('user_status', ['active', 'disabled', 'merged'])
-export const authProvider = pgEnum('auth_provider', ['phone', 'wechat_unionid', 'wechat_mini'])
+export const authProvider = pgEnum('auth_provider', [
+  'phone',
+  'wechat_unionid',
+  'wechat_mini',
+  'account',
+])
 export const authDeviceType = pgEnum('auth_device_type', ['desktop', 'mobile', 'miniprogram'])
 
 export const users = pgTable(
@@ -56,6 +61,7 @@ export const authIdentities = pgTable(
       .references(() => users.id, { onDelete: 'restrict' }),
     provider: authProvider('provider').notNull(),
     providerSubject: varchar('provider_subject', { length: 128 }).notNull(),
+    passwordHash: text('password_hash'),
     verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },

@@ -38,6 +38,56 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(BadRequestException)
   })
 
+  it('账号已存在时拒绝注册', async () => {
+    const repository = {
+      findIdentity: vi.fn().mockResolvedValue({ userId: crypto.randomUUID() }),
+    }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: vi.fn() } as never,
+      {} as never,
+    )
+    await expect(
+      service.registerAccount({ account: 'demo', password: 'secret123' }),
+    ).rejects.toMatchObject({ response: { code: AUTH_ERROR.accountExists.code } })
+  })
+
+  it('账号密码错误时返回固定错误码', async () => {
+    const repository = {
+      findIdentity: vi.fn().mockResolvedValue({
+        userId: crypto.randomUUID(),
+        passwordHash: 'scrypt$invalid$invalid',
+      }),
+    }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: vi.fn() } as never,
+      {} as never,
+    )
+    await expect(
+      service.loginAccount({ account: 'demo', password: 'wrong-password', deviceType: 'desktop' }),
+    ).rejects.toMatchObject({ response: { code: AUTH_ERROR.invalidCredentials.code } })
+  })
+
+  it('未注册账号登录失败且不自动创建用户', async () => {
+    const repository = {
+      findIdentity: vi.fn().mockResolvedValue(null),
+      createAccountUser: vi.fn(),
+    }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: vi.fn() } as never,
+      {} as never,
+    )
+    await expect(
+      service.loginAccount({ account: 'demo', password: 'secret123', deviceType: 'desktop' }),
+    ).rejects.toMatchObject({ response: { code: AUTH_ERROR.invalidCredentials.code } })
+    expect(repository.createAccountUser).not.toHaveBeenCalled()
+  })
+
   it('微信登录码无效时返回固定错误码', async () => {
     const wechat = {
       exchangeCode: vi

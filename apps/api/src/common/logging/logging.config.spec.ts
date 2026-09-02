@@ -55,6 +55,7 @@ describe('createLoggingConfig', () => {
         'req.body.refreshToken',
         'req.body.code',
         'req.body.phone',
+        'req.body.account',
         'res.headers["set-cookie"]',
       ]),
     )

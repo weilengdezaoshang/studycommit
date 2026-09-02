@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  accountLoginInputSchema,
+  accountRegisterInputSchema,
   sendPhoneCodeInputSchema,
   verifyPhoneInputSchema,
   verifyPhoneOutputSchema,
@@ -54,5 +56,44 @@ describe('phone auth contract', () => {
     expect(wechatMiniprogramLoginInputSchema.safeParse({ code: 'a'.repeat(129) }).success).toBe(
       false,
     )
+  })
+
+  it('账号密码登录去掉首尾空格并要求足够长度', () => {
+    expect(
+      accountLoginInputSchema.parse({
+        account: '  demo_user  ',
+        password: 'secret123',
+        deviceType: 'desktop',
+      }),
+    ).toMatchObject({ account: 'demo_user', deviceType: 'desktop' })
+    expect(
+      accountLoginInputSchema.safeParse({
+        account: 'a',
+        password: 'secret123',
+        deviceType: 'mobile',
+      }).success,
+    ).toBe(false)
+    expect(
+      accountLoginInputSchema.safeParse({
+        account: 'demo_user',
+        password: 'short',
+        deviceType: 'mobile',
+      }).success,
+    ).toBe(false)
+  })
+
+  it('账号注册不携带设备类型，登录才需要', () => {
+    expect(
+      accountRegisterInputSchema.parse({ account: '  demo_user  ', password: 'secret123' }),
+    ).toEqual({ account: 'demo_user', password: 'secret123' })
+    expect(
+      accountRegisterInputSchema.parse({ account: 'demo_user', password: 'secret123' }),
+    ).not.toHaveProperty('deviceType')
+    expect(
+      accountRegisterInputSchema.safeParse({
+        account: 'demo_user',
+        password: 'short',
+      }).success,
+    ).toBe(false)
   })
 })

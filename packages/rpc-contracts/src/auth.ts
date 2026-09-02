@@ -71,6 +71,26 @@ export const wechatMiniprogramLoginInputSchema = z.object({
   code: z.string().trim().min(1).max(128),
 })
 
+const accountCredentialSchema = z.object({
+  account: z
+    .string()
+    .trim()
+    .min(2)
+    .max(32)
+    .regex(/^[a-zA-Z0-9_\u4e00-\u9fff]+$/, '账号仅能包含字母、数字、下划线或汉字'),
+  password: z.string().min(8).max(128),
+})
+
+export const accountRegisterInputSchema = accountCredentialSchema
+
+export const accountRegisterOutputSchema = z.object({
+  account: z.string().min(2).max(32),
+})
+
+export const accountLoginInputSchema = accountCredentialSchema.extend({
+  deviceType: deviceTypeSchema,
+})
+
 export type AuthUser = z.infer<typeof authUserSchema>
 export type TokenPair = z.infer<typeof tokenPairSchema>
 export type LoginInput = z.infer<typeof loginInputSchema>
@@ -83,3 +103,6 @@ export type CurrentUser = z.infer<typeof currentUserSchema>
 export type AuthTokens = z.infer<typeof authTokensSchema>
 export type VerifyPhoneOutput = z.infer<typeof verifyPhoneOutputSchema>
 export type WechatMiniprogramLoginInput = z.infer<typeof wechatMiniprogramLoginInputSchema>
+export type AccountLoginInput = z.infer<typeof accountLoginInputSchema>
+export type AccountRegisterInput = z.infer<typeof accountRegisterInputSchema>
+export type AccountRegisterOutput = z.infer<typeof accountRegisterOutputSchema>

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Inject,
@@ -9,6 +10,9 @@ import {
 import { ConfigService } from '@nestjs/config'
 import { createHash, randomBytes, randomInt } from 'node:crypto'
 import type {
+  AccountLoginInput,
+  AccountRegisterInput,
+  AccountRegisterOutput,
   CurrentUser,
   DeviceType,
   SendPhoneCodeOutput,
@@ -24,6 +28,7 @@ import {
   DEFAULT_NICKNAME,
 } from './auth.constants'
 import { AuthRepository, type User } from './auth.repository'
+import { dummyPasswordHash, hashPassword, normalizeAccount, verifyPassword } from './password'
 import { WechatMiniClient } from './wechat-mini.client'
 
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex')
@@ -65,6 +70,7 @@ export class AuthService {
     @Inject(WechatMiniClient) private readonly wechatMini: WechatMiniClient,
   ) {}
 
+  // 短信发送尚未接入：验证码仅存 Redis（auth:otp:<sha256(phone)>），不会真实下发。
   async sendPhoneCode(phone: string): Promise<SendPhoneCodeOutput> {
     const cooled = await this.redis.setNxEx(otpCooldownKey(phone), AUTH_CODE_COOLDOWN_SECONDS, '1')
     if (!cooled) {
@@ -86,6 +92,36 @@ export class AuthService {
     const user = identity
       ? await this.requireActiveUser(identity.userId)
       : await this.repository.createPhoneUser(subject)
+    const tokens = await this.issueTokens(user.id, input.deviceType)
+    return { user: this.toCurrentUser(user), tokens }
+  }
+
+  async registerAccount(input: AccountRegisterInput): Promise<AccountRegisterOutput> {
+    const subject = normalizeAccount(input.account)
+    const existing = await this.repository.findIdentity(AUTH_PROVIDER.account, subject)
+    if (existing) {
+      throw new ConflictException(AUTH_ERROR.accountExists)
+    }
+    const created = await this.repository.createAccountUser(
+      subject,
+      await hashPassword(input.password),
+      input.account.slice(0, 50),
+    )
+    if (!created) {
+      throw new ConflictException(AUTH_ERROR.accountExists)
+    }
+    return { account: input.account }
+  }
+
+  async loginAccount(input: AccountLoginInput): Promise<VerifyPhoneOutput> {
+    const subject = normalizeAccount(input.account)
+    const identity = await this.repository.findIdentity(AUTH_PROVIDER.account, subject)
+    const passwordHash = identity?.passwordHash ?? (await dummyPasswordHash())
+    const matched = await verifyPassword(input.password, passwordHash)
+    if (!identity?.passwordHash || !matched) {
+      throw new UnauthorizedException(AUTH_ERROR.invalidCredentials)
+    }
+    const user = await this.requireActiveUser(identity.userId)
     const tokens = await this.issueTokens(user.id, input.deviceType)
     return { user: this.toCurrentUser(user), tokens }
   }

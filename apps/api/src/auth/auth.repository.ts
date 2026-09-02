@@ -36,6 +36,27 @@ export class AuthRepository {
     return identity ?? null
   }
 
+  async createAccountUser(subject: string, passwordHash: string, nickname: string) {
+    try {
+      return await this.database.db.transaction(async (tx) => {
+        const [user] = await tx.insert(users).values({ nickname }).returning()
+        await tx.insert(authIdentities).values({
+          userId: user.id,
+          provider: AUTH_PROVIDER.account,
+          providerSubject: subject,
+          passwordHash,
+          verifiedAt: new Date(),
+        })
+        return user
+      })
+    } catch (error) {
+      if (!isConstraint(error, AUTH_IDENTITIES_PROVIDER_SUBJECT_UNIQUE)) {
+        throw error
+      }
+      return null
+    }
+  }
+
   async createPhoneUser(subject: string) {
     try {
       return await this.database.db.transaction(async (tx) => {

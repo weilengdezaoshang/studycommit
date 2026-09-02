@@ -219,4 +219,87 @@ describe('Auth API', () => {
   it('空白微信登录码拒绝', async () => {
     expect((await wechatLogin('   ')).statusCode).toBe(400)
   })
+
+  const accountLogin = (body: object) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/auth/account/login',
+      payload: body,
+    })
+
+  const accountRegister = (body: object) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/auth/account/register',
+      payload: body,
+    })
+
+  it('先注册再登录，相同账号复用同一用户', async () => {
+    const registered = await accountRegister({
+      account: 'Demo_User',
+      password: 'secret123',
+    })
+    expect(registered.statusCode).toBe(201)
+    expect(registered.json()).toEqual({ account: 'Demo_User' })
+    expect(registered.json()).not.toHaveProperty('tokens')
+
+    const unregistered = await accountLogin({
+      account: 'missing_user',
+      password: 'secret123',
+      deviceType: 'desktop',
+    })
+    expect(unregistered.statusCode).toBe(401)
+    expect(unregistered.json().error.code).toBe('AUTH_INVALID_CREDENTIALS')
+
+    const first = await accountLogin({
+      account: 'demo_user',
+      password: 'secret123',
+      deviceType: 'desktop',
+    })
+    expect(first.statusCode).toBe(200)
+    expect(first.json().user).toMatchObject({
+      nickname: 'Demo_User',
+      status: 'active',
+    })
+    const me = await app.inject({
+      method: 'GET',
+      url: '/api/me',
+      headers: { authorization: `Bearer ${first.json().tokens.accessToken}` },
+    })
+    expect(me.statusCode).toBe(200)
+    expect(me.json().id).toBe(first.json().user.id)
+  })
+
+  it('重复注册同一账号冲突', async () => {
+    await accountRegister({ account: 'exists_user', password: 'secret123' })
+    const duplicate = await accountRegister({ account: 'Exists_User', password: 'other-pass' })
+    expect(duplicate.statusCode).toBe(409)
+    expect(duplicate.json().error.code).toBe('AUTH_ACCOUNT_EXISTS')
+  })
+
+  it('错误密码不暴露账号是否存在', async () => {
+    await accountRegister({
+      account: 'exists_user',
+      password: 'secret123',
+    })
+    const wrong = await accountLogin({
+      account: 'exists_user',
+      password: 'other-pass',
+      deviceType: 'desktop',
+    })
+    expect(wrong.statusCode).toBe(401)
+    expect(wrong.json().error.code).toBe('AUTH_INVALID_CREDENTIALS')
+  })
+
+  it('过短密码拒绝', async () => {
+    expect(
+      (
+        await accountLogin({
+          account: 'demo_user',
+          password: 'short',
+          deviceType: 'desktop',
+        })
+      ).statusCode,
+    ).toBe(400)
+  })
 })
