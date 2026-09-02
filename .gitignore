@@ -20,3 +20,7 @@ apps/desktop/playwright-report/
 *.md
 !README.md
 !**/README.md
+
+# 本地工具产物
+.impeccable/
+.xgrok/
