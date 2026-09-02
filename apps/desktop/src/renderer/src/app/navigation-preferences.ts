@@ -1,17 +1,15 @@
-import { isTopicSection, isTopLevelPath, type TopicSection, type TopLevelPath } from './routes'
+import { isTopLevelPath, type TopLevelPath } from './routes'
 
 export const NAVIGATION_STORAGE_KEY = 'studycommit:navigation:v1'
 
 export interface NavigationPreferencesV1 {
   version: 1
   lastTopLevelPath: TopLevelPath
-  lastTopicSectionById: Record<string, TopicSection>
 }
 
 export const DEFAULT_NAVIGATION_PREFERENCES: NavigationPreferencesV1 = {
   version: 1,
   lastTopLevelPath: '/today',
-  lastTopicSectionById: {},
 }
 
 function isNavigationPreferences(value: unknown): value is NavigationPreferencesV1 {
@@ -19,30 +17,21 @@ function isNavigationPreferences(value: unknown): value is NavigationPreferences
     return false
   }
   const candidate = value as Record<string, unknown>
-  if (candidate.version !== 1 || !isTopLevelPath(candidate.lastTopLevelPath)) {
-    return false
-  }
-  if (!candidate.lastTopicSectionById || typeof candidate.lastTopicSectionById !== 'object') {
-    return false
-  }
-
-  return Object.entries(candidate.lastTopicSectionById).every(
-    ([topicId, section]) => topicId.length > 0 && isTopicSection(section),
-  )
+  return candidate.version === 1 && isTopLevelPath(candidate.lastTopLevelPath)
 }
 
 export function loadNavigationPreferences(storage: Storage): NavigationPreferencesV1 {
   try {
     const raw = storage.getItem(NAVIGATION_STORAGE_KEY)
     if (!raw) {
-      return { ...DEFAULT_NAVIGATION_PREFERENCES, lastTopicSectionById: {} }
+      return { ...DEFAULT_NAVIGATION_PREFERENCES }
     }
     const parsed: unknown = JSON.parse(raw)
     return isNavigationPreferences(parsed)
-      ? parsed
-      : { ...DEFAULT_NAVIGATION_PREFERENCES, lastTopicSectionById: {} }
+      ? { version: 1, lastTopLevelPath: parsed.lastTopLevelPath }
+      : { ...DEFAULT_NAVIGATION_PREFERENCES }
   } catch {
-    return { ...DEFAULT_NAVIGATION_PREFERENCES, lastTopicSectionById: {} }
+    return { ...DEFAULT_NAVIGATION_PREFERENCES }
   }
 }
 
@@ -55,7 +44,6 @@ export function saveNavigationPreferences(
     JSON.stringify({
       version: 1,
       lastTopLevelPath: preferences.lastTopLevelPath,
-      lastTopicSectionById: preferences.lastTopicSectionById,
     }),
   )
 }

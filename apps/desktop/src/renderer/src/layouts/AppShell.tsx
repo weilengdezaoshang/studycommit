@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { ErrorBoundary } from '../components/feedback/ErrorBoundary'
 import { Sidebar } from '../components/navigation/Sidebar'
@@ -8,7 +8,6 @@ import { useStudySessionController } from '@studycommit/common/study-session-rea
 import { useDesktopServices } from '../features/study-session/api/DesktopServicesProvider'
 import { subscribeWindowFocus } from '../features/study-session/subscribe-window-focus'
 import { TodayPage } from '../features/study-session/pages/TodayPage'
-import { MockTodayPage } from '../features/mock/MockWorkspacePages'
 
 function PageOutlet(): React.JSX.Element {
   const location = useLocation()
@@ -38,6 +37,13 @@ export function AppShell({
   const { pathname } = useLocation()
   const showToday = pathname === '/today'
 
+  // 列表页空态通过事件请求打开抽屉(抽屉状态在 shell 层)
+  useEffect(() => {
+    const open = (): void => setDrawerOpen(true)
+    window.addEventListener('studycommit:open-drawer', open)
+    return () => window.removeEventListener('studycommit:open-drawer', open)
+  }, [])
+
   return (
     <div className="app-shell">
       <NavigationPersistence />
@@ -45,11 +51,12 @@ export function AppShell({
       <div className="workspace">
         <AppHeader drawerOpen={drawerOpen} onMenu={openDrawer} />
         <main className="content" tabIndex={-1}>
-          {showToday ? (
+          {showToday && workspaceMode === 'study-session' ? (
             <ErrorBoundary>
-              {workspaceMode === 'study-session' ? <TodayPage study={study} /> : <MockTodayPage />}
+              <TodayPage study={study} />
             </ErrorBoundary>
           ) : (
+            /* 路由决定内容:/today 渲染纸页首页(选中日期的记录) */
             <PageOutlet />
           )}
         </main>

@@ -58,7 +58,7 @@ button:focus-visible {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 18px 12px 14px;
+  padding: 18px 16px 16px;
   overflow: auto;
   border-right: 1px solid var(--color-border);
   background: var(--color-background);
@@ -103,16 +103,29 @@ button:focus-visible {
 .drawer-close {
   margin-left: auto;
   border: 0;
-  color: var(--color-text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--color-text);
   background: transparent;
-  font-size: 22px;
   cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.drawer-close:hover {
+  background: var(--color-surface);
+}
+
+.drawer-close .app-icon {
+  width: 20px;
+  height: 20px;
 }
 .drawer-intro {
   display: grid;
   gap: 4px;
-  padding: 8px 9px 14px;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0 9px 12px;
 }
 .drawer-intro strong {
   font-size: 15px;
@@ -151,8 +164,9 @@ button:focus-visible {
 .mini-calendar__week,
 .mini-calendar__days {
   display: grid;
-  grid-template-columns: repeat(7, minmax(24px, 1fr));
-  column-gap: 6px;
+  grid-template-columns: repeat(7, minmax(20px, 1fr));
+  column-gap: 2px;
+  justify-items: center;
 }
 .mini-calendar__week {
   margin-bottom: 6px;
@@ -5356,4 +5370,998 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
+}
+
+/* ---------- 抽屉月历(与移动端对齐) ---------- */
+.drawer-month-nav {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.month-shift {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: var(--muted-soft, #96958b);
+  cursor: pointer;
+}
+
+.month-shift svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.month-label {
+  color: var(--muted-soft, #96958b);
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0 2px;
+}
+
+.month-spacer {
+  flex: 1;
+}
+
+.review-link {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-faint, #aaa99f);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.review-link svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.drawer-calendar .mini-calendar__week span {
+  font-size: 12px;
+  color: var(--muted-soft, #96958b);
+}
+
+.calendar-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.calendar-cell--blank {
+  cursor: default;
+}
+
+.calendar-cell--selected {
+  border-color: var(--action, #53635a);
+  background: var(--action-surface, #dce9d8);
+}
+
+.calendar-paper-visual {
+  position: relative;
+  width: 20px;
+  height: 24px;
+}
+
+.calendar-paper {
+  position: absolute;
+  width: 14px;
+  height: 18px;
+  border-radius: 2px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--paper, #fffef9);
+}
+
+/* ---------- 抽屉分区(与移动端对齐) ---------- */
+.drawer-section__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 36px;
+}
+
+.drawer-section h2 {
+  margin: 0;
+  color: var(--muted-soft, #96958b);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.drawer-add {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: var(--muted-soft, #96958b);
+  cursor: pointer;
+}
+
+.drawer-add:hover {
+  background: var(--color-surface, #eceeee);
+}
+
+.drawer-add svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.drawer-link {
+  min-height: 44px;
+  gap: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.drawer-link small {
+  margin-left: auto;
+}
+
+.drawer-count {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--action-surface-strong, #e2ece0);
+  color: var(--action, #53635a);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  display: grid;
+  place-items: center;
+}
+
+.drawer-link--muted {
+  color: var(--muted-soft, #96958b);
+  font-size: 11px;
+  padding-left: 30px;
+}
+
+/* 抽屉月历:紧凑尺寸(对齐移动端) */
+.calendar-cell {
+  height: 30px;
+  border-width: 2px;
+  border-radius: 7px;
+}
+
+.calendar-cell--selected {
+  border-color: var(--action, #53635a);
+}
+
+.calendar-paper-visual {
+  width: 15px;
+  height: 18px;
+}
+
+.calendar-paper {
+  width: 10px;
+  height: 13px;
+  border-radius: 2px;
+}
+
+.drawer-calendar .mini-calendar__legend {
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.drawer-calendar .calendar-paper-visual {
+  width: 15px;
+  height: 18px;
+}
+
+/* ---------- 双列年月选择浮层 ---------- */
+.drawer-calendar {
+  position: relative;
+}
+
+.month-label--button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.wheel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.wheel-popover {
+  position: absolute;
+  top: 30px;
+  left: -8px;
+  right: -8px;
+  z-index: 31;
+  background: var(--paper, #fffef9);
+  border: 1px solid var(--color-border, #ccd6cc);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(43, 56, 48, 0.16);
+  padding: 10px 12px 8px;
+}
+
+.wheel-popover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wheel-popover__head span {
+  color: var(--ink, #34423b);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wheel-popover__head button {
+  border: 0;
+  background: transparent;
+  color: var(--action, #53635a);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wheel-popover__preview {
+  margin: 4px 0 6px;
+  text-align: center;
+  color: var(--muted, #7b867e);
+  font-size: 11px;
+}
+
+.wheel-columns {
+  display: flex;
+  gap: 8px;
+}
+
+.wheel-column {
+  flex: 1;
+  height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--line, #ccd6cc);
+  border-radius: 8px;
+  background: var(--surface-soft, #fbfcf7);
+  scrollbar-width: none;
+}
+
+.wheel-column::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-row {
+  width: 100%;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--muted, #7b867e);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.wheel-row.is-selected {
+  color: var(--ink, #34423b);
+  font-weight: 600;
+  background: var(--action-surface, #dce9d8);
+}
+
+.wheel-popover__hint {
+  margin: 6px 0 0;
+  text-align: center;
+  color: var(--muted-faint, #aaa99f);
+  font-size: 10px;
+}
+
+/* ---------- 抽屉月历:最终收口(作用域内覆盖旧 SVG 时代规则) ---------- */
+.drawer-calendar .calendar-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.drawer-calendar .calendar-cell:hover {
+  background: var(--action-surface, #dce9d8);
+}
+
+.drawer-calendar .calendar-cell:active {
+  transform: scale(0.92);
+}
+
+.drawer-calendar .calendar-cell--selected,
+.drawer-calendar .calendar-cell--selected:hover {
+  border-color: transparent;
+  background: var(--action-surface, #dce9d8);
+  box-shadow: 0 1px 6px rgba(52, 66, 59, 0.16);
+}
+
+.drawer-calendar .calendar-paper-visual {
+  position: relative;
+  width: 18px;
+  height: 21px;
+}
+
+.drawer-calendar .calendar-paper {
+  position: absolute;
+  width: 12px;
+  height: 15px;
+  border-radius: 2px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--paper, #fffef9);
+  fill: none;
+  stroke: none;
+}
+
+.drawer-calendar .calendar-day__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-faint, #aaa99f);
+}
+
+/* ---------- 抽屉点击反馈 ---------- */
+.drawer-link {
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.drawer-link:active {
+  background: var(--action-surface-strong, #e2ece0);
+  transform: scale(0.985);
+}
+
+.drawer-add,
+.month-shift {
+  border-radius: 8px;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.drawer-add:active,
+.month-shift:active {
+  transform: scale(0.9);
+  background: var(--color-surface, #eceeee);
+}
+
+.review-link {
+  border-radius: 8px;
+  padding: 4px 6px;
+  transition: background 140ms ease;
+}
+
+.review-link:hover {
+  background: var(--color-surface, #eceeee);
+}
+
+/* ---------- 桌面纸页首页与问题页(与移动端对齐) ---------- */
+.papers-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--paper, #fffef9);
+}
+
+.papers-week {
+  display: flex;
+  padding: 8px 16px 10px;
+  border-bottom: 1px solid var(--line, #ccd6cc);
+  flex: none;
+}
+
+.papers-week__day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.papers-week__day.is-selected {
+  background: var(--selected-surface, #edf3e9);
+}
+
+.papers-week__label {
+  color: var(--muted, #7b867e);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.papers-week__visual {
+  position: relative;
+  width: 22px;
+  height: 24px;
+}
+
+.papers-week__sheet {
+  position: absolute;
+  width: 12px;
+  height: 15px;
+  border-radius: 2px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--paper, #fffef9);
+}
+
+.papers-week__dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted-faint, #aaa99f);
+}
+
+.papers-timeline {
+  padding: 14px 16px 40px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.papers-entry {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.papers-entry__marker {
+  width: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.papers-entry__dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--action, #53635a);
+  background: var(--paper, #fffef9);
+}
+
+.papers-entry__main {
+  flex: 1;
+  min-width: 0;
+  padding-left: 8px;
+}
+
+.papers-entry__time {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+}
+
+.papers-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 66px;
+  text-align: left;
+  border: 1px solid var(--line, #ccd6cc);
+  border-radius: 8px;
+  background: var(--surface-soft, #fbfcf7);
+  padding: 12px 12px 12px 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.papers-card:hover {
+  background: var(--selected-surface, #edf3e9);
+}
+
+.papers-card__tag {
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 2px;
+}
+
+.papers-card__fold {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 20px solid var(--accent, #f1dc7a);
+  border-left: 20px solid transparent;
+}
+
+.papers-card__content {
+  display: block;
+  color: var(--ink, #34423b);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.papers-card__meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted, #7b867e);
+}
+
+.papers-card__hint {
+  color: var(--action, #53635a);
+  font-weight: 500;
+}
+
+.papers-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-bottom: 60px;
+}
+
+.papers-empty__title {
+  margin: 0;
+  color: var(--ink, #34423b);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.papers-empty__copy {
+  margin: 0;
+  color: var(--muted, #7b867e);
+  font-size: 13px;
+}
+
+.problems-page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px 20px;
+  background: var(--paper, #fffef9);
+}
+
+.problems-page__title {
+  margin: 0 0 16px;
+  color: var(--muted, #7b867e);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.problems-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.problems-page__item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line, #ccd6cc);
+  background: transparent;
+  padding: 0 0 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.problems-page__date {
+  color: var(--action, #53635a);
+  font-size: 12px;
+}
+
+.problems-page__content {
+  color: var(--ink, #34423b);
+  font-size: 14px;
+  line-height: 21px;
+}
+
+.problems-page__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 120px;
+  color: var(--muted, #7b867e);
+}
+
+.problems-page__empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.problems-page__empty small {
+  color: var(--muted-faint, #aaa99f);
+  font-size: 12px;
+}
+
+/* ---------- 空态插画 ---------- */
+.paper-empty-illustration {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paper-empty-illustration__circle {
+  position: absolute;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  background: var(--surface-warm, #f1f5ef);
+}
+
+.paper-empty-illustration__sheet {
+  position: absolute;
+  width: 46px;
+  height: 58px;
+  border-radius: 5px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--paper, #fffef9);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding-left: 8px;
+  box-shadow: 0 3px 8px rgba(52, 66, 59, 0.08);
+}
+
+.paper-empty-illustration__sheet--back {
+  transform: rotate(-8deg) translateX(-16px);
+}
+
+.paper-empty-illustration__sheet--front {
+  transform: rotate(6deg) translateX(12px) translateY(-6px);
+}
+
+.paper-empty-illustration__sheet i {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line, #ccd6cc);
+}
+
+.paper-empty-illustration__fold {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 0;
+  height: 0;
+  border-top: 14px solid var(--accent, #f1dc7a);
+  border-left: 14px solid transparent;
+  border-top-right-radius: 5px;
+}
+
+.paper-empty-illustration__dot {
+  position: absolute;
+  right: 14px;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #f1dc7a);
+}
+
+/* ---------- 抽屉行最终收口(强制 flex 行布局,修复堆叠与边框) ---------- */
+.sidebar .drawer-section .drawer-link {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sidebar .drawer-section .drawer-link .app-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.sidebar .drawer-section .drawer-count {
+  margin-left: auto;
+  flex: none;
+}
+
+/* 首页头部:月份标题 + 周汇总 */
+.papers-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12px 16px 4px;
+}
+
+.papers-header h1 {
+  margin: 0;
+  color: var(--ink, #34423b);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.papers-header span {
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+}
+
+/* ---------- 桌面页面通用(草稿/专题/复习/设置) ---------- */
+.topics-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.topics-heading__copy {
+  margin: 4px 0 0;
+  color: var(--muted, #7b867e);
+  font-size: 13px;
+}
+
+.topics-heading__create {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  border-radius: 999px;
+  background: var(--action-surface, #dce9d8);
+  color: var(--action, #53635a);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.topics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.topic-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--line, #ccd6cc);
+  border-radius: 12px;
+  background: var(--surface-soft, #fbfcf7);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.topic-card:hover {
+  background: var(--selected-surface, #edf3e9);
+}
+
+.topic-card:active {
+  transform: scale(0.98);
+}
+
+.topic-card__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.topic-card__name {
+  color: var(--ink, #34423b);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.topic-card__count {
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+}
+
+.topics-summary {
+  margin-top: 20px;
+  color: var(--muted-faint, #aaa99f);
+  font-size: 12px;
+}
+
+.topic-overview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.topic-overview__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.topic-overview__count {
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+}
+
+.records-page__subtitle {
+  margin: 20px 0 10px;
+  color: var(--muted-soft, #96958b);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.review-book {
+  background: var(--action, #53635a);
+  border-radius: 14px;
+  padding: 24px;
+  color: var(--paper, #fffef9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 10px 24px rgba(52, 66, 59, 0.16);
+}
+
+.review-book__kicker {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--accent, #f1dc7a);
+}
+
+.review-book__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.review-book__copy {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  opacity: 0.85;
+}
+
+.review-book__stats {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.review-book__stats b {
+  font-size: 18px;
+  margin-right: 4px;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  margin: 0 0 10px;
+  color: var(--muted-soft, #96958b);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.settings-line {
+  margin: 0;
+  color: var(--muted, #7b867e);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.settings-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-account__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent, #f1dc7a);
+  color: var(--ink, #34423b);
+  font-weight: 600;
+  display: grid;
+  place-items: center;
+}
+
+.settings-account__name {
+  color: var(--ink, #34423b);
+  font-size: 14px;
+}
+
+.settings-account__meta {
+  color: var(--muted-faint, #aaa99f);
+  font-size: 11px;
+}
+
+.settings-logout {
+  margin-left: auto;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong, #b9c8bc);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--danger, #b42318);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.drawer-footer-nav {
+  display: flex;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.drawer-footer-nav button {
+  flex: 1;
+  min-height: 34px;
+  border: 1px solid var(--line, #ccd6cc);
+  border-radius: 9px;
+  background: var(--surface-soft, #fbfcf7);
+  color: var(--muted, #7b867e);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.drawer-footer-nav button:hover {
+  color: var(--ink, #34423b);
+  background: var(--selected-surface, #edf3e9);
+}
+
+.drawer-empty-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted-soft, #96958b);
+}
+
+.auth-toggle-password {
+  align-self: flex-start;
+  cursor: pointer;
 }

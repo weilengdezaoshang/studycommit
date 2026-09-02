@@ -1,17 +1,28 @@
 import { useLocation } from 'react-router'
+import { usePapersState } from '../features/papers/papers-store'
 
-function getPageTitle(pathname: string): string {
-  if (pathname === '/drafts') {
-    return '草稿'
+function getPageTitle(
+  pathname: string,
+  topicNameOf: (topicId: string) => string | undefined,
+): string {
+  if (pathname.startsWith('/boxes/')) {
+    try {
+      return topicNameOf(decodeURIComponent(pathname.slice('/boxes/'.length))) ?? '纸页箱子'
+    } catch {
+      return '纸页箱子'
+    }
   }
-  if (pathname === '/topics') {
-    return '所有专题'
+  if (pathname === '/inbox') {
+    return '待整理的纸页'
   }
-  if (pathname.startsWith('/topics/')) {
-    return '专题'
+  if (pathname === '/problems') {
+    return '还在思考的问题'
   }
-  if (pathname === '/review') {
-    return '复习'
+  if (pathname === '/timeline') {
+    return '纸页时间线'
+  }
+  if (pathname.startsWith('/records/')) {
+    return '当日记录'
   }
   if (pathname === '/desk') {
     return '成长书桌'
@@ -33,7 +44,16 @@ export function AppHeader({
   onMenu: () => void
 }): React.JSX.Element {
   const { pathname } = useLocation()
+  const papers = usePapersState()
+  const problemCount = papers.papers.filter((paper) => {
+    if (paper.deletedAt) {
+      return false
+    }
+    const extra = papers.extras[paper.id]
+    return extra?.hasQuestion && !extra.isQuestionResolved
+  }).length
   const isToday = pathname === '/today' || pathname === '/'
+  const topicNameOf = (topicId: string) => papers.topics.find((topic) => topic.id === topicId)?.name
 
   return (
     <header className={`app-header${isToday ? ' app-header--today' : ''}`}>
@@ -53,17 +73,17 @@ export function AppHeader({
           </span>
         </button>
         {isToday ? (
-          <h1>继续一个问题</h1>
+          <h1>纸页时间线</h1>
         ) : (
           <div>
             <span className="app-header__eyebrow">StudyCommit 桌面端</span>
-            <h1>{getPageTitle(pathname)}</h1>
+            <h1>{getPageTitle(pathname, topicNameOf)}</h1>
           </div>
         )}
       </div>
       <span className={isToday ? 'home-question-status' : 'local-status'}>
         <i aria-hidden="true" />
-        {isToday ? '还有 2 个问题在等你' : '本地工作'}
+        {isToday ? `${problemCount} 个问题在等你` : '本地工作'}
       </span>
     </header>
   )

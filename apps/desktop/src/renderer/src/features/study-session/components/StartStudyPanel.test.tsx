@@ -23,7 +23,6 @@ describe('StartStudyPanel', () => {
     })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
     expect(await screen.findByLabelText('专题')).toHaveValue('')
-    expect(screen.getByRole('link', { name: '今天' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByLabelText('学习目标')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
     expect(screen.getByText('请选择一个专题后再开始。')).toBeInTheDocument()
@@ -33,16 +32,6 @@ describe('StartStudyPanel', () => {
     expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
     await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
     expect(screen.getByRole('button', { name: '开始学习' })).toBeEnabled()
-  })
-
-  it('shows a path to topics when none exist', async () => {
-    renderStudyApp('/today', {
-      topics: createTopicGateway({
-        listActive: async () => ({ items: [], pageInfo: { hasNextPage: false, nextCursor: null } }),
-      }),
-    })
-    await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
-    expect(await screen.findByRole('link', { name: '前往专题' })).toHaveAttribute('href', '/topics')
   })
 
   it('creates a session once and stays on today with timer controls', async () => {

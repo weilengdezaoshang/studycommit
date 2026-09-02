@@ -1,14 +1,17 @@
 import { lazy, Suspense } from 'react'
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
+import { Link, Navigate, Route, Routes, useParams } from 'react-router'
+import { usePapersState, todayKey } from '../features/papers/papers-store'
+import { parseDateKey } from '@studycommit/common/study-session-runtime'
 import { loadNavigationPreferences } from './navigation-preferences'
 import { routes } from './routes'
 import { AppShell } from '../layouts/AppShell'
-import { TopicLayout } from '../layouts/TopicLayout'
-import { PagePlaceholder } from '../components/PagePlaceholder'
 import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
-import { MockDraftsPage, MockReviewPage, MockTopicsPage } from '../features/mock/MockWorkspacePages'
+import { SettingsPage } from '../features/papers/SettingsPage'
+import { PapersHomePage } from '../features/papers/PapersHomePage'
+import { ProblemsPage } from '../features/papers/ProblemsPage'
+import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { setAuthSession, useAuthSession } from '../features/auth/session'
 
@@ -21,40 +24,90 @@ function LandingRedirect(): React.JSX.Element {
   return <Navigate to={preferences.lastTopLevelPath} replace />
 }
 
-function TopicRedirect(): React.JSX.Element {
-  const { topicId } = useParams()
-  if (!topicId) {
-    return <Navigate to={routes.topics()} replace />
-  }
-  const decoded = decodeURIComponent(topicId)
-  const preferences = loadNavigationPreferences(window.localStorage)
-  const section = preferences.lastTopicSectionById[decoded] ?? 'overview'
-  const target = {
-    overview: routes.topicOverview,
-    notes: routes.topicNotes,
-    map: routes.topicMap,
-    logs: routes.topicLogs,
-  }[section](decoded)
-  return <Navigate to={target} replace />
+function RecordsListPageBridge({
+  title,
+  emptyCopy,
+  matcher,
+  topicId,
+}: {
+  title: string
+  emptyCopy: string
+  matcher: (paper: import('../features/papers/view-model').PaperWithExtra) => boolean
+  topicId?: string
+}): React.JSX.Element {
+  const state = usePapersState()
+  const papers = state.papers
+    .filter((paper) => !paper.deletedAt)
+    .map((paper) => ({
+      ...paper,
+      extra: state.extras[paper.id] ?? {
+        hasQuestion: false,
+        isQuestionResolved: false,
+        photoPath: null,
+      },
+    }))
+    .filter((paper) => matcher(paper))
+  const topicById = new Map(state.topics.map((topic) => [topic.id, topic]))
+
+  return (
+    <RecordsListPage
+      key={title}
+      mode={title === '待整理的纸页' ? 'inbox' : 'box'}
+      title={title}
+      papers={papers}
+      emptyCopy={emptyCopy}
+      topicId={topicId}
+      topicNameOf={(paper) => {
+        const topic = paper.topicId ? topicById.get(paper.topicId) : undefined
+        return topic?.name ?? '待整理'
+      }}
+    />
+  )
 }
 
-function NoteDetailPage(): React.JSX.Element {
-  const navigate = useNavigate()
-  const { topicId, noteId } = useParams()
-  const decodedTopicId = topicId ? decodeURIComponent(topicId) : ''
+function DateRecordsBridge({ dateKey: dateKeyProp }: { dateKey?: string }): React.JSX.Element {
+  const params = useParams()
+  const dateKey = dateKeyProp ?? params.dateKey
+  const state = usePapersState()
+  const papers = state.papers
+    .filter((paper) => !paper.deletedAt && paper.createdAt.slice(0, 10) === dateKey)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((paper) => ({
+      ...paper,
+      extra: state.extras[paper.id] ?? {
+        hasQuestion: false,
+        isQuestionResolved: false,
+        photoPath: null,
+      },
+    }))
+  const topicById = new Map(state.topics.map((topic) => [topic.id, topic]))
+  const selected = dateKey ? parseDateKey(dateKey) : null
+
   return (
-    <section className="placeholder">
-      <span className="placeholder__label">EL-202</span>
-      <h2>笔记详情占位页</h2>
-      <p>笔记 ID：{noteId ? decodeURIComponent(noteId) : '无效'}</p>
-      <button
-        type="button"
-        className="button"
-        onClick={() => navigate(routes.topicNotes(decodedTopicId), { replace: true })}
-      >
-        返回笔记列表
-      </button>
-    </section>
+    <RecordsListPage
+      mode="date"
+      title={selected ? `${selected.month} 月 ${selected.day} 日 · 记录` : '记录'}
+      papers={papers}
+      emptyCopy="这天还没有纸页。"
+      topicNameOf={(paper) => {
+        const topic = paper.topicId ? topicById.get(paper.topicId) : undefined
+        return topic?.name ?? '待整理'
+      }}
+    />
+  )
+}
+
+function BoxRecordsBridge(): React.JSX.Element {
+  const { topicId } = useParams()
+  const state = usePapersState()
+  const topic = state.topics.find((item) => item.id === topicId)
+  return (
+    <RecordsListPageBridge
+      title={topic?.name ?? '箱子'}
+      emptyCopy="这个箱子还没有纸页。"
+      matcher={(paper) => paper.topicId === topicId}
+      topicId={topicId}
+    />
   )
 }
 
@@ -105,54 +158,28 @@ export function AppRoutes({
             }
           >
             <Route index element={<LandingRedirect />} />
-            <Route path="today" element={null} />
-            <Route path="drafts" element={<MockDraftsPage />} />
-            <Route path="topics" element={<MockTopicsPage />} />
-            <Route path="topics/:topicId" element={<TopicLayout />}>
-              <Route index element={<TopicRedirect />} />
-              <Route
-                path="overview"
-                element={
-                  <PagePlaceholder
-                    title="专题概览"
-                    description="将展示该专题的学习进度与内容摘要。"
-                    nextTask="EL-005"
-                  />
-                }
-              />
-              <Route
-                path="notes"
-                element={
-                  <PagePlaceholder
-                    title="专题笔记"
-                    description="Markdown 笔记列表和编辑器将在 EL-202 实现。"
-                    nextTask="EL-202"
-                  />
-                }
-              />
-              <Route path="notes/:noteId" element={<NoteDetailPage />} />
-              <Route
-                path="map"
-                element={
-                  <PagePlaceholder
-                    title="知识地图"
-                    description="节点、关系和地图状态将在 EL-204 实现。"
-                    nextTask="EL-204"
-                  />
-                }
-              />
-              <Route
-                path="logs"
-                element={
-                  <PagePlaceholder
-                    title="学习记录"
-                    description="记录查询、日期与专题筛选将在 EL-105 实现。"
-                    nextTask="EL-105"
-                  />
-                }
-              />
-            </Route>
-            <Route path="review" element={<MockReviewPage />} />
+            <Route
+              path="today"
+              element={
+                workspaceMode === 'study-session' ? null : (
+                  <DateRecordsBridge dateKey={todayKey()} />
+                )
+              }
+            />
+            <Route path="timeline" element={<PapersHomePage />} />
+            <Route path="problems" element={<ProblemsPage />} />
+            <Route path="records/:dateKey" element={<DateRecordsBridge />} />
+            <Route
+              path="inbox"
+              element={
+                <RecordsListPageBridge
+                  title="待整理的纸页"
+                  emptyCopy="整理完成后，这里会清空。"
+                  matcher={(paper) => paper.status === 'inbox'}
+                />
+              }
+            />
+            <Route path="boxes/:topicId" element={<BoxRecordsBridge />} />
             <Route
               path="desk"
               element={
@@ -167,16 +194,7 @@ export function AppRoutes({
                 </Suspense>
               }
             />
-            <Route
-              path="settings"
-              element={
-                <PagePlaceholder
-                  title="设置尚未配置"
-                  description="主题、数据目录、Git 和备份等选项将在后续任务中接入。"
-                  nextTask="P1"
-                />
-              }
-            />
+            <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>

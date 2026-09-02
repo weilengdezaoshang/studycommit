@@ -25,7 +25,6 @@ describe('SessionPanel on today', () => {
     })
     expect(await screen.findByRole('button', { name: '暂停' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '完成学习' })).toBeEnabled()
-    expect(screen.getByRole('link', { name: '今天' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('disables commands while a pause is in flight and then uses the response snapshot', async () => {

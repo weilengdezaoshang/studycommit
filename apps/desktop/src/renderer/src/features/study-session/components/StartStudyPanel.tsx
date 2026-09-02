@@ -1,6 +1,4 @@
 import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
-import { routes } from '../../../app/routes'
 import { Select } from '../../../components/select/Select'
 import { useDesktopServices } from '../api/DesktopServicesProvider'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
@@ -86,9 +84,6 @@ export function StartStudyPanel({
       <section className="study-page">
         <h2>还没有可学习的专题</h2>
         <p>开始学习前需要至少一个未归档专题。</p>
-        <Link className="button" to={routes.topics()}>
-          前往专题
-        </Link>
       </section>
     )
   }

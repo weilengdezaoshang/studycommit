@@ -32,22 +32,28 @@ describe('TodayPage', () => {
     expect(screen.queryByRole('link', { name: '继续学习' })).not.toBeInTheDocument()
   })
 
-  it('keeps the same session after visiting topics and returning to today', async () => {
+  it('keeps the same session after opening and closing the drawer', async () => {
+    let getActiveCalls = 0
     const user = userEvent.setup()
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({
-        getActive: async () => ({
-          session: runningStudySessionFixture,
-          serverNow: '2026-08-17T08:10:00.000Z',
-        }),
+        getActive: async () => {
+          getActiveCalls += 1
+          return {
+            session: runningStudySessionFixture,
+            serverNow: '2026-08-17T08:10:00.000Z',
+          }
+        },
       }),
     })
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: '所有专题' }))
-    expect(screen.getByText('我的箱子')).toBeInTheDocument()
-    await user.click(screen.getByRole('link', { name: '今天' }))
+
+    await user.click(screen.getByRole('button', { name: '打开学习抽屉' }))
+    await user.keyboard('{Escape}')
+
     expect(screen.getByRole('button', { name: '暂停' })).toBeEnabled()
     expect(screen.queryByText('正在读取当前学习会话')).not.toBeInTheDocument()
+    expect(getActiveCalls).toBe(1)
   })
 
   it('shows paused controls for a paused session', async () => {
