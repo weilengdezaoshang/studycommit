@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
@@ -29,13 +29,14 @@ export function HomeScreen() {
 
   const [selectedDateKey, setSelectedDateKey] = useState(() => toDateKeyFromDate(new Date()))
   const [cursor, setCursor] = useState(() => parseDateKey(selectedDateKey))
-  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [wheelOpen, setWheelOpen] = useState(false)
+  const [wheelDraft, setWheelDraft] = useState({ year: cursor.year, month: cursor.month })
   const [drawerAnim] = useState(() => new Animated.Value(0))
 
   const vm = useMemo(
-    () => buildHomeViewModel(state, selectedDateKey, cursor, selectedTopicId),
-    [state, selectedDateKey, cursor, selectedTopicId],
+    () => buildHomeViewModel(state, selectedDateKey, cursor, null),
+    [state, selectedDateKey, cursor],
   )
 
   const openDrawer = () => {
@@ -72,6 +73,49 @@ export function HomeScreen() {
         <Pressable style={styles.scrim} onPress={closeDrawer} accessibilityLabel="关闭学习抽屉">
           <View />
         </Pressable>
+      )}
+      {wheelOpen && (
+        <View style={styles.wheelOverlay}>
+          <Pressable
+            accessibilityLabel="取消年月选择"
+            style={StyleSheet.absoluteFill}
+            onPress={() => setWheelOpen(false)}
+          />
+          <View style={styles.wheelSheet} accessibilityLabel="选择年月">
+            <View style={styles.wheelHeader}>
+              <Text style={styles.wheelTitle}>选择年月</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  setCursor({ year: wheelDraft.year, month: wheelDraft.month, day: 1 })
+                  setWheelOpen(false)
+                }}
+              >
+                <Text style={styles.wheelApply}>完成</Text>
+              </Pressable>
+            </View>
+            <Text accessibilityLiveRegion="polite" style={styles.wheelPreview}>
+              {wheelDraft.year} 年 {wheelDraft.month} 月
+            </Text>
+            <View style={styles.wheelColumns}>
+              <WheelColumn
+                label="年份"
+                items={WHEEL_YEARS}
+                value={wheelDraft.year}
+                suffix="年"
+                onChange={(year) => setWheelDraft((draft) => ({ ...draft, year }))}
+              />
+              <WheelColumn
+                label="月份"
+                items={WHEEL_MONTHS}
+                value={wheelDraft.month}
+                suffix="月"
+                onChange={(month) => setWheelDraft((draft) => ({ ...draft, month }))}
+              />
+            </View>
+            <Text style={styles.wheelHint}>上下滚动选择 · 点击外侧取消</Text>
+          </View>
+        </View>
       )}
       {drawerOpen && (
         <Animated.View
@@ -116,10 +160,14 @@ export function HomeScreen() {
           <Legend />
           <TopicSection
             vm={vm}
-            selectedTopicId={selectedTopicId}
             onSelectTopic={(topicId) => {
-              setSelectedTopicId(topicId)
               closeDrawer()
+              navigation.navigate('Collection', { mode: 'box', topicId })
+            }}
+            onCreateTopic={() => {
+              const topic = papersActions.createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
+              closeDrawer()
+              navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
             }}
             onViewAll={() => {
               closeDrawer()
@@ -128,10 +176,9 @@ export function HomeScreen() {
           />
           <AttentionSection
             vm={vm}
-            selectedTopicId={selectedTopicId}
             onSelectTopic={(topicId) => {
-              setSelectedTopicId(topicId)
               closeDrawer()
+              navigation.navigate('Collection', { mode: 'inbox', topicId })
             }}
             onOpenProblems={() => {
               closeDrawer()
@@ -297,6 +344,68 @@ function Timeline({ vm, onOpenPaper }: { vm: HomeViewModel; onOpenPaper: (id: st
   )
 }
 
+const WHEEL_ITEM_HEIGHT = 40
+// 模块级常量:WheelColumn 的定位 effect 依赖 items,引用稳定才能避免滚动时被重置
+const WHEEL_YEARS = Array.from({ length: 191 }, (_, index) => 1900 + index)
+const WHEEL_MONTHS = Array.from({ length: 12 }, (_, index) => index + 1)
+const WHEEL_VISIBLE_ITEMS = 6
+
+function WheelColumn({
+  label,
+  items,
+  value,
+  suffix,
+  onChange,
+}: {
+  label: string
+  items: number[]
+  value: number
+  suffix: string
+  onChange: (value: number) => void
+}) {
+  const listRef = useRef<ScrollView>(null)
+  const pad = ((WHEEL_VISIBLE_ITEMS - 1) / 2) * WHEEL_ITEM_HEIGHT
+
+  useEffect(() => {
+    const index = Math.max(0, items.indexOf(value))
+    listRef.current?.scrollTo({ y: index * WHEEL_ITEM_HEIGHT, animated: false })
+    // 仅在打开/候选值重置时定位
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items])
+
+  return (
+    <View style={styles.wheelColumn} accessibilityLabel={label}>
+      <ScrollView
+        ref={listRef}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={WHEEL_ITEM_HEIGHT}
+        decelerationRate="fast"
+        contentContainerStyle={{ paddingVertical: pad }}
+        onMomentumScrollEnd={(event) => {
+          const index = Math.max(
+            0,
+            Math.min(
+              items.length - 1,
+              Math.round(event.nativeEvent.contentOffset.y / WHEEL_ITEM_HEIGHT),
+            ),
+          )
+          if (items[index] !== value) {
+            onChange(items[index])
+          }
+        }}
+      >
+        {items.map((item) => (
+          <Pressable key={item} onPress={() => onChange(item)} style={styles.wheelItem}>
+            <Text style={[styles.wheelItemText, item === value && styles.wheelItemTextSelected]}>
+              {item} {suffix}
+            </Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
+  )
+}
+
 function Fab({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
@@ -407,15 +516,23 @@ function CalendarGrid({
               >
                 {cell.count > 0 ? (
                   <View style={styles.calendarPaperVisual}>
-                    {Array.from({ length: Math.min(cell.count, 3) }, (_, layer) => (
-                      <View
-                        key={layer}
-                        style={[
-                          styles.calendarPaper,
-                          { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
-                        ]}
-                      />
-                    ))}
+                    {Array.from({ length: Math.min(cell.count, 3) }, (_, layer) => {
+                      const base = 2.5 - (Math.min(cell.count, 3) - 1)
+                      return (
+                        <View
+                          key={layer}
+                          style={[
+                            styles.calendarPaper,
+                            {
+                              transform: [
+                                { translateX: base + layer * 2 },
+                                { translateY: base + layer * 2 },
+                              ],
+                            },
+                          ]}
+                        />
+                      )
+                    })}
                   </View>
                 ) : (
                   <View style={styles.paperDot} />
@@ -465,13 +582,13 @@ function Legend() {
 
 function TopicSection({
   vm,
-  selectedTopicId,
   onSelectTopic,
+  onCreateTopic,
   onViewAll,
 }: {
   vm: HomeViewModel
-  selectedTopicId: string | null
   onSelectTopic: (topicId: string) => void
+  onCreateTopic: () => void
   onViewAll: () => void
 }) {
   const visible = vm.topicRows.slice(0, VISIBLE_TOPIC_COUNT)
@@ -481,9 +598,9 @@ function TopicSection({
       <View style={styles.sectionHeading}>
         <Text style={styles.sectionTitle}>我的箱子</Text>
         <Pressable
-          accessibilityLabel="快速新建未命名箱子"
+          accessibilityLabel="新建箱子并打开"
           accessibilityRole="button"
-          onPress={() => papersActions.createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)}
+          onPress={onCreateTopic}
           style={styles.sectionAction}
         >
           <Ionicons name="add" size={16} color={paperColors.muted} />
@@ -495,7 +612,7 @@ function TopicSection({
           icon="archive-outline"
           label={row.name}
           count={row.count}
-          selected={selectedTopicId === row.id}
+          selected={false}
           onPress={() => onSelectTopic(row.id)}
         />
       ))}
@@ -510,12 +627,10 @@ function TopicSection({
 
 function AttentionSection({
   vm,
-  selectedTopicId,
   onSelectTopic,
   onOpenProblems,
 }: {
   vm: HomeViewModel
-  selectedTopicId: string | null
   onSelectTopic: (topicId: string) => void
   onOpenProblems: () => void
 }) {
@@ -528,7 +643,7 @@ function AttentionSection({
         icon="file-tray-outline"
         label="待整理的纸页"
         count={vm.inboxCount}
-        selected={selectedTopicId === INBOX_TOPIC_ID}
+        selected={false}
         onPress={() => onSelectTopic(INBOX_TOPIC_ID)}
       />
       <DrawerRow
@@ -740,6 +855,43 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginHorizontal: 2,
   },
+  wheelOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 40,
+    backgroundColor: paperColors.scrim,
+  },
+  wheelSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: paperColors.paper,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingBottom: 24,
+  },
+  wheelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: paperColors.line,
+  },
+  wheelTitle: { color: paperColors.ink, fontSize: 15, fontWeight: '600' },
+  wheelApply: { color: paperColors.action, fontSize: 14, fontWeight: '500' },
+  wheelPreview: { color: paperColors.muted, fontSize: 12, textAlign: 'center', paddingVertical: 8 },
+  wheelColumns: { flexDirection: 'row', height: WHEEL_VISIBLE_ITEMS * WHEEL_ITEM_HEIGHT },
+  wheelColumn: { flex: 1, overflow: 'hidden' },
+  wheelItem: { height: WHEEL_ITEM_HEIGHT, alignItems: 'center', justifyContent: 'center' },
+  wheelItemText: { color: paperColors.muted, fontSize: 15 },
+  wheelItemTextSelected: { color: paperColors.ink, fontSize: 17, fontWeight: '600' },
+  wheelHint: { color: paperColors.mutedFaint, fontSize: 11, textAlign: 'center', paddingTop: 6 },
   monthNavSpacer: { flex: 1 },
   reviewLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 4 },
   reviewLinkText: { color: paperColors.mutedFaint, fontSize: 11 },

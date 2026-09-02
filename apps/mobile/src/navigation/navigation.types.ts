@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Problems: undefined
   Search: undefined
   Topics: undefined
+  Collection: { mode: 'box' | 'inbox'; topicId?: string }
 }
 
 export type PaperExtra = {

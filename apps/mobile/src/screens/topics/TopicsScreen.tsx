@@ -47,7 +47,9 @@ export function TopicsScreen() {
                 key={topic.id}
                 accessibilityRole="button"
                 accessibilityLabel={`${topic.name},${count} 张纸页`}
-                onPress={() => navigation.goBack()}
+                onPress={() =>
+                  navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
+                }
                 style={styles.row}
               >
                 <View style={[styles.boxIcon, { backgroundColor: topic.color }]} />

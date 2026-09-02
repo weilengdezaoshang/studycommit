@@ -8,6 +8,7 @@ import { ProblemsScreen } from '../screens/problems/ProblemsScreen'
 import { ReviewScreen } from '../screens/review/ReviewScreen'
 import { SearchScreen } from '../screens/search/SearchScreen'
 import { TopicsScreen } from '../screens/topics/TopicsScreen'
+import { CollectionScreen } from '../screens/collection/CollectionScreen'
 import { studyCommitColors } from '@studycommit/design-tokens'
 import type { RootStackParamList } from './navigation.types'
 
@@ -42,6 +43,11 @@ export function AppNavigator() {
         <Stack.Screen component={ProblemsScreen} name="Problems" options={MODAL_PRESENTATION} />
         <Stack.Screen component={SearchScreen} name="Search" options={MODAL_PRESENTATION} />
         <Stack.Screen component={TopicsScreen} name="Topics" options={MODAL_PRESENTATION} />
+        <Stack.Screen
+          component={CollectionScreen}
+          name="Collection"
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   )
