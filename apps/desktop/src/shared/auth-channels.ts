@@ -1,4 +1,4 @@
 export const authIpcChannels = {
-  sendPhoneCode: 'auth:send-phone-code',
-  verifyPhone: 'auth:verify-phone',
+  registerAccount: 'auth:register-account',
+  loginAccount: 'auth:login-account',
 } as const

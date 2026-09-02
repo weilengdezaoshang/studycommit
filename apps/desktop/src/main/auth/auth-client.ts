@@ -1,30 +1,45 @@
-import { sendPhoneCodeOutputSchema, verifyPhoneOutputSchema } from '@studycommit/rpc-contracts/auth'
+import {
+  accountRegisterOutputSchema,
+  authTokensSchema,
+  verifyPhoneOutputSchema,
+} from '@studycommit/rpc-contracts/auth'
 import type { ElectronNetTransport } from '../http/electron-net-transport'
+import type { DesktopAuthSessionStore } from './session-store'
 
-/**
- * 桌面端认证客户端:对齐后端 AuthController,
- * deviceType 固定为 'desktop'(PRD:桌面端扫码优先,验证码为兜底)。
- */
-export type DesktopAuthApiPort = Pick<DesktopAuthApi, 'sendPhoneCode' | 'verifyPhone'>
+export type DesktopAuthApiPort = Pick<DesktopAuthApi, 'registerAccount' | 'loginAccount'>
 
 export class DesktopAuthApi {
-  constructor(private readonly transport: ElectronNetTransport) {}
+  constructor(
+    private readonly sessions: DesktopAuthSessionStore,
+    private readonly publicTransport: ElectronNetTransport,
+  ) {}
 
-  sendPhoneCode(phone: string) {
-    return this.transport.request({
+  registerAccount(account: string, password: string) {
+    return this.publicTransport.request({
       method: 'POST',
-      path: '/auth/phone/code',
-      body: { phone },
-      responseSchema: sendPhoneCodeOutputSchema,
+      path: '/auth/account/register',
+      body: { account, password },
+      responseSchema: accountRegisterOutputSchema,
     })
   }
 
-  verifyPhone(phone: string, code: string) {
-    return this.transport.request({
+  async loginAccount(account: string, password: string) {
+    const session = await this.publicTransport.request({
       method: 'POST',
-      path: '/auth/phone/verify',
-      body: { phone, code, deviceType: 'desktop' as const },
+      path: '/auth/account/login',
+      body: { account, password, deviceType: 'desktop' as const },
       responseSchema: verifyPhoneOutputSchema,
+    })
+    this.sessions.setSession(session)
+    return session
+  }
+
+  refresh(refreshToken: string) {
+    return this.publicTransport.request({
+      method: 'POST',
+      path: '/auth/token/refresh',
+      body: { refreshToken },
+      responseSchema: authTokensSchema,
     })
   }
 }

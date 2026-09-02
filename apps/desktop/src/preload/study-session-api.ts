@@ -25,8 +25,8 @@ export const learningLogPreloadApi = {
 }
 
 export const authPreloadApi = {
-  sendPhoneCode: (input: unknown) => ipcRenderer.invoke(authIpcChannels.sendPhoneCode, input),
-  verifyPhone: (input: unknown) => ipcRenderer.invoke(authIpcChannels.verifyPhone, input),
+  registerAccount: (input: unknown) => ipcRenderer.invoke(authIpcChannels.registerAccount, input),
+  loginAccount: (input: unknown) => ipcRenderer.invoke(authIpcChannels.loginAccount, input),
 }
 
 export const studyCommitPreloadApi = {

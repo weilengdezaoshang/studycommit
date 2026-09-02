@@ -2,6 +2,7 @@ import { HttpError, createHttpError } from '@studycommit/common/http'
 import { createServices } from '@studycommit/common/services'
 import type { LearningLogApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
 import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
+import { DesktopAuthSessionStore } from '../auth/session-store'
 import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
@@ -11,7 +12,10 @@ export interface DesktopServices {
   auth: DesktopAuthApiPort
 }
 
-export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): DesktopServices {
+export function createDesktopServices(
+  env: NodeJS.ProcessEnv = process.env,
+  options?: { fetchImpl?: typeof fetch; sessionStore?: DesktopAuthSessionStore },
+): DesktopServices {
   const origin = env.STUDYCOMMIT_API_ORIGIN
   const apiPrefix = env.STUDYCOMMIT_API_PREFIX ?? '/api'
   if (!origin) {
@@ -20,16 +24,31 @@ export function createDesktopServices(env: NodeJS.ProcessEnv = process.env): Des
 
   const allowInsecureHttp =
     env.NODE_ENV !== 'production' || env.STUDYCOMMIT_ALLOW_INSECURE_HTTP === 'true'
-  const transport = new ElectronNetTransport({
+  const sessions = options?.sessionStore ?? new DesktopAuthSessionStore()
+  const transportOptions = {
     origin,
     apiPrefix,
     allowInsecureHttp,
     defaultTimeoutMs: 10_000,
-    getHeaders: async () => createDesktopHeaders(env),
+    fetchImpl: options?.fetchImpl,
+  }
+  const publicTransport = new ElectronNetTransport({
+    ...transportOptions,
+    getHeaders: async () => ({ accept: 'application/json' }),
   })
+  const transport = new ElectronNetTransport({
+    ...transportOptions,
+    getHeaders: async () => ({
+      accept: 'application/json',
+      ...(await sessions.authorizationHeaders()),
+      ...createDesktopDevHeaders(env),
+    }),
+  })
+  const auth = new DesktopAuthApi(sessions, publicTransport)
+  sessions.bindRefresh((refreshToken) => auth.refresh(refreshToken))
   return {
     ...createServices({ transport: 'rest', httpTransport: transport }),
-    auth: new DesktopAuthApi(transport),
+    auth,
   }
 }
 
@@ -71,16 +90,15 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       update: reject,
     },
     auth: {
-      sendPhoneCode: reject,
-      verifyPhone: reject,
-    } as unknown as DesktopAuthApiPort,
+      registerAccount: reject,
+      loginAccount: reject,
+    },
   }
 }
 
-function createDesktopHeaders(env: NodeJS.ProcessEnv): Readonly<Record<string, string>> {
-  const headers: Record<string, string> = { accept: 'application/json' }
+function createDesktopDevHeaders(env: NodeJS.ProcessEnv): Readonly<Record<string, string>> {
   if (env.NODE_ENV !== 'production' && env.STUDYCOMMIT_DEV_USER_ID) {
-    headers['x-user-id'] = env.STUDYCOMMIT_DEV_USER_ID
+    return { 'x-user-id': env.STUDYCOMMIT_DEV_USER_ID }
   }
-  return headers
+  return {}
 }

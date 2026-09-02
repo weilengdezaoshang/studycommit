@@ -1,12 +1,9 @@
 import { useSyncExternalStore } from 'react'
 
-/**
- * 桌面端会话状态:localStorage 持久化(布局优先)。
- * 令牌刷新与安全存储归档将在接入真实会话生命周期时补齐。
- */
+/** 渲染进程只保留用户资料；访问/刷新令牌放在主进程。 */
 export type DesktopAuthSession = {
   user: { id: string; nickname: string; avatarUrl: string | null; status: string }
-  tokens: { accessToken: string; refreshToken: string; expiresAt: string }
+  tokens?: { accessToken: string; refreshToken: string; expiresAt: string }
 }
 
 const SESSION_KEY = 'studycommit.desktop.auth.session.v1'
@@ -16,7 +13,14 @@ const listeners = new Set<() => void>()
 function readSession(): DesktopAuthSession | null {
   try {
     const raw = window.localStorage.getItem(SESSION_KEY)
-    return raw ? (JSON.parse(raw) as DesktopAuthSession) : null
+    if (!raw) {
+      return null
+    }
+    const parsed = JSON.parse(raw) as DesktopAuthSession
+    if (!parsed?.user?.id) {
+      return null
+    }
+    return { user: parsed.user }
   } catch {
     return null
   }
@@ -47,7 +51,7 @@ export function useAuthSession(): DesktopAuthSession | null {
 }
 
 export function setAuthSession(session: DesktopAuthSession) {
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+  window.localStorage.setItem(SESSION_KEY, JSON.stringify({ user: session.user }))
   emit()
 }
 

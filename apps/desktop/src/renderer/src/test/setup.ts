@@ -31,8 +31,8 @@ function createDefaultStudyCommit() {
       update: async () => ({ ok: false as const, error: configurationError() }),
     },
     auth: {
-      sendPhoneCode: async () => ({ ok: false as const, error: configurationError() }),
-      verifyPhone: async () => ({ ok: false as const, error: configurationError() }),
+      registerAccount: async () => ({ ok: false as const, error: configurationError() }),
+      loginAccount: async () => ({ ok: false as const, error: configurationError() }),
     },
   }
 }

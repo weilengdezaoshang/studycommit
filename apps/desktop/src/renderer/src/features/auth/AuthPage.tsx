@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { DesktopAuthSession } from './session'
 
-type AuthTab = 'wechat-qr' | 'phone'
+type AuthMode = 'login' | 'register'
 
 type AuthApiLike = {
-  sendPhoneCode: (input: { phone: string }) => Promise<unknown>
-  verifyPhone: (input: {
-    phone: string
-    code: string
-    deviceType: 'desktop'
-  }) => Promise<{ ok: boolean; error?: { message?: string }; data?: unknown }>
+  registerAccount: (input: { account: string; password: string }) => Promise<{
+    ok: boolean
+    error?: { message?: string }
+    data?: { account: string }
+  }>
+  loginAccount: (input: { account: string; password: string }) => Promise<{
+    ok: boolean
+    error?: { message?: string }
+    data?: DesktopAuthSession
+  }>
 }
 
-/**
- * 桌面端登录页(登录即注册):微信扫码优先,手机号验证码兜底。
- * PRD:验证码 60 秒重发;失败保留手机号、只清空验证码,不暴露注册状态。
- */
 export function AuthPage({
   api,
   onSession,
@@ -23,69 +23,71 @@ export function AuthPage({
   api: AuthApiLike
   onSession: (session: DesktopAuthSession) => void
 }) {
-  const [tab, setTab] = useState<AuthTab>('phone')
-  const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
+  const [mode, setMode] = useState<AuthMode>('login')
+  const [account, setAccount] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [codeSending, setCodeSending] = useState(false)
-  const [loggingIn, setLoggingIn] = useState(false)
-  const [resendLeft, setResendLeft] = useState(0)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const accountRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    if (resendLeft <= 0) {
-      return undefined
-    }
-    const timer = setInterval(() => setResendLeft((value) => Math.max(0, value - 1)), 1000)
-    return () => clearInterval(timer)
-  }, [resendLeft])
+  const accountValid = account.trim().length >= 2
+  const passwordValid = password.length >= 8
+  const confirmValid = mode === 'login' || password === confirmPassword
+  const canSubmit = accountValid && passwordValid && confirmValid && !submitting
 
-  const phoneValid = /^1\d{10}$/.test(phone)
-
-  const requestCode = async () => {
-    setCodeSending(true)
+  const switchMode = (next: AuthMode) => {
+    setMode(next)
     setError(null)
-    try {
-      const result = (await api.sendPhoneCode({ phone })) as {
-        ok: boolean
-        error?: { message?: string }
-      }
-      if (!result.ok) {
-        setError(result.error?.message ?? '验证码发送失败')
-        return
-      }
-      setResendLeft(60)
-    } catch (requestError) {
-      setError(extractError(requestError, '验证码发送失败'))
-    } finally {
-      setCodeSending(false)
-    }
+    setNotice(null)
+    setPassword('')
+    setConfirmPassword('')
   }
 
-  const login = async () => {
-    setLoggingIn(true)
+  const submit = async () => {
+    setSubmitting(true)
     setError(null)
+    setNotice(null)
     try {
-      const result = (await api.verifyPhone({ phone, code, deviceType: 'desktop' })) as {
-        ok: boolean
-        error?: { message?: string }
-        data?: DesktopAuthSession
+      if (mode === 'register') {
+        if (password !== confirmPassword) {
+          setError('两次输入的密码不一致')
+          return
+        }
+        const result = await api.registerAccount({ account: account.trim(), password })
+        if (!result.ok) {
+          setPassword('')
+          setConfirmPassword('')
+          setError(result.error?.message ?? '注册失败')
+          return
+        }
+        setMode('login')
+        setPassword('')
+        setConfirmPassword('')
+        setNotice('注册成功，请登录')
+        accountRef.current?.focus()
+        return
       }
+      const result = await api.loginAccount({ account: account.trim(), password })
       if (!result.ok) {
-        setCode('')
+        setPassword('')
         setError(result.error?.message ?? '登录失败')
         return
       }
       if (!result.data) {
-        setCode('')
+        setPassword('')
         setError('登录响应格式异常')
         return
       }
       onSession(result.data)
     } catch (requestError) {
-      setCode('')
-      setError(extractError(requestError, '登录失败'))
+      setPassword('')
+      setConfirmPassword('')
+      setError(extractError(requestError, mode === 'register' ? '注册失败' : '登录失败'))
     } finally {
-      setLoggingIn(false)
+      setSubmitting(false)
     }
   }
 
@@ -103,87 +105,87 @@ export function AuthPage({
       <div className="auth-form">
         <div className="auth-form__heading">
           <div>
-            <span className="auth-form__kicker">欢迎回来</span>
-            <h1 id="auth-title">登录与注册共用一个入口</h1>
-          </div>
-          <div className="auth-tabs">
-            <button
-              type="button"
-              className={tab === 'wechat-qr' ? 'is-active' : ''}
-              onClick={() => setTab('wechat-qr')}
-            >
-              微信扫码
-            </button>
-            <button
-              type="button"
-              className={tab === 'phone' ? 'is-active' : ''}
-              onClick={() => setTab('phone')}
-            >
-              手机号
-            </button>
+            <span className="auth-form__kicker">{mode === 'login' ? '欢迎回来' : '创建账户'}</span>
+            <h1 id="auth-title">{mode === 'login' ? '登录' : '注册'}</h1>
           </div>
         </div>
 
-        {tab === 'wechat-qr' ? (
-          <div className="qr-panel">
-            <div className="qr-placeholder" role="img" aria-label="微信登录二维码占位">
-              <span>二维码</span>
-            </div>
-            <p className="qr-hint">使用微信扫码，在手机上确认登录</p>
-            <p className="qr-pending">微信扫码登录暂未开通，请先使用手机号验证码登录</p>
-          </div>
-        ) : (
-          <form
-            className="auth-fields"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void login()
-            }}
+        <form
+          className="auth-fields"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void submit()
+          }}
+        >
+          <label className="auth-field">
+            账号
+            <input
+              ref={accountRef}
+              autoComplete="username"
+              maxLength={32}
+              placeholder="2 到 32 个字符"
+              value={account}
+              onChange={(event) => setAccount(event.target.value)}
+            />
+          </label>
+          <label className="auth-field">
+            密码
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              maxLength={128}
+              placeholder="至少 8 位"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <button
+            type="button"
+            className="auth-form__footnote auth-toggle-password"
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((value) => !value)}
           >
+            {showPassword ? '隐藏密码' : '显示密码'}
+          </button>
+          {mode === 'register' ? (
             <label className="auth-field">
-              手机号
+              确认密码
               <input
-                inputMode="numeric"
-                maxLength={11}
-                placeholder="11 位手机号"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value.replace(/\D/g, ''))}
+                type="password"
+                autoComplete="new-password"
+                maxLength={128}
+                placeholder="再输入一次密码"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
               />
             </label>
-            <div className="auth-code-row">
-              <input
-                className="auth-field__inner"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="验证码"
-                value={code}
-                onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
-              />
-              <button
-                type="button"
-                className="auth-code-button"
-                disabled={!phoneValid || resendLeft > 0 || codeSending}
-                onClick={() => void requestCode()}
-              >
-                {codeSending ? '发送中' : resendLeft > 0 ? `${resendLeft}s 后重发` : '获取验证码'}
-              </button>
-            </div>
-            {error ? (
-              <p className="auth-form__error" role="alert">
-                {error}
-              </p>
-            ) : null}
-            <button
-              type="submit"
-              className="button auth-form__submit"
-              disabled={!phoneValid || code.length !== 6 || loggingIn}
-            >
-              {loggingIn ? '登录中' : '登录'}
-            </button>
-            <p className="auth-form__footnote">首次验证将自动创建 StudyCommit 账户</p>
-            <p className="auth-form__footnote">登录即代表你同意《用户协议》和《隐私政策》</p>
-          </form>
-        )}
+          ) : null}
+          {notice ? <p className="auth-form__footnote">{notice}</p> : null}
+          {error ? (
+            <p className="auth-form__error" role="alert">
+              {error}
+            </p>
+          ) : null}
+          <button type="submit" className="button auth-form__submit" disabled={!canSubmit}>
+            {submitting
+              ? mode === 'register'
+                ? '注册中'
+                : '登录中'
+              : mode === 'register'
+                ? '注册'
+                : '登录'}
+          </button>
+          <button
+            type="button"
+            className="auth-form__footnote"
+            onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+          >
+            {mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
+          </button>
+          <p className="auth-form__footnote">
+            {mode === 'login' ? '登录' : '注册'}即代表你同意《用户协议》和《隐私政策》
+          </p>
+        </form>
       </div>
     </section>
   )

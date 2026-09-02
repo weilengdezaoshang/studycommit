@@ -47,8 +47,8 @@ describe('registerDesktopIpc', () => {
       update: vi.fn(),
     },
     auth: {
-      sendPhoneCode: vi.fn(),
-      verifyPhone: vi.fn(),
+      registerAccount: vi.fn(),
+      loginAccount: vi.fn(),
     },
   }
 

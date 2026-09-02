@@ -34,11 +34,13 @@ export interface StudyCommitLearningLogsApi {
 }
 
 export interface StudyCommitAuthApi {
-  sendPhoneCode: (input: { phone: string }) => Promise<IpcResult<{ expiresInSeconds: number }>>
-  verifyPhone: (input: {
-    phone: string
-    code: string
-    deviceType: 'desktop'
+  registerAccount: (input: {
+    account: string
+    password: string
+  }) => Promise<IpcResult<{ account: string }>>
+  loginAccount: (input: {
+    account: string
+    password: string
   }) => Promise<IpcResult<AuthVerifyPhoneOutput>>
 }
 
