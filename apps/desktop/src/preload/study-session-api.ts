@@ -37,7 +37,7 @@ export const learningLogPreloadApi = {
 }
 
 export const aiPreloadApi = {
-  companionFollowup: (input: unknown) => ipcRenderer.invoke(aiIpcChannels.companionFollowup, input),
+  explainPaper: (input: unknown) => ipcRenderer.invoke(aiIpcChannels.explainPaper, input),
 }
 
 export const authPreloadApi = {

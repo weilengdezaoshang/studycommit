@@ -102,7 +102,7 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       remove: reject,
     },
     ai: {
-      companionFollowup: reject,
+      explainPaper: reject,
     },
     learningLogs: {
       list: reject,

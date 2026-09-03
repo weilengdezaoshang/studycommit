@@ -1,3 +1,3 @@
 export const aiIpcChannels = {
-  companionFollowup: 'ai:companion-followup',
+  explainPaper: 'ai:paper-explain',
 } as const

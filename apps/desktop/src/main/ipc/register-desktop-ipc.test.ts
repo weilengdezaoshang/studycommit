@@ -58,7 +58,7 @@ describe('registerDesktopIpc', () => {
       update: vi.fn(),
     },
     ai: {
-      companionFollowup: vi.fn(),
+      explainPaper: vi.fn(),
     },
     auth: {
       registerAccount: vi.fn(),

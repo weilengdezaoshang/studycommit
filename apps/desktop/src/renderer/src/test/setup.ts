@@ -41,7 +41,7 @@ function createDefaultStudyCommit() {
       update: async () => ({ ok: false as const, error: configurationError() }),
     },
     ai: {
-      companionFollowup: async () => ({ ok: false as const, error: configurationError() }),
+      explainPaper: async () => ({ ok: false as const, error: configurationError() }),
     },
     auth: {
       registerAccount: async () => ({ ok: false as const, error: configurationError() }),

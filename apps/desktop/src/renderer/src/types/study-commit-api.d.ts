@@ -54,14 +54,22 @@ export interface StudyCommitLearningLogsApi {
 }
 
 export interface StudyCommitAiApi {
-  companionFollowup: (input: {
-    sessionId?: string
-    topicId?: string | null
-    expression: string
+  explainPaper: (input: {
+    paperId?: string
+    content: string
+    questionText?: string | null
+    directive?: 'initial' | 'plainer' | 'alternative'
+    previousViewType?: 'causal_chain' | 'contrast' | 'checklist' | 'definition_counterexample'
+    round?: number
   }) => Promise<
     IpcResult<{
-      questions: { question: string }[]
-      memoryDraft: { summary: string; gap: string } | null
+      view:
+        | { type: 'causal_chain'; steps: { title: string; detail: string }[] }
+        | { type: 'contrast'; items: { aspect: string; a: string; b: string }[] }
+        | { type: 'checklist'; steps: { action: string; reason: string }[] }
+        | { type: 'definition_counterexample'; definition: string; counterexample: string }
+      example: string
+      plainLevel: number
       model: string
       promptVersion: string
     }>
