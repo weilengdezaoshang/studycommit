@@ -53,6 +53,21 @@ export interface StudyCommitLearningLogsApi {
   update: (input: UpdateLearningLogInput) => Promise<IpcResult<LearningLog>>
 }
 
+export interface StudyCommitAiApi {
+  companionFollowup: (input: {
+    sessionId?: string
+    topicId?: string | null
+    expression: string
+  }) => Promise<
+    IpcResult<{
+      questions: { question: string }[]
+      memoryDraft: { summary: string; gap: string } | null
+      model: string
+      promptVersion: string
+    }>
+  >
+}
+
 export interface StudyCommitAuthApi {
   registerAccount: (input: {
     account: string
@@ -80,6 +95,7 @@ export interface StudyCommitApi {
   topics: StudyCommitTopicsApi
   learningLogs: StudyCommitLearningLogsApi
   papers: StudyCommitPapersApi
+  ai: StudyCommitAiApi
   auth: StudyCommitAuthApi
 }
 

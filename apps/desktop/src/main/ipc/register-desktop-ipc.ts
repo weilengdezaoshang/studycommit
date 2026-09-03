@@ -1,5 +1,6 @@
 import type { DesktopServices } from '../composition/create-services'
 import { IpcHost } from './ipc-host'
+import { registerAiIpc } from './ai-ipc'
 import { registerAuthIpc } from './auth-ipc'
 import { registerLearningLogIpc } from './learning-log-ipc'
 import { registerPaperIpc } from './paper-ipc'
@@ -17,6 +18,7 @@ export function registerDesktopIpc(
   registerLearningLogIpc(host, services.learningLogs)
   registerPaperIpc(host, services.papers)
   registerAuthIpc(host, services.auth)
+  registerAiIpc(host, services.ai)
   return () => {
     host.dispose()
   }

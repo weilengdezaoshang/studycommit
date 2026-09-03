@@ -1,4 +1,5 @@
 import { ipcRenderer } from 'electron'
+import { aiIpcChannels } from '../shared/ai-channels'
 import { authIpcChannels } from '../shared/auth-channels'
 import { learningLogIpcChannels } from '../shared/learning-log-channels'
 import { studySessionIpcChannels } from '../shared/study-session-channels'
@@ -35,6 +36,10 @@ export const learningLogPreloadApi = {
   update: (input: unknown) => ipcRenderer.invoke(learningLogIpcChannels.update, input),
 }
 
+export const aiPreloadApi = {
+  companionFollowup: (input: unknown) => ipcRenderer.invoke(aiIpcChannels.companionFollowup, input),
+}
+
 export const authPreloadApi = {
   registerAccount: (input: unknown) => ipcRenderer.invoke(authIpcChannels.registerAccount, input),
   loginAccount: (input: unknown) => ipcRenderer.invoke(authIpcChannels.loginAccount, input),
@@ -46,5 +51,6 @@ export const studyCommitPreloadApi = {
   topics: topicPreloadApi,
   learningLogs: learningLogPreloadApi,
   papers: paperPreloadApi,
+  ai: aiPreloadApi,
   auth: authPreloadApi,
 }

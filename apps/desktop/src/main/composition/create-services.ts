@@ -1,6 +1,12 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
 import { createServices } from '@studycommit/common/services'
-import type { LearningLogApi, PaperApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
+import type {
+  AiApi,
+  LearningLogApi,
+  PaperApi,
+  StudySessionApi,
+  TopicApi,
+} from '@studycommit/common/ports'
 import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
 import { DesktopAuthSessionStore } from '../auth/session-store'
 import { ElectronNetTransport } from '../http/electron-net-transport'
@@ -10,6 +16,7 @@ export interface DesktopServices {
   topics: TopicApi
   learningLogs: LearningLogApi
   papers: PaperApi
+  ai: AiApi
   auth: DesktopAuthApiPort
 }
 
@@ -93,6 +100,9 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       organize: reject,
       moveToInbox: reject,
       remove: reject,
+    },
+    ai: {
+      companionFollowup: reject,
     },
     learningLogs: {
       list: reject,

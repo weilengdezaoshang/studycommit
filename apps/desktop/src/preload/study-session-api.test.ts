@@ -16,6 +16,7 @@ describe('study session preload api', () => {
       'topics',
       'learningLogs',
       'papers',
+      'ai',
       'auth',
     ])
     expect(Object.keys(studySessionPreloadApi)).toEqual([
