@@ -1,8 +1,8 @@
 import {
-  companionFollowupInputSchema,
-  companionFollowupOutputSchema,
-  type CompanionFollowupInput,
-  type CompanionFollowupOutput,
+  paperExplainInputSchema,
+  paperExplainOutputSchema,
+  type PaperExplainInput,
+  type PaperExplainOutput,
 } from '@studycommit/rpc-contracts/ai'
 import type { HttpTransport } from '../../http'
 import type { AiApi } from '../../ports'
@@ -13,12 +13,12 @@ export type { AiApi } from '../../ports'
 export class AiClient implements AiApi {
   constructor(private readonly http: HttpTransport) {}
 
-  companionFollowup(input: CompanionFollowupInput): Promise<CompanionFollowupOutput> {
+  explainPaper(input: PaperExplainInput): Promise<PaperExplainOutput> {
     return this.http.request({
       method: 'POST',
-      path: '/ai/companion/followup',
-      body: companionFollowupInputSchema.parse(input),
-      responseSchema: companionFollowupOutputSchema,
+      path: '/ai/papers/explain',
+      body: paperExplainInputSchema.parse(input),
+      responseSchema: paperExplainOutputSchema,
     })
   }
 }
