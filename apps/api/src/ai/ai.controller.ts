@@ -1,8 +1,5 @@
 import { Body, Controller, HttpCode, Inject, Post, UseGuards } from '@nestjs/common'
-import {
-  companionFollowupInputSchema,
-  type CompanionFollowupInput,
-} from '@studycommit/rpc-contracts/ai'
+import { paperExplainInputSchema, type PaperExplainInput } from '@studycommit/rpc-contracts/ai'
 import { CurrentUserId } from '../common/current-user'
 import { IdentityGuard } from '../auth/identity.guard'
 import { ZodPipe } from '../common/zod.pipe'
@@ -13,13 +10,13 @@ import { AiService } from './ai.service'
 export class AiController {
   constructor(@Inject(AiService) private readonly ai: AiService) {}
 
-  /** 陪学追问:Agent 不可用时抛 503,客户端按 PRD 直接降级进入奖励揭晓。 */
-  @Post('companion/followup')
+  /** 继续弄懂 · 直观解释卡:Agent 不可用时抛 503,客户端按 PRD 降级回纸页。 */
+  @Post('papers/explain')
   @HttpCode(200)
-  companionFollowup(
+  explainPaper(
     @CurrentUserId() userId: string,
-    @Body(new ZodPipe(companionFollowupInputSchema)) body: CompanionFollowupInput,
+    @Body(new ZodPipe(paperExplainInputSchema)) body: PaperExplainInput,
   ) {
-    return this.ai.generateCompanionFollowup(userId, body)
+    return this.ai.generatePaperExplain(userId, body)
   }
 }

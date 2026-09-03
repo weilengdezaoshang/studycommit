@@ -1,0 +1,1 @@
+ALTER TYPE "public"."agent_run_kind" ADD VALUE IF NOT EXISTS 'paper_explain';

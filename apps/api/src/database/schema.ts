@@ -28,7 +28,7 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
 export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
 export const userStatus = pgEnum('user_status', ['active', 'disabled', 'merged'])
-export const agentRunKind = pgEnum('agent_run_kind', ['companion_followup'])
+export const agentRunKind = pgEnum('agent_run_kind', ['companion_followup', 'paper_explain'])
 export const agentRunStatus = pgEnum('agent_run_status', ['pending', 'completed', 'failed'])
 export const authProvider = pgEnum('auth_provider', [
   'phone',

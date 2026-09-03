@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { and, eq } from 'drizzle-orm'
-import type { CompanionFollowupInput, CompanionFollowupOutput } from '@studycommit/rpc-contracts/ai'
+import type { PaperExplainInput, PaperExplainOutput } from '@studycommit/rpc-contracts/ai'
 import { DatabaseService } from '../database/database.service'
 import { agentRuns } from '../database/schema'
 import { AGENT_RUN_KIND, AGENT_RUN_STATUS } from './ai.constants'
@@ -11,16 +11,16 @@ export type AgentRun = typeof agentRuns.$inferSelect
 export class AiRepository {
   constructor(private readonly database: DatabaseService) {}
 
-  async createFollowupRun(
+  async createExplainRun(
     userId: string,
-    input: CompanionFollowupInput,
+    input: PaperExplainInput,
     promptVersion: string,
   ): Promise<AgentRun> {
     const [run] = await this.database.db
       .insert(agentRuns)
       .values({
         userId,
-        kind: AGENT_RUN_KIND.companionFollowup,
+        kind: AGENT_RUN_KIND.paperExplain,
         status: AGENT_RUN_STATUS.pending,
         promptVersion,
         input,
@@ -29,7 +29,7 @@ export class AiRepository {
     return run
   }
 
-  async completeFollowupRun(runId: string, output: CompanionFollowupOutput) {
+  async completeExplainRun(runId: string, output: PaperExplainOutput) {
     await this.database.db
       .update(agentRuns)
       .set({
@@ -54,7 +54,7 @@ export class AiRepository {
       .where(eq(agentRuns.id, runId))
   }
 
-  /** 用户确认候选共同记忆后调用;确认状态是 AI 写入红线的落库证据。 */
+  /** 用户确认后的结论落库时调用;确认状态是 AI 写入红线的证据。 */
   async confirmRun(runId: string, userId: string) {
     await this.database.db
       .update(agentRuns)
