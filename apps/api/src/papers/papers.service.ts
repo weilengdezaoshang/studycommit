@@ -50,6 +50,8 @@ type PaperRow = {
   createdAt: Date
   updatedAt: Date
   deletedAt: Date | null
+  hasQuestion: boolean
+  isQuestionResolved: boolean
 }
 
 @Injectable()
@@ -165,6 +167,8 @@ export class PapersService {
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
       deletedAt: row.deletedAt?.toISOString() ?? null,
+      hasQuestion: row.hasQuestion,
+      isQuestionResolved: row.isQuestionResolved,
     }
   }
 }

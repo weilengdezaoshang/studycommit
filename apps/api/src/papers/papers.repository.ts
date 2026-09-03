@@ -96,7 +96,12 @@ export class PapersRepository {
 
       const [paper] = await tx
         .insert(papers)
-        .values({ userId, content: input.content, topicId: null })
+        .values({
+          userId,
+          content: input.content,
+          topicId: null,
+          hasQuestion: input.hasQuestion ?? false,
+        })
         .returning()
       await tx.insert(idempotencyRecords).values({
         userId,

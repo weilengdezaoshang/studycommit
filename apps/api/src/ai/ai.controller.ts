@@ -1,4 +1,5 @@
-import { Body, Controller, HttpCode, Inject, Post, UseGuards } from '@nestjs/common'
+import { Body, Controller, HttpCode, Inject, Param, Post, UseGuards } from '@nestjs/common'
+import { z } from 'zod'
 import { paperExplainInputSchema, type PaperExplainInput } from '@studycommit/rpc-contracts/ai'
 import { CurrentUserId } from '../common/current-user'
 import { IdentityGuard } from '../auth/identity.guard'
@@ -18,5 +19,14 @@ export class AiController {
     @Body(new ZodPipe(paperExplainInputSchema)) body: PaperExplainInput,
   ) {
     return this.ai.generatePaperExplain(userId, body)
+  }
+
+  @Post('runs/:id/confirm')
+  @HttpCode(200)
+  confirmPaperExplain(
+    @CurrentUserId() userId: string,
+    @Param('id', new ZodPipe(z.uuid())) id: string,
+  ) {
+    return this.ai.confirmPaperExplain(userId, id)
   }
 }

@@ -2,6 +2,7 @@ import {
   BadGatewayException,
   Inject,
   Injectable,
+  NotFoundException,
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common'
@@ -97,6 +98,7 @@ export class AiService {
       })
       const output = paperExplainOutputSchema.parse({
         ...(extractJson(completion.text) as Record<string, unknown>),
+        runId: run.id,
         model: completion.model,
         promptVersion: AI_PROMPT_VERSION,
       })
@@ -113,5 +115,13 @@ export class AiService {
       }
       throw error
     }
+  }
+
+  async confirmPaperExplain(userId: string, runId: string) {
+    const confirmed = await this.repository.confirmRun(runId, userId)
+    if (!confirmed) {
+      throw new NotFoundException({ code: 'AI_RUN_NOT_FOUND', message: '解释卡记录不存在' })
+    }
+    return { confirmed: true as const }
   }
 }

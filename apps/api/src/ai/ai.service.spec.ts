@@ -3,10 +3,10 @@ import { AiService } from './ai.service'
 
 function buildService(provider: unknown) {
   const repository = {
-    createExplainRun: vi.fn().mockResolvedValue({ id: 'run-1' }),
+    createExplainRun: vi.fn().mockResolvedValue({ id: '11111111-1111-4111-8111-111111111111' }),
     completeExplainRun: vi.fn().mockResolvedValue(undefined),
     failRun: vi.fn().mockResolvedValue(undefined),
-    confirmRun: vi.fn().mockResolvedValue(undefined),
+    confirmRun: vi.fn().mockResolvedValue(true),
   }
   const config = { get: vi.fn() }
   const service = new AiService(repository as never, config as never, provider as never)
@@ -41,7 +41,10 @@ describe('AiService', () => {
       expect.objectContaining({ directive: 'initial' }),
       'paper-explain@1',
     )
-    expect(repository.completeExplainRun).toHaveBeenCalledWith('run-1', output)
+    expect(repository.completeExplainRun).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      output,
+    )
     expect(repository.failRun).not.toHaveBeenCalled()
   })
 
@@ -54,7 +57,11 @@ describe('AiService', () => {
     await expect(service.generatePaperExplain('user-1', input)).rejects.toMatchObject({
       response: { code: 'AI_OUTPUT_INVALID' },
     })
-    expect(repository.failRun).toHaveBeenCalledWith('run-1', expect.any(String), 'paper-explain@1')
+    expect(repository.failRun).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      expect.any(String),
+      'paper-explain@1',
+    )
     expect(repository.completeExplainRun).not.toHaveBeenCalled()
   })
 
@@ -65,5 +72,16 @@ describe('AiService', () => {
       response: { code: 'AI_UNAVAILABLE' },
     })
     expect(repository.createExplainRun).not.toHaveBeenCalled()
+  })
+
+  it('确认解释卡时仅返回当前用户的确认结果', async () => {
+    const { service, repository } = buildService(null)
+    await expect(
+      service.confirmPaperExplain('user-1', '11111111-1111-4111-8111-111111111111'),
+    ).resolves.toEqual({ confirmed: true })
+    expect(repository.confirmRun).toHaveBeenCalledWith(
+      '11111111-1111-4111-8111-111111111111',
+      'user-1',
+    )
   })
 })

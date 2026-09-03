@@ -42,6 +42,7 @@ interface AiProviderOptions {
   baseUrl: string
   apiKey: string
   model: string
+  timeoutMs?: number
   fetchImpl?: typeof fetch
 }
 
@@ -109,7 +110,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
             signal,
           },
         ),
-      request.timeoutMs ?? 15_000,
+      request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as { choices?: Array<{ message?: { content?: string } }> }
 
     const choice = payload.choices?.[0]?.message?.content
@@ -150,7 +151,7 @@ export class AnthropicProvider implements AiProvider {
             signal,
           },
         ),
-      request.timeoutMs ?? 15_000,
+      request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as { content?: Array<{ type?: string; text?: string }> }
 
     const text = payload.content
@@ -191,7 +192,7 @@ export class GeminiProvider implements AiProvider {
             signal,
           },
         ),
-      request.timeoutMs ?? 15_000,
+      request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
     }
@@ -223,6 +224,7 @@ export function createAiProviderFromEnv(config: ConfigService<AppEnv>): AiProvid
     baseUrl: config.get('AI_BASE_URL') ?? AI_PROTOCOL_DEFAULT_BASE_URL[protocol],
     apiKey,
     model,
+    timeoutMs: config.get('AI_TIMEOUT_MS') ?? 15_000,
   }
   switch (protocol) {
     case 'anthropic':

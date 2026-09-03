@@ -37,7 +37,7 @@ export class PapersController {
   async create(
     @CurrentUserId() userId: string,
     @Headers('idempotency-key') key: string | undefined,
-    @Body(new ZodPipe(createPaperInputSchema)) body: { content: string },
+    @Body(new ZodPipe(createPaperInputSchema)) body: { content: string; hasQuestion: boolean },
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
     const result = await this.papers.create(userId, body, requireIdempotencyKey(key))
