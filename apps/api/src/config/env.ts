@@ -24,7 +24,8 @@ export const envSchema = z.object({
   WECHAT_MINI_APP_SECRET: z.string().min(1).optional(),
   AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   AUTH_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
-  /** AI 基建:OpenAI 兼容供应商;三者都配置才启用,缺省时 AI 功能降级 */
+  /** AI 基建:AI_PROTOCOL 选择供应商协议(openai 兼容 / anthropic / gemini),未配置密钥时 AI 功能降级 */
+  AI_PROTOCOL: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
   AI_API_KEY: z.string().min(1).optional(),
   AI_BASE_URL: z.url().optional(),
   AI_MODEL: z.string().min(1).max(120).optional(),
