@@ -34,7 +34,7 @@ describe('createServices', () => {
         moveToInbox: vi.fn(),
         remove: vi.fn(),
       },
-      ai: { explainPaper: vi.fn() },
+      ai: { explainPaper: vi.fn(), confirmPaperExplain: vi.fn() },
     }
 
     const services = createServices({ transport: 'orpc', orpcClient: rawClient })

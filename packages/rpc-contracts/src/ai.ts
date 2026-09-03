@@ -73,6 +73,8 @@ export const explainViewSchema = z.discriminatedUnion('type', [
 
 export const explainDirectiveSchema = z.enum(['initial', 'plainer', 'alternative'])
 
+export const confirmPaperExplainInputSchema = z.object({ runId: z.uuid() })
+
 export const paperExplainInputSchema = z.object({
   paperId: z.uuid().optional(),
   /** 纸页正文(AI 只读,不修改) */
@@ -87,6 +89,7 @@ export const paperExplainInputSchema = z.object({
 })
 
 export const paperExplainOutputSchema = z.object({
+  runId: z.uuid(),
   view: explainViewSchema,
   /** 一个具体例子,帮助落地 */
   example: z.string().trim().min(1).max(800),
@@ -97,6 +100,8 @@ export const paperExplainOutputSchema = z.object({
   promptVersion: z.string().min(1).max(60),
 })
 
+export const confirmPaperExplainOutputSchema = z.object({ confirmed: z.literal(true) })
+
 export const agentRunStatusSchema = z.enum(['pending', 'completed', 'failed'])
 
 export type ExplainViewType = z.infer<typeof explainViewTypeSchema>
@@ -104,4 +109,5 @@ export type ExplainView = z.infer<typeof explainViewSchema>
 export type ExplainDirective = z.infer<typeof explainDirectiveSchema>
 export type PaperExplainInput = z.infer<typeof paperExplainInputSchema>
 export type PaperExplainOutput = z.infer<typeof paperExplainOutputSchema>
+export type ConfirmPaperExplainOutput = z.infer<typeof confirmPaperExplainOutputSchema>
 export type AgentRunStatus = z.infer<typeof agentRunStatusSchema>

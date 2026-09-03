@@ -22,6 +22,7 @@ describe('paper contract', () => {
   it('只接受非空纯文字内容', () => {
     expect(createPaperInputSchema.parse({ content: '  一段记录  ' })).toEqual({
       content: '一段记录',
+      hasQuestion: false,
     })
     expect(createPaperInputSchema.safeParse({ content: '   ' }).success).toBe(false)
     expect(createPaperInputSchema.safeParse({ content: 'a'.repeat(20_001) }).success).toBe(false)

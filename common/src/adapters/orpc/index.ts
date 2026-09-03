@@ -18,7 +18,11 @@ import type {
   Topic,
   TopicPage,
 } from '../../contracts/topic'
-import type { PaperExplainInput, PaperExplainOutput } from '@studycommit/rpc-contracts/ai'
+import type {
+  ConfirmPaperExplainOutput,
+  PaperExplainInput,
+  PaperExplainOutput,
+} from '@studycommit/rpc-contracts/ai'
 import type {
   CreatePaperInput,
   DeletePaperOutput,
@@ -66,6 +70,7 @@ export interface OrpcRawClient {
   }
   ai: {
     explainPaper: Procedure<PaperExplainInput, PaperExplainOutput>
+    confirmPaperExplain: Procedure<{ runId: string }, ConfirmPaperExplainOutput>
   }
 }
 
@@ -100,6 +105,7 @@ export function createOrpcServices(client: OrpcRawClient): OrpcServices {
     },
     ai: {
       explainPaper: (input) => client.ai.explainPaper(input),
+      confirmPaperExplain: (input) => client.ai.confirmPaperExplain(input),
     },
   }
 }

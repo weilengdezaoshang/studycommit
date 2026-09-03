@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { explainViewSchema, paperExplainInputSchema, paperExplainOutputSchema } from './ai'
+import { explainViewSchema, paperExplainInputSchema, paperExplainOutputSchema } from './ai.js'
 
 describe('paper explain contract', () => {
   it('接受纸页正文与指令并去掉首尾空格', () => {
@@ -56,6 +56,7 @@ describe('paper explain contract', () => {
 
   it('输出必须携带模型与 Prompt 版本,浅白程度限制在 1~3', () => {
     const base = {
+      runId: '11111111-1111-4111-8111-111111111111',
       view: {
         type: 'causal_chain',
         steps: [

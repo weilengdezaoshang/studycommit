@@ -21,7 +21,7 @@ function createClient(): OrpcRawClient {
       moveToInbox: vi.fn(),
       remove: vi.fn(),
     },
-    ai: { explainPaper: vi.fn() },
+    ai: { explainPaper: vi.fn(), confirmPaperExplain: vi.fn() },
   }
 }
 

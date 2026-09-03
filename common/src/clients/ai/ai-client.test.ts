@@ -5,6 +5,7 @@ import { AiClient } from './ai-client'
 describe('AiClient', () => {
   it('解释卡发送 POST /ai/papers/explain 并解析输出', async () => {
     const transport = new FakeHttpTransport(() => ({
+      runId: '11111111-1111-4111-8111-111111111111',
       view: {
         type: 'causal_chain',
         steps: [
@@ -30,5 +31,20 @@ describe('AiClient', () => {
     expect(request.method).toBe('POST')
     expect(request.path).toBe('/ai/papers/explain')
     expect(request.body).toMatchObject({ directive: 'initial' })
+  })
+
+  it('确认解释卡发送确认请求并解析确认结果', async () => {
+    const transport = new FakeHttpTransport(() => ({ confirmed: true }))
+    const client = new AiClient(transport)
+
+    await expect(
+      client.confirmPaperExplain({ runId: '11111111-1111-4111-8111-111111111111' }),
+    ).resolves.toEqual({
+      confirmed: true,
+    })
+    expect(transport.requests[0]).toMatchObject({
+      method: 'POST',
+      path: '/ai/runs/11111111-1111-4111-8111-111111111111/confirm',
+    })
   })
 })

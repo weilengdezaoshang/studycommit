@@ -1,6 +1,9 @@
 import {
   paperExplainInputSchema,
   paperExplainOutputSchema,
+  type ConfirmPaperExplainOutput,
+  confirmPaperExplainOutputSchema,
+  confirmPaperExplainInputSchema,
   type PaperExplainInput,
   type PaperExplainOutput,
 } from '@studycommit/rpc-contracts/ai'
@@ -19,6 +22,16 @@ export class AiClient implements AiApi {
       path: '/ai/papers/explain',
       body: paperExplainInputSchema.parse(input),
       responseSchema: paperExplainOutputSchema,
+    })
+  }
+
+  confirmPaperExplain(input: { runId: string }): Promise<ConfirmPaperExplainOutput> {
+    const parsed = confirmPaperExplainInputSchema.parse(input)
+    return this.http.request({
+      method: 'POST',
+      path: `/ai/runs/${parsed.runId}/confirm`,
+      body: {},
+      responseSchema: confirmPaperExplainOutputSchema,
     })
   }
 }

@@ -12,10 +12,13 @@ export const paperSchema = z.object({
   createdAt: z.iso.datetime({ offset: true }),
   updatedAt: z.iso.datetime({ offset: true }),
   deletedAt: z.iso.datetime({ offset: true }).nullable(),
+  hasQuestion: z.boolean().default(false),
+  isQuestionResolved: z.boolean().default(false),
 })
 
 export const createPaperInputSchema = z.object({
   content: z.string().trim().min(1).max(20_000),
+  hasQuestion: z.boolean().default(false),
 })
 
 export const listPapersInputSchema = z
@@ -86,7 +89,7 @@ export const paperContract = {
 
 export type Paper = z.infer<typeof paperSchema>
 export type PaperPage = z.infer<typeof paperPageSchema>
-export type CreatePaperInput = z.infer<typeof createPaperInputSchema>
+export type CreatePaperInput = z.input<typeof createPaperInputSchema>
 export type ListPapersInput = z.infer<typeof listPapersInputSchema>
 export type UpdatePaperInput = z.infer<typeof updatePaperInputSchema>
 export type OrganizePaperInput = z.infer<typeof organizePaperInputSchema>
