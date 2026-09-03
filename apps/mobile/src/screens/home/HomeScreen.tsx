@@ -165,9 +165,13 @@ export function HomeScreen() {
               navigation.navigate('Collection', { mode: 'box', topicId })
             }}
             onCreateTopic={() => {
-              const topic = papersActions.createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
-              closeDrawer()
-              navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
+              void papersActions
+                .createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
+                .then((topic) => {
+                  closeDrawer()
+                  navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
+                })
+                .catch(() => undefined)
             }}
             onViewAll={() => {
               closeDrawer()

@@ -117,9 +117,13 @@ export function PaperDetailScreen() {
                   key={topic.id}
                   accessibilityRole="button"
                   onPress={() => {
-                    papersActions.organizePaper(paper.id, topic.id)
-                    setManageOpen(false)
-                    setTopicChoicesOpen(false)
+                    void papersActions
+                      .organizePaper(paper.id, topic.id)
+                      .then(() => {
+                        setManageOpen(false)
+                        setTopicChoicesOpen(false)
+                      })
+                      .catch(() => undefined)
                   }}
                   style={styles.boxChoice}
                 >

@@ -1,6 +1,12 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
 import { createServices } from '@studycommit/common/services'
-import type { LearningLogApi, StudySessionApi, TopicApi } from '@studycommit/common/ports'
+import type {
+  AiApi,
+  LearningLogApi,
+  PaperApi,
+  StudySessionApi,
+  TopicApi,
+} from '@studycommit/common/ports'
 import {
   allowsInsecureHttpFor,
   createDevelopmentHeaderProvider,
@@ -15,6 +21,8 @@ export interface MobileServices {
   studySessions: StudySessionApi
   topics: TopicApi
   learningLogs: LearningLogApi
+  papers: PaperApi
+  ai: AiApi
 }
 
 export function createMobileServices(options?: {
@@ -74,11 +82,24 @@ function createUnavailableServices(error: HttpError): MobileServices {
     },
     topics: {
       listActive: reject,
+      create: reject,
     },
     learningLogs: {
       list: reject,
       getBySession: reject,
       update: reject,
+    },
+    papers: {
+      list: reject,
+      create: reject,
+      update: reject,
+      organize: reject,
+      moveToInbox: reject,
+      remove: reject,
+    },
+    ai: {
+      explainPaper: reject,
+      confirmPaperExplain: reject,
     },
   }
 }

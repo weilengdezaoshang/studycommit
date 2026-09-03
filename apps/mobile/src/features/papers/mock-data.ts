@@ -260,6 +260,8 @@ export function buildSeedPapers(): Paper[] {
       createdAt,
       updatedAt: createdAt,
       deletedAt: null,
+      hasQuestion: Boolean(seed.hasQuestion),
+      isQuestionResolved: Boolean(seed.isQuestionResolved),
     }
   })
 }

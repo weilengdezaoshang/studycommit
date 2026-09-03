@@ -68,6 +68,8 @@ const SEED_PAPERS: Paper[] = [
     createdAt: '2026-08-24T14:10:00.000Z',
     updatedAt: '2026-08-24T14:10:00.000Z',
     deletedAt: null,
+    hasQuestion: false,
+    isQuestionResolved: false,
   },
   {
     id: '22222222-2222-4222-8222-222222222222',
@@ -78,6 +80,8 @@ const SEED_PAPERS: Paper[] = [
     createdAt: '2026-08-25T06:20:00.000Z',
     updatedAt: '2026-08-25T06:20:00.000Z',
     deletedAt: null,
+    hasQuestion: true,
+    isQuestionResolved: false,
   },
   {
     id: '44444444-4444-4444-8444-444444444444',
@@ -88,6 +92,8 @@ const SEED_PAPERS: Paper[] = [
     createdAt: '2026-08-25T01:42:00.000Z',
     updatedAt: '2026-08-25T01:42:00.000Z',
     deletedAt: null,
+    hasQuestion: false,
+    isQuestionResolved: false,
   },
   {
     id: '55555555-5555-4555-8555-555555555555',
@@ -98,6 +104,8 @@ const SEED_PAPERS: Paper[] = [
     createdAt: '2026-08-21T10:36:00.000Z',
     updatedAt: '2026-08-21T10:36:00.000Z',
     deletedAt: null,
+    hasQuestion: true,
+    isQuestionResolved: false,
   },
 ]
 
@@ -221,6 +229,8 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
         createdAt: timestamp,
         updatedAt: timestamp,
         deletedAt: null,
+        hasQuestion: input.hasQuestion ?? false,
+        isQuestionResolved: false,
       })
       persist([paper, ...papers])
       const metadata = parsePaperMetadata({
@@ -242,6 +252,18 @@ export function createMockPapersApi(options: MockPapersApiOptions = {}) {
       }
       const resolved = { ...current, isQuestionResolved: true }
       paperMetadata = paperMetadata.map((item) => (item.paperId === id ? resolved : item))
+      persist(
+        papers.map((paper) =>
+          paper.id === id
+            ? {
+                ...paper,
+                isQuestionResolved: true,
+                version: paper.version + 1,
+                updatedAt: now().toISOString(),
+              }
+            : paper,
+        ),
+      )
       metadataStorage.write(paperMetadata.map(clonePaperMetadata))
       return settle(clonePaperMetadata(resolved))
     },
@@ -547,6 +569,8 @@ function parsePaper(input: unknown): Paper {
     createdAt: readDate(value.createdAt),
     updatedAt: readDate(value.updatedAt),
     deletedAt,
+    hasQuestion: value.hasQuestion === true,
+    isQuestionResolved: value.isQuestionResolved === true,
   } as Paper
 }
 

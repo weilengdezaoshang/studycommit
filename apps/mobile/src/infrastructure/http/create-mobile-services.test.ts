@@ -27,5 +27,10 @@ describe('createMobileServices', () => {
     ).rejects.toMatchObject({
       serialized: { code: 'CONFIGURATION_ERROR' },
     })
+    await expect(
+      services.ai.explainPaper({ content: '测试解释', directive: 'initial', round: 1 }),
+    ).rejects.toMatchObject({
+      serialized: { code: 'CONFIGURATION_ERROR' },
+    })
   })
 })

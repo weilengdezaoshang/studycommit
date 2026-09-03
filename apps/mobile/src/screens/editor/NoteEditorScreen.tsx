@@ -23,13 +23,17 @@ export function NoteEditorScreen() {
   const [photoAttached, setPhotoAttached] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const save = () => {
+  const save = async () => {
     if (!content.trim()) {
       setSaveError('先写点什么再记下')
       return
     }
-    papersActions.createPaper({ content: content.trim(), hasQuestion: isQuestionActive })
-    navigation.goBack()
+    try {
+      await papersActions.createPaper({ content: content.trim(), hasQuestion: isQuestionActive })
+      navigation.goBack()
+    } catch {
+      setSaveError('保存失败，请检查网络后重试')
+    }
   }
 
   return (

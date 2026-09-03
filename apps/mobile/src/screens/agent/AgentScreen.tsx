@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import type { PaperExplainOutput } from '@studycommit/rpc-contracts/ai'
 import { paperColors } from '../../features/papers/paper-visual'
-import { usePapersState } from '../../features/papers/papers-store'
+import { papersActions, usePapersState } from '../../features/papers/papers-store'
+import { useMobileServices } from '../../core/MobileServicesProvider'
 
 /**
  * Agent 学习闭环:只有手势方向,没有固定按钮。
@@ -39,7 +41,11 @@ export function AgentScreen() {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const state = usePapersState()
+  const { ai } = useMobileServices()
   const [step, setStep] = useState(0)
+  const [result, setResult] = useState<PaperExplainOutput | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [translateX] = useState(() => new Animated.Value(0))
 
   const paper = useMemo(
@@ -47,7 +53,42 @@ export function AgentScreen() {
     [state.papers, route.params.paperId],
   )
   const topic = paper?.topicId ? state.topics.find((item) => item.id === paper.topicId) : undefined
-  const explanation = EXPLANATION_TEMPLATES[Math.min(step, EXPLANATION_TEMPLATES.length - 1)]
+
+  const requestExplanation = useCallback(
+    async (
+      directive: 'initial' | 'plainer' | 'alternative',
+      nextStep: number,
+      previousViewType?: PaperExplainOutput['view']['type'],
+    ) => {
+      if (!paper) {
+        return
+      }
+      setLoading(true)
+      setError(null)
+      try {
+        const next = await ai.explainPaper({
+          paperId: paper.id,
+          content: paper.content,
+          directive,
+          previousViewType,
+          round: Math.min(nextStep + 1, MAX_STEP),
+        })
+        setResult(next)
+      } catch {
+        setError('暂时拿不到新的解释，保留当前纸页内容。')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [ai, paper],
+  )
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      void requestExplanation('initial', 0)
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [requestExplanation])
 
   const finish = useCallback(
     (direction: 'left' | 'right') => {
@@ -55,9 +96,26 @@ export function AgentScreen() {
         toValue: direction === 'left' ? -500 : 500,
         duration: 220,
         useNativeDriver: true,
-      }).start(() => navigation.goBack())
+      }).start(() => {
+        if (direction !== 'right' || !result || !paper) {
+          navigation.goBack()
+          return
+        }
+        void (async () => {
+          setLoading(true)
+          try {
+            await ai.confirmPaperExplain({ runId: result.runId })
+            papersActions.resolveQuestion(paper.id)
+            navigation.goBack()
+          } catch {
+            setError('确认失败，纸页仍保留在“还在思考”。')
+          } finally {
+            setLoading(false)
+          }
+        })()
+      })
     },
-    [navigation, translateX],
+    [ai, navigation, paper, result, translateX],
   )
 
   const panResponder = useMemo(
@@ -91,12 +149,14 @@ export function AgentScreen() {
             duration: 180,
             useNativeDriver: true,
           }).start(() => {
-            setStep((value) => value + 1)
+            const nextStep = step + 1
+            setStep(nextStep)
             translateX.setValue(0)
+            void requestExplanation('plainer', nextStep, result?.view.type)
           })
         },
       }),
-    [finish, step, translateX],
+    [finish, requestExplanation, result, step, translateX],
   )
 
   if (!paper) {
@@ -144,13 +204,12 @@ export function AgentScreen() {
           style={[styles.card, { transform: [{ translateX }, { rotate: rotation }] }]}
         >
           <Text style={styles.cardStep}>
-            AI 解释 · 第 {Math.min(step, MAX_STEP - 1) + 1} 步，共 {MAX_STEP - 1} 步
+            AI 解释 · 第 {Math.min(step, MAX_STEP - 1) + 1} 步，共 {MAX_STEP} 步
           </Text>
-          <Text style={styles.cardTitle}>{explanation.title}</Text>
+          {loading && <Text style={styles.cardHint}>正在换一种说法……</Text>}
           <Text style={styles.cardBody}>{paper.content}</Text>
-          <Text style={styles.cardExample}>{explanation.body}</Text>
-          <View style={styles.cardDivider} />
-          <Text style={styles.cardExample}>{explanation.example}</Text>
+          {result ? <ExplainViewContent result={result} /> : <FallbackExplanation step={step} />}
+          {error && <Text style={styles.errorText}>{error}</Text>}
         </Animated.View>
       </View>
 
@@ -211,6 +270,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: paperColors.ink, fontSize: 18, fontWeight: '600' },
   cardBody: { color: paperColors.ink, fontSize: 13, lineHeight: 22 },
   cardExample: { color: paperColors.muted, fontSize: 12, lineHeight: 20 },
+  cardHint: { color: paperColors.action, fontSize: 11 },
+  errorText: { color: '#9A4D43', fontSize: 11, lineHeight: 18 },
   cardDivider: { height: StyleSheet.hairlineWidth, backgroundColor: paperColors.line },
   swipeGuide: {
     flexDirection: 'row',
@@ -220,3 +281,63 @@ const styles = StyleSheet.create({
   },
   swipeText: { color: paperColors.muted, fontSize: 11 },
 })
+
+function FallbackExplanation({ step }: { step: number }) {
+  const explanation = EXPLANATION_TEMPLATES[Math.min(step, EXPLANATION_TEMPLATES.length - 1)]
+  return (
+    <>
+      <Text style={styles.cardTitle}>{explanation.title}</Text>
+      <Text style={styles.cardExample}>{explanation.body}</Text>
+      <View style={styles.cardDivider} />
+      <Text style={styles.cardExample}>{explanation.example}</Text>
+    </>
+  )
+}
+
+function ExplainViewContent({ result }: { result: PaperExplainOutput }) {
+  const { view, example } = result
+  return (
+    <>
+      <Text style={styles.cardTitle}>{viewTitle(view.type)}</Text>
+      {view.type === 'causal_chain' &&
+        view.steps.map((step) => (
+          <Text key={step.title} style={styles.cardExample}>
+            {step.title}：{step.detail}
+          </Text>
+        ))}
+      {view.type === 'contrast' &&
+        view.items.map((item) => (
+          <Text key={item.aspect} style={styles.cardExample}>
+            {item.aspect}：{item.a} / {item.b}
+          </Text>
+        ))}
+      {view.type === 'checklist' &&
+        view.steps.map((step) => (
+          <Text key={step.action} style={styles.cardExample}>
+            □ {step.action}：{step.reason}
+          </Text>
+        ))}
+      {view.type === 'definition_counterexample' && (
+        <>
+          <Text style={styles.cardBody}>{view.definition}</Text>
+          <Text style={styles.cardExample}>反例：{view.counterexample}</Text>
+        </>
+      )}
+      <View style={styles.cardDivider} />
+      <Text style={styles.cardExample}>{example}</Text>
+    </>
+  )
+}
+
+function viewTitle(type: PaperExplainOutput['view']['type']): string {
+  switch (type) {
+    case 'causal_chain':
+      return '因果链'
+    case 'contrast':
+      return '对照来看'
+    case 'checklist':
+      return '检查步骤'
+    case 'definition_counterexample':
+      return '一句话定义'
+  }
+}

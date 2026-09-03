@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import * as SecureStore from 'expo-secure-store'
 import {
   authTokensSchema,
+  currentUserSchema,
   type AuthTokens,
   type CurrentUser,
 } from '@studycommit/rpc-contracts/auth'
@@ -73,7 +74,20 @@ export async function hydrateAuthSession(): Promise<void> {
 async function restoreAuthSession(): Promise<void> {
   try {
     const raw = await SecureStore.getItemAsync(SESSION_KEY)
-    gate = { ...gate, session: raw ? (JSON.parse(raw) as AuthSession) : null }
+    if (!raw) {
+      gate = { ...gate, session: null }
+      return
+    }
+    const parsed = JSON.parse(raw) as { user?: unknown; tokens?: unknown }
+    const user = currentUserSchema.safeParse(parsed.user)
+    const tokens = authTokensSchema.safeParse(parsed.tokens)
+    gate = {
+      ...gate,
+      session: user.success && tokens.success ? { user: user.data, tokens: tokens.data } : null,
+    }
+    if (!user.success || !tokens.success) {
+      await SecureStore.deleteItemAsync(SESSION_KEY).catch(() => undefined)
+    }
   } catch {
     gate = { ...gate, session: null }
   } finally {
