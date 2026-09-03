@@ -1,7 +1,11 @@
 import {
+  createTopicInputSchema,
   listActiveTopicsInputSchema,
   topicPageSchema,
+  topicSchema,
+  type CreateTopicInput,
   type ListActiveTopicsInput,
+  type Topic,
   type TopicPage,
 } from '../../contracts/topic'
 import type { HttpTransport } from '../../http'
@@ -25,6 +29,15 @@ export class TopicClient implements TopicApi {
       method: 'GET',
       path: `/topics?${params.toString()}`,
       responseSchema: topicPageSchema,
+    })
+  }
+
+  create(input: CreateTopicInput): Promise<Topic> {
+    return this.http.request({
+      method: 'POST',
+      path: '/topics',
+      body: createTopicInputSchema.parse(input),
+      responseSchema: topicSchema,
     })
   }
 }

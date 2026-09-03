@@ -11,8 +11,16 @@ function createClient(): OrpcRawClient {
       resume: vi.fn(),
       complete: vi.fn(),
     },
-    topics: { list: vi.fn() },
+    topics: { list: vi.fn(), create: vi.fn() },
     learningLogs: { list: vi.fn(), bySession: vi.fn(), update: vi.fn() },
+    papers: {
+      list: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      organize: vi.fn(),
+      moveToInbox: vi.fn(),
+      remove: vi.fn(),
+    },
   }
 }
 

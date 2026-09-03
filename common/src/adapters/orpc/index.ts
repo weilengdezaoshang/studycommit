@@ -12,7 +12,22 @@ import type {
   SessionCommandInput,
   StudySession,
 } from '../../contracts/study-session'
-import type { ListActiveTopicsInput, TopicPage } from '../../contracts/topic'
+import type {
+  CreateTopicInput,
+  ListActiveTopicsInput,
+  Topic,
+  TopicPage,
+} from '../../contracts/topic'
+import type {
+  CreatePaperInput,
+  DeletePaperOutput,
+  ListPapersInput,
+  OrganizePaperInput,
+  Paper,
+  PaperCommandInput,
+  PaperPage,
+  UpdatePaperInput,
+} from '../../contracts/paper'
 import type { ApplicationServices } from '../../ports'
 
 type Procedure<TInput, TOutput> = (input: TInput) => Promise<TOutput>
@@ -33,11 +48,20 @@ export interface OrpcRawClient {
   }
   topics: {
     list: Procedure<ListActiveTopicsInput | undefined, TopicPage>
+    create: Procedure<CreateTopicInput, Topic>
   }
   learningLogs: {
     list: Procedure<ListLearningLogsInput | undefined, LearningLogPage>
     bySession: Procedure<string, LearningLog>
     update: Procedure<UpdateLearningLogInput, LearningLog>
+  }
+  papers: {
+    list: Procedure<ListPapersInput | undefined, PaperPage>
+    create: Procedure<CreatePaperInput, Paper>
+    update: Procedure<UpdatePaperInput, Paper>
+    organize: Procedure<OrganizePaperInput, Paper>
+    moveToInbox: Procedure<PaperCommandInput, Paper>
+    remove: Procedure<PaperCommandInput, DeletePaperOutput>
   }
 }
 
@@ -55,11 +79,20 @@ export function createOrpcServices(client: OrpcRawClient): OrpcServices {
     },
     topics: {
       listActive: (input?: ListActiveTopicsInput): Promise<TopicPage> => client.topics.list(input),
+      create: (input: CreateTopicInput): Promise<Topic> => client.topics.create(input),
     },
     learningLogs: {
       list: (input) => client.learningLogs.list(input),
       getBySession: (sessionId) => client.learningLogs.bySession(sessionId),
       update: (input) => client.learningLogs.update(input),
+    },
+    papers: {
+      list: (input) => client.papers.list(input),
+      create: (input) => client.papers.create(input),
+      update: (input) => client.papers.update(input),
+      organize: (input) => client.papers.organize(input),
+      moveToInbox: (input) => client.papers.moveToInbox(input),
+      remove: (input) => client.papers.remove(input),
     },
   }
 }

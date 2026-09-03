@@ -1,4 +1,5 @@
 import { LearningLogClient } from '../../clients/learning-log/learning-log-client'
+import { PaperClient } from '../../clients/paper/paper-client'
 import { StudySessionClient } from '../../clients/study-session/study-session-client'
 import { TopicClient } from '../../clients/topic/topic-client'
 import type { HttpTransport } from '../../http'
@@ -12,5 +13,6 @@ export function createRestServices(transport: HttpTransport): RestServices {
     studySessions: new StudySessionClient(transport),
     topics: new TopicClient(transport),
     learningLogs: new LearningLogClient(transport),
+    papers: new PaperClient(transport),
   }
 }

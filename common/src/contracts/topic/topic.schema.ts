@@ -33,6 +33,16 @@ export const listActiveTopicsInputSchema = z
   })
   .strict()
 
+export const createTopicInputSchema = z.object({
+  name: z.string().trim().min(1).max(18),
+  description: z.string().max(1000).nullable().optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
+})
+
 export type Topic = z.infer<typeof topicSchema>
 export type TopicPage = z.infer<typeof topicPageSchema>
 export type ListActiveTopicsInput = z.infer<typeof listActiveTopicsInputSchema>
+export type CreateTopicInput = z.infer<typeof createTopicInputSchema>

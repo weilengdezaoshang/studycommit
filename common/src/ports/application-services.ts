@@ -12,7 +12,17 @@ import type {
   SessionCommandInput,
   StudySession,
 } from '../contracts/study-session'
-import type { ListActiveTopicsInput, TopicPage } from '../contracts/topic'
+import type { CreateTopicInput, ListActiveTopicsInput, Topic, TopicPage } from '../contracts/topic'
+import type {
+  CreatePaperInput,
+  DeletePaperOutput,
+  ListPapersInput,
+  OrganizePaperInput,
+  Paper,
+  PaperCommandInput,
+  PaperPage,
+  UpdatePaperInput,
+} from '../contracts/paper'
 
 export interface StudySessionApi {
   create(input: CreateStudySessionInput): Promise<StudySession>
@@ -25,6 +35,7 @@ export interface StudySessionApi {
 
 export interface TopicApi {
   listActive(input?: ListActiveTopicsInput): Promise<TopicPage>
+  create(input: CreateTopicInput): Promise<Topic>
 }
 
 /** @deprecated Use TopicApi for new code. */
@@ -36,8 +47,18 @@ export interface LearningLogApi {
   update(input: UpdateLearningLogInput): Promise<LearningLog>
 }
 
+export interface PaperApi {
+  list(input?: ListPapersInput): Promise<PaperPage>
+  create(input: CreatePaperInput): Promise<Paper>
+  update(input: UpdatePaperInput): Promise<Paper>
+  organize(input: OrganizePaperInput): Promise<Paper>
+  moveToInbox(input: PaperCommandInput): Promise<Paper>
+  remove(input: PaperCommandInput): Promise<DeletePaperOutput>
+}
+
 export interface ApplicationServices {
   studySessions: StudySessionApi
   topics: TopicApi
   learningLogs: LearningLogApi
+  papers: PaperApi
 }

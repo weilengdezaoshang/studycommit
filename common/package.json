@@ -16,7 +16,8 @@
     "./ports": "./src/ports/index.ts",
     "./adapters/rest": "./src/adapters/rest/index.ts",
     "./adapters/orpc": "./src/adapters/orpc/index.ts",
-    "./services": "./src/services/index.ts"
+    "./services": "./src/services/index.ts",
+    "./paper": "./src/clients/paper/index.ts"
   },
   "scripts": {
     "test": "vitest",
