@@ -71,7 +71,7 @@ export class RedisService implements OnModuleDestroy {
         await this.client.connect()
       }
     } catch (error) {
-      if (this.client.status === 'ready' || this.client.status === 'connecting') {
+      if ((this.client.status as string) === 'ready' || this.client.status === 'connecting') {
         return
       }
       throw error
