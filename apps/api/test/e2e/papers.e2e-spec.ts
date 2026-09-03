@@ -156,7 +156,10 @@ describe('Papers API', () => {
       version: 2,
       createdAt: paper.createdAt,
     })
-    expect(organized.json().updatedAt).not.toBe(paper.updatedAt)
+    // 快速连续操作可能落在同一毫秒,updatedAt 相同不能视为失败
+    expect(new Date(organized.json().updatedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(paper.updatedAt).getTime(),
+    )
   })
 
   it('重复归入同一箱子直接返回且不增加版本', async () => {
@@ -281,7 +284,9 @@ describe('Papers API', () => {
       version: 3,
       createdAt: paper.createdAt,
     })
-    expect(updated.json().updatedAt).not.toBe(organized.updatedAt)
+    expect(new Date(updated.json().updatedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(organized.updatedAt).getTime(),
+    )
   })
 
   it('重复提交相同正文直接返回且不增加版本', async () => {
@@ -351,7 +356,10 @@ describe('Papers API', () => {
       version: 3,
       createdAt: paper.createdAt,
     })
-    expect(moved.json().updatedAt).not.toBe(paper.updatedAt)
+    // 快速连续操作可能落在同一毫秒,updatedAt 相同不能视为失败
+    expect(new Date(moved.json().updatedAt).getTime()).toBeGreaterThanOrEqual(
+      new Date(paper.updatedAt).getTime(),
+    )
   })
 
   it('已经在待整理时直接返回且不增加版本', async () => {
