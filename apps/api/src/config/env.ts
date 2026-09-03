@@ -24,6 +24,11 @@ export const envSchema = z.object({
   WECHAT_MINI_APP_SECRET: z.string().min(1).optional(),
   AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   AUTH_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
+  /** AI 基建:OpenAI 兼容供应商;三者都配置才启用,缺省时 AI 功能降级 */
+  AI_API_KEY: z.string().min(1).optional(),
+  AI_BASE_URL: z.url().optional(),
+  AI_MODEL: z.string().min(1).max(120).optional(),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(15_000),
 })
 export type AppEnv = z.infer<typeof envSchema>
 

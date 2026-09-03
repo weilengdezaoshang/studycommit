@@ -28,6 +28,8 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
 export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
 export const userStatus = pgEnum('user_status', ['active', 'disabled', 'merged'])
+export const agentRunKind = pgEnum('agent_run_kind', ['companion_followup'])
+export const agentRunStatus = pgEnum('agent_run_status', ['pending', 'completed', 'failed'])
 export const authProvider = pgEnum('auth_provider', [
   'phone',
   'wechat_unionid',
@@ -172,6 +174,34 @@ export const papers = pgTable(
       table.createdAt,
       table.id,
     ),
+  ],
+)
+
+/**
+ * Agent 运行记录:所有 AI 输出必须落库并携带模型、Prompt 版本与确认状态
+ * (PRD 红线:AI 只产生候选,用户确认后才写入业务数据)。
+ */
+export const agentRuns = pgTable(
+  'agent_runs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    kind: agentRunKind('kind').notNull(),
+    status: agentRunStatus('status').notNull().default('pending'),
+    model: text('model'),
+    promptVersion: text('prompt_version').notNull(),
+    input: jsonb('input').notNull(),
+    output: jsonb('output'),
+    error: text('error'),
+    /** 候选内容被用户确认的时间;null 表示尚未确认或已放弃 */
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index('agent_runs_user_kind_created_idx').on(table.userId, table.kind, table.createdAt),
   ],
 )
 

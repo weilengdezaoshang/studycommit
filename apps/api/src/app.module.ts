@@ -14,6 +14,7 @@ import { ORPCModule } from '@orpc/nest'
 import { PapersModule } from './papers/papers.module'
 import { TemplatesModule } from './templates/templates.module'
 import { AuthModule } from './auth/auth.module'
+import { AiModule } from './ai/ai.module'
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AuthModule } from './auth/auth.module'
     PapersModule,
     TemplatesModule,
     AuthModule,
+    AiModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
