@@ -76,7 +76,10 @@ export class ErrorFilter implements ExceptionFilter {
   }
 
   private getPublicPayload(exception: unknown, statusCode: number): ErrorPayload {
-    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    // 5xx 默认不向客户端暴露内部细节;例外:显式携带业务错误码的 HttpException
+    // (如 AI 降级 503/AI_OUTPUT_INVALID),其消息在抛出时已脱敏。
+    const explicitCode = this.getExplicitBusinessCode(exception)
+    if (statusCode >= HttpStatus.INTERNAL_SERVER_ERROR && explicitCode === null) {
       return {
         code: 'INTERNAL_SERVER_ERROR',
         message: '服务器内部错误',
@@ -90,6 +93,10 @@ export class ErrorFilter implements ExceptionFilter {
         message: exception.message,
         details: null,
       }
+    }
+
+    if (explicitCode !== null) {
+      return explicitCode
     }
 
     if (exception instanceof HttpException) {
@@ -111,6 +118,22 @@ export class ErrorFilter implements ExceptionFilter {
       message: exception instanceof Error ? exception.message : 'HTTP Error',
       details: null,
     }
+  }
+
+  /** 仅当 HttpException 的响应体显式携带字符串 code 时返回完整负载。 */
+  private getExplicitBusinessCode(exception: unknown): ErrorPayload | null {
+    if (!(exception instanceof HttpException)) {
+      return null
+    }
+    const raw = exception.getResponse()
+    if (this.isObject(raw) && typeof raw.code === 'string') {
+      return {
+        code: raw.code,
+        message: this.getHttpMessage(raw.message, exception.message),
+        details: 'details' in raw ? raw.details : null,
+      }
+    }
+    return null
   }
 
   private getHttpMessage(message: unknown, fallback: string): string {
