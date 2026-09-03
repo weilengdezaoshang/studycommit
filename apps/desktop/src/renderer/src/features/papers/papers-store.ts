@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { Paper } from '@studycommit/rpc-contracts/papers'
+import type { Paper, PaperPage } from '@studycommit/rpc-contracts/papers'
 import {
   INBOX_TOPIC_ID,
   DESKTOP_TOPICS,
@@ -21,6 +21,9 @@ export type PapersState = {
   topics: DesktopTopic[]
   extras: Record<string, PaperExtra>
   selectedDateKey: string
+  /** seed = 本地演示数据;server = 已从服务端加载。 */
+  source: 'seed' | 'server'
+  syncing: boolean
 }
 
 const listeners = new Set<() => void>()
@@ -30,6 +33,8 @@ let state: PapersState = {
   topics: DESKTOP_TOPICS,
   extras: buildSeedExtras(),
   selectedDateKey: todayKey(),
+  source: 'seed',
+  syncing: false,
 }
 
 function setState(next: Partial<PapersState>) {
@@ -54,11 +59,82 @@ export function usePapersState(): PapersState {
   return useSyncExternalStore(subscribe, getState, getState)
 }
 
-export const papersActions = {
-  organizePaper(paperId: string, topicId: string) {
-    if (!state.topics.some((topic) => topic.id === topicId)) {
-return
+/** 非 React 场景读取当前状态(测试、命令式逻辑)。 */
+export function getPapersState(): PapersState {
+  return getState()
 }
+
+type IpcEnvelope<T> = { ok: true; data: T } | { ok: false; error?: { message?: string } }
+
+function papersApi(): import('../../types/study-commit-api').StudyCommitPapersApi | null {
+  return typeof window !== 'undefined' && window.studyCommit?.papers
+    ? window.studyCommit.papers
+    : null
+}
+
+function topicsApi(): import('../../types/study-commit-api').StudyCommitTopicsApi | null {
+  return typeof window !== 'undefined' && window.studyCommit?.topics
+    ? window.studyCommit.topics
+    : null
+}
+
+async function unwrap<T>(promise: Promise<IpcEnvelope<T>>): Promise<T> {
+  const result = await promise
+  if (!result.ok) {
+    throw new Error(result.error?.message ?? '请求失败')
+  }
+  return result.data
+}
+
+/** 预加载页数上限:100/页 × 3 页,覆盖演示与早期真实使用量。 */
+const REMOTE_PAPER_PAGES = 3
+
+const papersActions = {
+  /** 登录后拉取云端纸页与箱子;失败时保留当前数据(演示或上一次成功结果)。 */
+  async loadRemote(): Promise<void> {
+    const api = papersApi()
+    const topics = topicsApi()
+    if (!api) {
+      return
+    }
+    setState({ syncing: true })
+    try {
+      const items: Paper[] = []
+      let cursor: string | null = null
+      for (let page = 0; page < REMOTE_PAPER_PAGES; page += 1) {
+        const result: PaperPage = await unwrap(
+          api.list(cursor ? { limit: 100, cursor } : { limit: 100 }),
+        )
+        items.push(...result.items)
+        if (!result.pageInfo.hasNextPage || !result.pageInfo.nextCursor) {
+          break
+        }
+        cursor = result.pageInfo.nextCursor
+      }
+      const nextTopics: DesktopTopic[] = topics
+        ? (await unwrap(topics.listActive({ limit: 100 }))).items.map((topic) => ({
+            id: topic.id,
+            name: topic.name,
+            color: topic.color,
+          }))
+        : []
+      setState(mergeServerState(state, items, nextTopics))
+    } catch {
+      // 保持当前状态:演示数据或上次成功的数据仍可用
+    } finally {
+      setState({ syncing: false })
+    }
+  },
+
+  organizePaper(paperId: string, topicId: string) {
+    const target = state.topics.find((topic) => topic.id === topicId)
+    if (!target) {
+      return
+    }
+    const previous = state.papers.find((paper) => paper.id === paperId)
+    if (!previous || previous.deletedAt) {
+      return
+    }
     setState({
       papers: state.papers.map((paper) =>
         paper.id === paperId && !paper.deletedAt
@@ -72,6 +148,17 @@ return
           : paper,
       ),
     })
+    const api = papersApi()
+    if (api && state.source === 'server') {
+      unwrap(api.organize({ id: paperId, version: previous.version, topicId }))
+        .then((saved) => replacePaper(saved))
+        .catch(() => {
+          // 服务端失败时回滚到归档前状态
+          setState({
+            papers: state.papers.map((paper) => (paper.id === paperId ? previous : paper)),
+          })
+        })
+    }
   },
   selectDate(dateKey: string) {
     setState({ selectedDateKey: dateKey })
@@ -90,6 +177,7 @@ return
     }
     setState({ extras: { ...state.extras, [paperId]: { ...extra, isQuestionResolved: false } } })
   },
+  // 重命名/删除箱子暂为本地操作:后端 topics 尚无对应接口,待接口就绪后同步
   renameTopic(topicId: string, name: string) {
     const trimmed = name.trim()
     if (!trimmed) {
@@ -123,8 +211,48 @@ return
   createTopic(name: string): DesktopTopic {
     const topic: DesktopTopic = { id: `topic-${Date.now()}`, name, color: '#53635A' }
     setState({ topics: [...state.topics, topic] })
+    const api = topicsApi()
+    if (api) {
+      unwrap(api.create({ name }))
+        .then((saved) => {
+          const serverTopic: DesktopTopic = { id: saved.id, name: saved.name, color: saved.color }
+          setState({
+            topics: state.topics.map((item) => (item.id === topic.id ? serverTopic : item)),
+            papers: state.papers.map((paper) =>
+              paper.topicId === topic.id ? { ...paper, topicId: saved.id } : paper,
+            ),
+          })
+        })
+        .catch(() => {
+          // 建箱失败时保留本地箱子,后续整理操作会按本地状态继续
+        })
+    }
     return topic
   },
 }
+
+function replacePaper(saved: Paper) {
+  setState({
+    papers: state.papers.map((paper) => (paper.id === saved.id ? saved : paper)),
+  })
+}
+
+/** 用服务端数据替换本地数据;问题标记(本地 sidecar)仅保留仍存在的纸页。 */
+function mergeServerState(
+  previous: PapersState,
+  items: Paper[],
+  topics: DesktopTopic[],
+): Partial<PapersState> {
+  const ids = new Set(items.map((paper) => paper.id))
+  const extras: Record<string, PaperExtra> = {}
+  for (const [paperId, extra] of Object.entries(previous.extras)) {
+    if (ids.has(paperId)) {
+      extras[paperId] = extra
+    }
+  }
+  return { papers: items, topics, extras, source: 'server' }
+}
+
+export { papersActions }
 
 export { INBOX_TOPIC_ID }

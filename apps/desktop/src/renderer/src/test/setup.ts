@@ -24,6 +24,16 @@ function createDefaultStudyCommit() {
         ok: true as const,
         data: { items: [], pageInfo: { hasNextPage: false, nextCursor: null } },
       }),
+      create: async () => ({ ok: false as const, error: configurationError() }),
+    },
+    papers: {
+      // 默认失败:渲染层测试继续使用种子演示数据;需要的用例自行覆盖 papers.list
+      list: async () => ({ ok: false as const, error: configurationError() }),
+      create: async () => ({ ok: false as const, error: configurationError() }),
+      update: async () => ({ ok: false as const, error: configurationError() }),
+      organize: async () => ({ ok: false as const, error: configurationError() }),
+      moveToInbox: async () => ({ ok: false as const, error: configurationError() }),
+      remove: async () => ({ ok: false as const, error: configurationError() }),
     },
     learningLogs: {
       list: async () => ({ ok: false as const, error: configurationError() }),

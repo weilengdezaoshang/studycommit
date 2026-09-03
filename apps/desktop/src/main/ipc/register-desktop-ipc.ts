@@ -2,6 +2,7 @@ import type { DesktopServices } from '../composition/create-services'
 import { IpcHost } from './ipc-host'
 import { registerAuthIpc } from './auth-ipc'
 import { registerLearningLogIpc } from './learning-log-ipc'
+import { registerPaperIpc } from './paper-ipc'
 import { registerStudySessionIpc } from './study-session-ipc'
 import { registerTopicIpc } from './topic-ipc'
 import type { TrustedIpcSenderOptions } from './validate-ipc-sender'
@@ -14,6 +15,7 @@ export function registerDesktopIpc(
   registerStudySessionIpc(host, services.studySessions)
   registerTopicIpc(host, services.topics)
   registerLearningLogIpc(host, services.learningLogs)
+  registerPaperIpc(host, services.papers)
   registerAuthIpc(host, services.auth)
   return () => {
     host.dispose()

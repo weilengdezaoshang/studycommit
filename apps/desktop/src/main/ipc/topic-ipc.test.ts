@@ -28,6 +28,7 @@ function trustedEvent() {
 describe('registerTopicIpc', () => {
   const client = {
     listActive: vi.fn(),
+    create: vi.fn(),
   }
 
   beforeEach(() => {
@@ -42,7 +43,7 @@ describe('registerTopicIpc', () => {
       rendererDevOrigin: 'http://localhost:5173',
     })
     registerTopicIpc(host, client)
-    expect(Object.keys(topicIpcChannels)).toEqual(['listActive'])
+    expect(Object.keys(topicIpcChannels)).toEqual(['listActive', 'create'])
     const result = await handlers.get(topicIpcChannels.listActive)?.(trustedEvent())
     expect(client.listActive).toHaveBeenCalledWith({})
     expect(result).toEqual({ ok: true, data: activeTopicPageFixture })

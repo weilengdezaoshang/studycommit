@@ -16,6 +16,7 @@ vi.mock('electron', () => ({
 }))
 
 import { learningLogIpcChannels } from '../../shared/learning-log-channels'
+import { paperIpcChannels } from '../../shared/paper-channels'
 import { authIpcChannels } from './auth-ipc'
 import { registerDesktopIpc } from './register-desktop-ipc'
 import { studySessionIpcChannels } from './study-session-ipc'
@@ -40,6 +41,15 @@ describe('registerDesktopIpc', () => {
     },
     topics: {
       listActive: vi.fn(),
+      create: vi.fn(),
+    },
+    papers: {
+      list: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      organize: vi.fn(),
+      moveToInbox: vi.fn(),
+      remove: vi.fn(),
     },
     learningLogs: {
       list: vi.fn(),
@@ -75,6 +85,7 @@ describe('registerDesktopIpc', () => {
         ...Object.values(topicIpcChannels),
         ...Object.values(authIpcChannels),
         ...Object.values(learningLogIpcChannels),
+        ...Object.values(paperIpcChannels),
       ].sort(),
     )
 

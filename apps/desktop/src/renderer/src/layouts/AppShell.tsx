@@ -8,6 +8,7 @@ import { useStudySessionController } from '@studycommit/common/study-session-rea
 import { useDesktopServices } from '../features/study-session/api/DesktopServicesProvider'
 import { subscribeWindowFocus } from '../features/study-session/subscribe-window-focus'
 import { TodayPage } from '../features/study-session/pages/TodayPage'
+import { papersActions } from '../features/papers/papers-store'
 
 function PageOutlet(): React.JSX.Element {
   const location = useLocation()
@@ -42,6 +43,11 @@ export function AppShell({
     const open = (): void => setDrawerOpen(true)
     window.addEventListener('studycommit:open-drawer', open)
     return () => window.removeEventListener('studycommit:open-drawer', open)
+  }, [])
+
+  // 进入工作区后拉取云端纸页与箱子;失败时界面继续使用本地数据
+  useEffect(() => {
+    void papersActions.loadRemote()
   }, [])
 
   return (

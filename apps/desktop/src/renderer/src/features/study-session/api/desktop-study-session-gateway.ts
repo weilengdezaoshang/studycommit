@@ -3,12 +3,14 @@ import type {
   CompleteStudySessionInput,
   CompleteStudySessionResult,
   CreateStudySessionInput,
+  CreateTopicInput,
   LearningLog,
   LearningLogPage,
   ListLearningLogsInput,
   ListActiveTopicsInput,
   SessionCommandInput,
   StudySession,
+  Topic,
   TopicPage,
   UpdateLearningLogInput,
 } from '@studycommit/common/contracts'
@@ -27,6 +29,7 @@ export interface StudySessionGateway {
 
 export interface TopicGateway {
   listActive(input?: ListActiveTopicsInput): Promise<TopicPage>
+  create(input: CreateTopicInput): Promise<Topic>
 }
 
 export interface LearningLogGateway {
@@ -71,6 +74,7 @@ export function createDesktopTopicGateway(
 ): TopicGateway {
   return {
     listActive: (input) => invokeIpc(() => api.listActive(input)),
+    create: (input) => invokeIpc(() => api.create(input)),
   }
 }
 

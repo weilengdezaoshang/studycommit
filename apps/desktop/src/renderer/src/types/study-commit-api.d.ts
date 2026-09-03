@@ -3,14 +3,24 @@ import type {
   CompleteStudySessionInput,
   CompleteStudySessionResult,
   CreateStudySessionInput,
+  CreatePaperInput,
+  CreateTopicInput,
+  DeletePaperOutput,
   LearningLog,
   LearningLogPage,
   ListLearningLogsInput,
   ListActiveTopicsInput,
+  ListPapersInput,
+  OrganizePaperInput,
+  Paper,
+  PaperCommandInput,
+  PaperPage,
   SessionCommandInput,
   StudySession,
+  Topic,
   TopicPage,
   UpdateLearningLogInput,
+  UpdatePaperInput,
 } from '@studycommit/common/contracts'
 import type { IpcResult } from '../../../main/ipc/ipc-result'
 
@@ -25,6 +35,16 @@ export interface StudyCommitStudySessionsApi {
 
 export interface StudyCommitTopicsApi {
   listActive: (input?: ListActiveTopicsInput) => Promise<IpcResult<TopicPage>>
+  create: (input: CreateTopicInput) => Promise<IpcResult<Topic>>
+}
+
+export interface StudyCommitPapersApi {
+  list: (input?: ListPapersInput) => Promise<IpcResult<PaperPage>>
+  create: (input: CreatePaperInput) => Promise<IpcResult<Paper>>
+  update: (input: UpdatePaperInput) => Promise<IpcResult<Paper>>
+  organize: (input: OrganizePaperInput) => Promise<IpcResult<Paper>>
+  moveToInbox: (input: PaperCommandInput) => Promise<IpcResult<Paper>>
+  remove: (input: PaperCommandInput) => Promise<IpcResult<DeletePaperOutput>>
 }
 
 export interface StudyCommitLearningLogsApi {
@@ -59,6 +79,7 @@ export interface StudyCommitApi {
   studySessions: StudyCommitStudySessionsApi
   topics: StudyCommitTopicsApi
   learningLogs: StudyCommitLearningLogsApi
+  papers: StudyCommitPapersApi
   auth: StudyCommitAuthApi
 }
 

@@ -40,6 +40,9 @@ export function createStudySessionGateway(
 export function createTopicGateway(overrides: Partial<TopicGateway> = {}): TopicGateway {
   return {
     listActive: async () => activeTopicPageFixture,
+    create: async () => {
+      throw new Error('create not stubbed')
+    },
     ...overrides,
   }
 }
