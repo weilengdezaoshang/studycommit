@@ -7,6 +7,7 @@ import {
   type DesktopRendererServices,
 } from '../api/DesktopServicesProvider'
 import type {
+  AiGateway,
   LearningLogGateway,
   StudySessionGateway,
   TopicGateway,
@@ -62,6 +63,18 @@ export function createLearningLogGateway(
   }
 }
 
+export function createAiGateway(overrides: Partial<AiGateway> = {}): AiGateway {
+  return {
+    explainPaper: async () => {
+      throw new Error('explainPaper not stubbed')
+    },
+    confirmPaperExplain: async () => {
+      throw new Error('confirmPaperExplain not stubbed')
+    },
+    ...overrides,
+  }
+}
+
 export function renderStudyApp(
   path: string,
   services?: Partial<DesktopRendererServices>,
@@ -71,6 +84,7 @@ export function renderStudyApp(
     studySessions: createStudySessionGateway(),
     topics: createTopicGateway(),
     learningLogs: createLearningLogGateway(),
+    ai: createAiGateway(),
     ...services,
   }
   return render(

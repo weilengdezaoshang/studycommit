@@ -72,8 +72,10 @@ export interface StudyCommitAiApi {
       plainLevel: number
       model: string
       promptVersion: string
+      runId: string
     }>
   >
+  confirmPaperExplain: (input: { runId: string }) => Promise<IpcResult<{ confirmed: true }>>
 }
 
 export interface StudyCommitAuthApi {

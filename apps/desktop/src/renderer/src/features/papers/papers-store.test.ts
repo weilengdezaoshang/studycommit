@@ -39,14 +39,12 @@ describe('桌面纸页数据通路', () => {
   it('loadRemote 成功后用服务端纸页和箱子替换演示数据', async () => {
     stubStudyCommit({
       papers: {
-        list: vi
-          .fn()
-          .mockResolvedValue(
-            okEnvelope({
-              items: [serverPaper],
-              pageInfo: { hasNextPage: false, nextCursor: null },
-            }),
-          ),
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [serverPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
         create: vi.fn(),
         update: vi.fn(),
         organize: vi.fn(),
@@ -105,14 +103,12 @@ describe('桌面纸页数据通路', () => {
     stubStudyCommit({
       papers: {
         ...window.studyCommit.papers,
-        list: vi
-          .fn()
-          .mockResolvedValue(
-            okEnvelope({
-              items: [serverPaper],
-              pageInfo: { hasNextPage: false, nextCursor: null },
-            }),
-          ),
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [serverPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
         organize,
       },
       topics: {

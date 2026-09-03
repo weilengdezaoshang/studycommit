@@ -15,6 +15,11 @@ import type {
   UpdateLearningLogInput,
 } from '@studycommit/common/contracts'
 import { createHttpError, HttpError, type SerializedHttpError } from '@studycommit/common/http'
+import type {
+  ConfirmPaperExplainOutput,
+  PaperExplainInput,
+  PaperExplainOutput,
+} from '@studycommit/rpc-contracts/ai'
 
 type IpcResult<T> = { ok: true; data: T } | { ok: false; error: SerializedHttpError }
 
@@ -36,6 +41,11 @@ export interface LearningLogGateway {
   list(input?: ListLearningLogsInput): Promise<LearningLogPage>
   getBySession(sessionId: string): Promise<LearningLog>
   update(input: UpdateLearningLogInput): Promise<LearningLog>
+}
+
+export interface AiGateway {
+  explainPaper(input: PaperExplainInput): Promise<PaperExplainOutput>
+  confirmPaperExplain(input: { runId: string }): Promise<ConfirmPaperExplainOutput>
 }
 
 export function unwrapIpcResult<T>(result: IpcResult<T>): T {
@@ -85,5 +95,14 @@ export function createDesktopLearningLogGateway(
     list: (input) => invokeIpc(() => api.list(input)),
     getBySession: (sessionId) => invokeIpc(() => api.getBySession(sessionId)),
     update: (input) => invokeIpc(() => api.update(input)),
+  }
+}
+
+export function createDesktopAiGateway(
+  api: Window['studyCommit']['ai'] = window.studyCommit.ai,
+): AiGateway {
+  return {
+    explainPaper: (input) => invokeIpc(() => api.explainPaper(input)),
+    confirmPaperExplain: (input) => invokeIpc(() => api.confirmPaperExplain(input)),
   }
 }

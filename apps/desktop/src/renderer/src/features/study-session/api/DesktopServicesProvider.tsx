@@ -1,6 +1,8 @@
 import { createContext, useContext, useMemo, type PropsWithChildren } from 'react'
 import {
   createDesktopLearningLogGateway,
+  createDesktopAiGateway,
+  type AiGateway,
   createDesktopStudySessionGateway,
   createDesktopTopicGateway,
   type LearningLogGateway,
@@ -12,6 +14,7 @@ export interface DesktopRendererServices {
   studySessions: StudySessionGateway
   topics: TopicGateway
   learningLogs: LearningLogGateway
+  ai: AiGateway
 }
 
 const DesktopServicesContext = createContext<DesktopRendererServices | null>(null)
@@ -28,6 +31,7 @@ export function DesktopServicesProvider({
         studySessions: createDesktopStudySessionGateway(),
         topics: createDesktopTopicGateway(),
         learningLogs: createDesktopLearningLogGateway(),
+        ai: createDesktopAiGateway(),
       },
     [parent, services],
   )
@@ -40,4 +44,8 @@ export function useDesktopServices(): DesktopRendererServices {
     throw new Error('DesktopServicesProvider 未就绪')
   }
   return services
+}
+
+export function useOptionalDesktopServices(): DesktopRendererServices | null {
+  return useContext(DesktopServicesContext)
 }

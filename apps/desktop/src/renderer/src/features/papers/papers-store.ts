@@ -243,11 +243,15 @@ function mergeServerState(
   items: Paper[],
   topics: DesktopTopic[],
 ): Partial<PapersState> {
-  const ids = new Set(items.map((paper) => paper.id))
   const extras: Record<string, PaperExtra> = {}
-  for (const [paperId, extra] of Object.entries(previous.extras)) {
-    if (ids.has(paperId)) {
-      extras[paperId] = extra
+  for (const paper of items) {
+    const previousExtra = previous.extras[paper.id]
+    if (paper.hasQuestion || paper.isQuestionResolved || previousExtra?.photoPath) {
+      extras[paper.id] = {
+        hasQuestion: paper.hasQuestion,
+        isQuestionResolved: paper.isQuestionResolved,
+        photoPath: previousExtra?.photoPath ?? null,
+      }
     }
   }
   return { papers: items, topics, extras, source: 'server' }

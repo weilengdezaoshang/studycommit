@@ -6,6 +6,8 @@ import { paperColors } from './paper-visual'
 import { papersActions, usePapersState } from './papers-store'
 import type { PaperWithExtra } from './view-model'
 import './collections.css'
+import { useOptionalDesktopServices } from '../study-session/api/DesktopServicesProvider'
+import { PaperExplainPanel } from './PaperExplainPanel'
 
 /** 请求 AppShell 打开学习抽屉(抽屉状态在 shell 层,通过事件解耦)。 */
 export function requestOpenDrawer() {
@@ -28,6 +30,8 @@ export function RecordsListPage({
   topicId?: string
 }): React.JSX.Element {
   const state = usePapersState()
+  const services = useOptionalDesktopServices()
+  const ai = services?.ai
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const detailId = searchParams.get('paper')
@@ -53,6 +57,7 @@ export function RecordsListPage({
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [destination, setDestination] = useState('')
   const [message, setMessage] = useState('')
+  const [showExplain, setShowExplain] = useState(false)
   const [renamingTopic, setRenamingTopic] = useState(false)
   const [topicDraftName, setTopicDraftName] = useState('')
   const isOpen = (paper: PaperWithExtra) =>
@@ -380,6 +385,23 @@ export function RecordsListPage({
                   >
                     我已经弄懂了
                   </button>
+                )}
+                {isOpen(selected) && ai && !showExplain && (
+                  <button
+                    type="button"
+                    className="collection-primary"
+                    onClick={() => setShowExplain(true)}
+                  >
+                    继续弄懂
+                  </button>
+                )}
+                {isOpen(selected) && services && showExplain && (
+                  <PaperExplainPanel
+                    key={selected.id}
+                    paper={selected}
+                    ai={services.ai}
+                    onClose={() => setShowExplain(false)}
+                  />
                 )}
                 {mode === 'questions' && selected.extra.hasQuestion && !isOpen(selected) && (
                   <button

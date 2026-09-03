@@ -38,6 +38,8 @@ export const learningLogPreloadApi = {
 
 export const aiPreloadApi = {
   explainPaper: (input: unknown) => ipcRenderer.invoke(aiIpcChannels.explainPaper, input),
+  confirmPaperExplain: (input: unknown) =>
+    ipcRenderer.invoke(aiIpcChannels.confirmPaperExplain, input),
 }
 
 export const authPreloadApi = {

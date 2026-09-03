@@ -103,6 +103,7 @@ function createUnavailableServices(error: HttpError): DesktopServices {
     },
     ai: {
       explainPaper: reject,
+      confirmPaperExplain: reject,
     },
     learningLogs: {
       list: reject,

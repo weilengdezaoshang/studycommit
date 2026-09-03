@@ -680,3 +680,35 @@
   color: var(--paper-ink, #34423b);
   background: var(--paper-surface-soft, #fbfcf7);
 }
+
+.paper-explain {
+  margin-top: var(--space-lg);
+  padding: var(--space-lg);
+  border: 1px solid var(--paper-line, #ccd6cc);
+  border-radius: 14px;
+  background: var(--paper-surface-soft, #fbfcf7);
+}
+
+.paper-explain__header,
+.paper-explain__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.paper-explain__header h3 {
+  margin: 0;
+  color: var(--paper-ink, #34423b);
+  font-size: var(--font-size-body);
+}
+
+.paper-explain__body {
+  margin: var(--space-md) 0;
+  color: var(--paper-ink, #34423b);
+  line-height: 1.7;
+}
+
+.paper-explain__body p {
+  margin: var(--space-xs) 0;
+}

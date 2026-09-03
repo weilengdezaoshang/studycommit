@@ -151,6 +151,8 @@ describe('长文阅读', () => {
       createdAt: '2026-08-31T00:00:00Z',
       updatedAt: '2026-08-31T00:00:00Z',
       deletedAt: null,
+      hasQuestion: false,
+      isQuestionResolved: false,
       extra: { hasQuestion: false, isQuestionResolved: false, photoPath: null },
     }
     render(

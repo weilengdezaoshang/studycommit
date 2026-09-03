@@ -38,6 +38,8 @@ export function buildSeedPapers(): Paper[] {
       createdAt: iso(0, 14, 20),
       updatedAt: iso(0, 14, 20),
       deletedAt: null,
+      hasQuestion: true,
+      isQuestionResolved: false,
     },
     {
       id: 'p-1',
@@ -48,6 +50,8 @@ export function buildSeedPapers(): Paper[] {
       createdAt: iso(1, 9, 42),
       updatedAt: iso(1, 9, 42),
       deletedAt: null,
+      hasQuestion: true,
+      isQuestionResolved: false,
     },
     {
       id: 'p-3',
@@ -58,6 +62,8 @@ export function buildSeedPapers(): Paper[] {
       createdAt: iso(3, 16, 8),
       updatedAt: iso(3, 16, 8),
       deletedAt: null,
+      hasQuestion: false,
+      isQuestionResolved: false,
     },
   ]
 }
