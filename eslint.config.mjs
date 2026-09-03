@@ -21,6 +21,8 @@ export default tseslint.config(
       'apps/desktop/playwright-report/**',
       'apps/api/drizzle/**',
       'docs/prototypes/**',
+      'docs/prd/**',
+      'tools/**',
       'pnpm-lock.yaml',
     ],
   },
