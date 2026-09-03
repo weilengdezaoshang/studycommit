@@ -34,11 +34,13 @@ describe('createServices', () => {
         moveToInbox: vi.fn(),
         remove: vi.fn(),
       },
+      ai: { companionFollowup: vi.fn() },
     }
 
     const services = createServices({ transport: 'orpc', orpcClient: rawClient })
 
     expect(Object.keys(services).sort()).toEqual([
+      'ai',
       'learningLogs',
       'papers',
       'studySessions',

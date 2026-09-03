@@ -18,6 +18,7 @@ import type {
   Topic,
   TopicPage,
 } from '../../contracts/topic'
+import type { CompanionFollowupInput, CompanionFollowupOutput } from '@studycommit/rpc-contracts/ai'
 import type {
   CreatePaperInput,
   DeletePaperOutput,
@@ -63,6 +64,9 @@ export interface OrpcRawClient {
     moveToInbox: Procedure<PaperCommandInput, Paper>
     remove: Procedure<PaperCommandInput, DeletePaperOutput>
   }
+  ai: {
+    companionFollowup: Procedure<CompanionFollowupInput, CompanionFollowupOutput>
+  }
 }
 
 export type OrpcServices = ApplicationServices
@@ -93,6 +97,9 @@ export function createOrpcServices(client: OrpcRawClient): OrpcServices {
       organize: (input) => client.papers.organize(input),
       moveToInbox: (input) => client.papers.moveToInbox(input),
       remove: (input) => client.papers.remove(input),
+    },
+    ai: {
+      companionFollowup: (input) => client.ai.companionFollowup(input),
     },
   }
 }

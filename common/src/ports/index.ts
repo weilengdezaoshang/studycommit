@@ -11,3 +11,4 @@ export type {
   TopicApi,
   TopicQueryApi,
 } from './application-services'
+export type { AiApi } from './ai'

@@ -12,6 +12,7 @@ import type {
   SessionCommandInput,
   StudySession,
 } from '../contracts/study-session'
+import type { AiApi } from './ai'
 import type { CreateTopicInput, ListActiveTopicsInput, Topic, TopicPage } from '../contracts/topic'
 import type {
   CreatePaperInput,
@@ -61,4 +62,5 @@ export interface ApplicationServices {
   topics: TopicApi
   learningLogs: LearningLogApi
   papers: PaperApi
+  ai: AiApi
 }

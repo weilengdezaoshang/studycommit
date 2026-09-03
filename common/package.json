@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./contracts": "./src/contracts/index.ts",
+    "./ai": "./src/clients/ai/index.ts",
     "./http": "./src/http/index.ts",
     "./study-session": "./src/clients/study-session/index.ts",
     "./topic": "./src/clients/topic/index.ts",
@@ -28,7 +29,8 @@
     "react": "^19.0.0"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "@studycommit/rpc-contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
