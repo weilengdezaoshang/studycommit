@@ -24,3 +24,7 @@ apps/desktop/playwright-report/
 # 本地工具产物
 .impeccable/
 .xgrok/
+
+# 设计产物与本地工具目录不提交
+docs/prd/
+tools/
