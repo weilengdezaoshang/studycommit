@@ -13,11 +13,12 @@ export type DesktopTopic = {
   id: string
   name: string
   color: string
+  version: number
 }
 
 export const DESKTOP_TOPICS: DesktopTopic[] = [
-  { id: 'topic-mobile', name: '移动端设计', color: '#7B867E' },
-  { id: 'topic-js', name: 'JavaScript', color: '#53635A' },
+  { id: 'topic-mobile', name: '移动端设计', color: '#7B867E', version: 1 },
+  { id: 'topic-js', name: 'JavaScript', color: '#53635A', version: 1 },
 ]
 
 function iso(daysAgo: number, hour: number, minute: number): string {

@@ -14,6 +14,11 @@ import type {
   TopicPage,
   UpdateLearningLogInput,
 } from '@studycommit/common/contracts'
+import type {
+  RemoveTopicInput,
+  RemoveTopicOutput,
+  UpdateTopicInput,
+} from '@studycommit/common/ports'
 import { createHttpError, HttpError, type SerializedHttpError } from '@studycommit/common/http'
 import type {
   ConfirmPaperExplainOutput,
@@ -35,6 +40,8 @@ export interface StudySessionGateway {
 export interface TopicGateway {
   listActive(input?: ListActiveTopicsInput): Promise<TopicPage>
   create(input: CreateTopicInput): Promise<Topic>
+  update(input: UpdateTopicInput): Promise<Topic>
+  remove(input: RemoveTopicInput): Promise<RemoveTopicOutput>
 }
 
 export interface LearningLogGateway {
@@ -85,6 +92,8 @@ export function createDesktopTopicGateway(
   return {
     listActive: (input) => invokeIpc(() => api.listActive(input)),
     create: (input) => invokeIpc(() => api.create(input)),
+    update: (input) => invokeIpc(() => api.update(input)),
+    remove: (input) => invokeIpc(() => api.remove(input)),
   }
 }
 

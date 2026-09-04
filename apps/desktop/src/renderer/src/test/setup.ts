@@ -13,6 +13,8 @@ function createDefaultStudyCommit() {
     platform: 'darwin' as NodeJS.Platform,
     studySessions: {
       create: async () => ({ ok: false as const, error: configurationError() }),
+      update: async () => ({ ok: false as const, error: configurationError() }),
+      remove: async () => ({ ok: false as const, error: configurationError() }),
       getActive: async () => emptyActive,
       getById: async () => ({ ok: false as const, error: configurationError() }),
       pause: async () => ({ ok: false as const, error: configurationError() }),
@@ -25,6 +27,8 @@ function createDefaultStudyCommit() {
         data: { items: [], pageInfo: { hasNextPage: false, nextCursor: null } },
       }),
       create: async () => ({ ok: false as const, error: configurationError() }),
+      update: async () => ({ ok: false as const, error: configurationError() }),
+      remove: async () => ({ ok: false as const, error: configurationError() }),
     },
     papers: {
       // 默认失败:渲染层测试继续使用种子演示数据;需要的用例自行覆盖 papers.list

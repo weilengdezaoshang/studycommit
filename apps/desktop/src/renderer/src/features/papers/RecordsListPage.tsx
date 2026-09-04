@@ -60,6 +60,7 @@ export function RecordsListPage({
   const [showExplain, setShowExplain] = useState(false)
   const [renamingTopic, setRenamingTopic] = useState(false)
   const [topicDraftName, setTopicDraftName] = useState('')
+  const [topicActionPending, setTopicActionPending] = useState(false)
   const isOpen = (paper: PaperWithExtra) =>
     paper.extra.hasQuestion && !paper.extra.isQuestionResolved
   const visible = papers
@@ -81,6 +82,35 @@ export function RecordsListPage({
   const style = Object.fromEntries(
     Object.entries(paperColors).map(([key, value]) => [`--paper-${key}`, value]),
   ) as CSSProperties
+  async function renameCurrentTopic() {
+    if (!topicId || !topicDraftName.trim()) {
+      return
+    }
+    setTopicActionPending(true)
+    try {
+      await papersActions.renameTopic(topicId, topicDraftName)
+      setRenamingTopic(false)
+      setMessage('箱子已同步')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '箱子重命名失败')
+    } finally {
+      setTopicActionPending(false)
+    }
+  }
+  async function deleteCurrentTopic() {
+    if (!topicId) {
+      return
+    }
+    setTopicActionPending(true)
+    try {
+      await papersActions.deleteTopic(topicId)
+      navigate(routes.timeline())
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : '箱子删除失败')
+    } finally {
+      setTopicActionPending(false)
+    }
+  }
   const organizeControls = selected ? (
     <div className="collection-organize">
       <label htmlFor="collection-box">
@@ -175,13 +205,12 @@ export function RecordsListPage({
                 className="collection-rename"
                 onSubmit={(event) => {
                   event.preventDefault()
-                  papersActions.renameTopic(topicId, topicDraftName)
-                  setRenamingTopic(false)
+                  void renameCurrentTopic()
                 }}
               >
                 <input
                   value={topicDraftName}
-                  maxLength={32}
+                  maxLength={18}
                   aria-label="箱子名称"
                   autoFocus
                   onChange={(event) => setTopicDraftName(event.target.value)}
@@ -189,13 +218,14 @@ export function RecordsListPage({
                 <button
                   type="submit"
                   className="collection-primary"
-                  disabled={!topicDraftName.trim()}
+                  disabled={!topicDraftName.trim() || topicActionPending}
                 >
                   保存
                 </button>
                 <button
                   type="button"
                   className="collection-resolve"
+                  disabled={topicActionPending}
                   onClick={() => setRenamingTopic(false)}
                 >
                   取消
@@ -206,6 +236,7 @@ export function RecordsListPage({
                 <button
                   type="button"
                   className="collection-resolve"
+                  disabled={topicActionPending}
                   onClick={() => {
                     setTopicDraftName(title)
                     setRenamingTopic(true)
@@ -216,10 +247,10 @@ export function RecordsListPage({
                 <button
                   type="button"
                   className="collection-resolve"
+                  disabled={topicActionPending}
                   onClick={() => {
                     if (window.confirm(`删除「${title}」？箱内纸页会回到待整理。`)) {
-                      papersActions.deleteTopic(topicId)
-                      navigate(routes.timeline())
+                      void deleteCurrentTopic()
                     }
                   }}
                 >

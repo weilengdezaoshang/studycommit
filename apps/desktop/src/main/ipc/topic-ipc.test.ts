@@ -29,6 +29,8 @@ describe('registerTopicIpc', () => {
   const client = {
     listActive: vi.fn(),
     create: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
   }
 
   beforeEach(() => {
@@ -36,20 +38,20 @@ describe('registerTopicIpc', () => {
     vi.clearAllMocks()
   })
 
-  it('only exposes listActive and routes it to the client', async () => {
+  it('暴露箱子操作并将查询路由到客户端', async () => {
     client.listActive.mockResolvedValue(activeTopicPageFixture)
     const host = new IpcHost({
       isDev: true,
       rendererDevOrigin: 'http://localhost:5173',
     })
     registerTopicIpc(host, client)
-    expect(Object.keys(topicIpcChannels)).toEqual(['listActive', 'create'])
+    expect(Object.keys(topicIpcChannels)).toEqual(['listActive', 'create', 'update', 'remove'])
     const result = await handlers.get(topicIpcChannels.listActive)?.(trustedEvent())
     expect(client.listActive).toHaveBeenCalledWith({})
     expect(result).toEqual({ ok: true, data: activeTopicPageFixture })
   })
 
-  it('rejects untrusted senders and invalid input', async () => {
+  it('拒绝不可信发送方和非法输入', async () => {
     const host = new IpcHost({
       isDev: true,
       rendererDevOrigin: 'http://localhost:5173',

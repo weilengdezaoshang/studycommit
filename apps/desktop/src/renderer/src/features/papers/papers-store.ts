@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from 'react'
 import type { Paper, PaperPage } from '@studycommit/rpc-contracts/papers'
 import {
+  deleteStoreTopic,
+  renameStoreTopic,
+  type TopicStoreHost,
+} from '@studycommit/common/topic-store-runtime'
+import {
   INBOX_TOPIC_ID,
   DESKTOP_TOPICS,
   buildSeedExtras,
@@ -86,6 +91,40 @@ async function unwrap<T>(promise: Promise<IpcEnvelope<T>>): Promise<T> {
   return result.data
 }
 
+/** 两端共用的箱子变更宿主:接入 IPC 远端通道与桌面端本地状态。 */
+function createTopicStoreHost(
+  api: ReturnType<typeof topicsApi>,
+): TopicStoreHost<DesktopTopic, Paper> {
+  return {
+    canSync: () => api !== null && state.source === 'server',
+    getTopics: () => state.topics,
+    getPapers: () => state.papers,
+    setTopics: (topics) => setState({ topics }),
+    setPapers: (papers) => setState({ papers }),
+    toLocalTopic: (saved) => ({
+      id: saved.id,
+      name: saved.name,
+      color: saved.color,
+      version: saved.version,
+    }),
+    refresh: () => {
+      void papersActions.loadRemote()
+    },
+    updateTopic: (input) => {
+      if (!api) {
+        return Promise.reject(new Error('远端通道不可用'))
+      }
+      return unwrap(api.update(input))
+    },
+    removeTopic: (input) => {
+      if (!api) {
+        return Promise.reject(new Error('远端通道不可用'))
+      }
+      return unwrap(api.remove(input))
+    },
+  }
+}
+
 /** 预加载页数上限:100/页 × 3 页,覆盖演示与早期真实使用量。 */
 const REMOTE_PAPER_PAGES = 3
 
@@ -111,13 +150,14 @@ const papersActions = {
         }
         cursor = result.pageInfo.nextCursor
       }
-      const nextTopics: DesktopTopic[] = topics
-        ? (await unwrap(topics.listActive({ limit: 100 }))).items.map((topic) => ({
-            id: topic.id,
-            name: topic.name,
-            color: topic.color,
-          }))
-        : []
+      const remoteTopics = topics ? await unwrap(topics.listActive({ limit: 100 })) : null
+      const nextTopics: DesktopTopic[] =
+        remoteTopics?.items.map((topic) => ({
+          id: topic.id,
+          name: topic.name,
+          color: topic.color,
+          version: topic.version,
+        })) ?? []
       setState(mergeServerState(state, items, nextTopics))
     } catch {
       // 保持当前状态:演示数据或上次成功的数据仍可用
@@ -177,51 +217,26 @@ const papersActions = {
     }
     setState({ extras: { ...state.extras, [paperId]: { ...extra, isQuestionResolved: false } } })
   },
-  // 重命名/删除箱子暂为本地操作:后端 topics 尚无对应接口,待接口就绪后同步
-  renameTopic(topicId: string, name: string) {
-    const trimmed = name.trim()
-    if (!trimmed) {
-      return
-    }
-    setState({
-      topics: state.topics.map((topic) =>
-        topic.id === topicId ? { ...topic, name: trimmed } : topic,
-      ),
-    })
+  async renameTopic(topicId: string, name: string): Promise<DesktopTopic | undefined> {
+    return renameStoreTopic(createTopicStoreHost(topicsApi()), topicId, name)
   },
-  deleteTopic(topicId: string) {
-    if (!state.topics.some((topic) => topic.id === topicId)) {
-      return
-    }
-    setState({
-      topics: state.topics.filter((topic) => topic.id !== topicId),
-      papers: state.papers.map((paper) =>
-        paper.topicId === topicId && !paper.deletedAt
-          ? {
-              ...paper,
-              topicId: null,
-              status: 'inbox' as const,
-              version: paper.version + 1,
-              updatedAt: new Date().toISOString(),
-            }
-          : paper,
-      ),
-    })
+  async deleteTopic(topicId: string): Promise<void> {
+    return deleteStoreTopic(createTopicStoreHost(topicsApi()), topicId)
   },
   createTopic(name: string): DesktopTopic {
-    const topic: DesktopTopic = { id: `topic-${Date.now()}`, name, color: '#53635A' }
+    const topic: DesktopTopic = { id: `topic-${Date.now()}`, name, color: '#53635A', version: 1 }
     setState({ topics: [...state.topics, topic] })
     const api = topicsApi()
     if (api) {
       unwrap(api.create({ name }))
         .then((saved) => {
-          const serverTopic: DesktopTopic = { id: saved.id, name: saved.name, color: saved.color }
-          setState({
-            topics: state.topics.map((item) => (item.id === topic.id ? serverTopic : item)),
-            papers: state.papers.map((paper) =>
-              paper.topicId === topic.id ? { ...paper, topicId: saved.id } : paper,
-            ),
-          })
+          const serverTopic: DesktopTopic = {
+            id: saved.id,
+            name: saved.name,
+            color: saved.color,
+            version: saved.version,
+          }
+          commitCreatedTopic(topic.id, serverTopic)
         })
         .catch(() => {
           // 建箱失败时保留本地箱子,后续整理操作会按本地状态继续
@@ -229,6 +244,19 @@ const papersActions = {
     }
     return topic
   },
+}
+
+/** 用服务端数据替换本地临时箱子;若加载竞态已把它清除,则追加到列表尾部。 */
+function commitCreatedTopic(localId: string, serverTopic: DesktopTopic) {
+  const exists = state.topics.some((topic) => topic.id === localId)
+  setState({
+    topics: exists
+      ? state.topics.map((topic) => (topic.id === localId ? serverTopic : topic))
+      : [...state.topics, serverTopic],
+    papers: state.papers.map((paper) =>
+      paper.topicId === localId ? { ...paper, topicId: serverTopic.id } : paper,
+    ),
+  })
 }
 
 function replacePaper(saved: Paper) {

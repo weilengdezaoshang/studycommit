@@ -43,6 +43,8 @@ describe('registerDesktopIpc', () => {
     topics: {
       listActive: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+      remove: vi.fn(),
     },
     papers: {
       list: vi.fn(),

@@ -1,19 +1,21 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
+import { createOrpcTopicService, createTopicOrpcClient } from '@studycommit/common/adapters/orpc'
 import { createServices } from '@studycommit/common/services'
 import type {
   AiApi,
   LearningLogApi,
   PaperApi,
   StudySessionApi,
-  TopicApi,
+  TopicMutationApi,
 } from '@studycommit/common/ports'
+import { net } from 'electron'
 import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
 import { DesktopAuthSessionStore } from '../auth/session-store'
 import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
   studySessions: StudySessionApi
-  topics: TopicApi
+  topics: TopicMutationApi
   learningLogs: LearningLogApi
   papers: PaperApi
   ai: AiApi
@@ -52,10 +54,22 @@ export function createDesktopServices(
       ...createDesktopDevHeaders(env),
     }),
   })
+  const topicClient = createTopicOrpcClient({
+    origin,
+    apiPrefix,
+    allowInsecureHttp,
+    fetchImpl: options?.fetchImpl ?? ((input, init) => net.fetch(String(input), init)),
+    getHeaders: async () => ({
+      accept: 'application/json',
+      ...(await sessions.authorizationHeaders()),
+      ...createDesktopDevHeaders(env),
+    }),
+  })
   const auth = new DesktopAuthApi(sessions, publicTransport)
   sessions.bindRefresh((refreshToken) => auth.refresh(refreshToken))
   return {
     ...createServices({ transport: 'rest', httpTransport: transport }),
+    topics: createOrpcTopicService(topicClient, () => crypto.randomUUID()),
     auth,
   }
 }
@@ -92,6 +106,8 @@ function createUnavailableServices(error: HttpError): DesktopServices {
     topics: {
       listActive: reject,
       create: reject,
+      update: reject,
+      remove: reject,
     },
     papers: {
       list: reject,

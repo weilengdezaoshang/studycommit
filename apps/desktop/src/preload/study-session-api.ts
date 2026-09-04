@@ -18,6 +18,8 @@ export const studySessionPreloadApi = {
 export const topicPreloadApi = {
   listActive: (input?: unknown) => ipcRenderer.invoke(topicIpcChannels.listActive, input),
   create: (input: unknown) => ipcRenderer.invoke(topicIpcChannels.create, input),
+  update: (input: unknown) => ipcRenderer.invoke(topicIpcChannels.update, input),
+  remove: (input: unknown) => ipcRenderer.invoke(topicIpcChannels.remove, input),
 }
 
 export const paperPreloadApi = {

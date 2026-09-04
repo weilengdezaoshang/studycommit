@@ -22,6 +22,11 @@ import type {
   UpdateLearningLogInput,
   UpdatePaperInput,
 } from '@studycommit/common/contracts'
+import type {
+  RemoveTopicInput,
+  RemoveTopicOutput,
+  UpdateTopicInput,
+} from '@studycommit/common/ports'
 import type { IpcResult } from '../../../main/ipc/ipc-result'
 
 export interface StudyCommitStudySessionsApi {
@@ -36,6 +41,8 @@ export interface StudyCommitStudySessionsApi {
 export interface StudyCommitTopicsApi {
   listActive: (input?: ListActiveTopicsInput) => Promise<IpcResult<TopicPage>>
   create: (input: CreateTopicInput) => Promise<IpcResult<Topic>>
+  update: (input: UpdateTopicInput) => Promise<IpcResult<Topic>>
+  remove: (input: RemoveTopicInput) => Promise<IpcResult<RemoveTopicOutput>>
 }
 
 export interface StudyCommitPapersApi {

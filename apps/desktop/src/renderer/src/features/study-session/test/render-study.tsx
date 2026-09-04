@@ -44,6 +44,12 @@ export function createTopicGateway(overrides: Partial<TopicGateway> = {}): Topic
     create: async () => {
       throw new Error('create not stubbed')
     },
+    update: async () => {
+      throw new Error('update not stubbed')
+    },
+    remove: async () => {
+      throw new Error('remove not stubbed')
+    },
     ...overrides,
   }
 }
