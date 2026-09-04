@@ -1,5 +1,6 @@
 import { HttpException, Logger } from '@nestjs/common'
 import { ORPCError } from '@orpc/nest'
+import { ZodError } from 'zod'
 
 const logger = new Logger('OrpcError')
 
@@ -7,6 +8,13 @@ const logger = new Logger('OrpcError')
 export function toOrpcError(error: unknown): ORPCError<string, unknown> {
   if (error instanceof ORPCError) {
     return error
+  }
+  if (error instanceof ZodError) {
+    return new ORPCError('VALIDATION_ERROR', {
+      status: 400,
+      message: '请求参数不合法',
+      data: { issues: error.issues },
+    })
   }
   if (error instanceof HttpException) {
     const raw = error.getResponse()
@@ -23,7 +31,7 @@ export function toOrpcError(error: unknown): ORPCError<string, unknown> {
     const data = response && 'details' in response ? response.details : undefined
 
     return new ORPCError(code, {
-      status: error.getStatus() >= 500 ? 500 : error.getStatus(),
+      status: error.getStatus(),
       message,
       data,
     })

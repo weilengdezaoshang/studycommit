@@ -50,7 +50,7 @@ describe('StudySessions API', () => {
       headers: headers('start'),
       payload: { topicId: topic.id, goal: '学习事务' },
     })
-    expect(started.statusCode).toBe(201)
+    expect(started.statusCode).toBe(200)
     const session = started.json()
 
     const active = (
@@ -158,8 +158,8 @@ describe('StudySessions API', () => {
         payload: { topicId: topic.id },
       }),
     ])
-    expect(starts.map((response) => response.statusCode).sort()).toEqual([201, 409])
-    const session = starts.find((response) => response.statusCode === 201)!.json()
+    expect(starts.map((response) => response.statusCode).sort()).toEqual([200, 409])
+    const session = starts.find((response) => response.statusCode === 200)!.json()
 
     const pauses = await Promise.all([
       app.inject({
@@ -175,7 +175,7 @@ describe('StudySessions API', () => {
         payload: { version: 1 },
       }),
     ])
-    expect(pauses.map((response) => response.statusCode)).toEqual([201, 201])
+    expect(pauses.map((response) => response.statusCode)).toEqual([200, 200])
     expect(pauses[0].json()).toMatchObject({ status: 'paused', version: 2 })
     expect(pauses[1].json().pausedAt).toBe(pauses[0].json().pausedAt)
   })
@@ -259,7 +259,7 @@ describe('StudySessions API', () => {
           headers: headers(),
           payload: { topicId: archived.id },
         })
-      ).json().error.code,
+      ).json().code,
     ).toBe('TOPIC_NOT_FOUND')
 
     const foreign = (
@@ -278,7 +278,7 @@ describe('StudySessions API', () => {
           headers: headers(),
           payload: { topicId: foreign.id },
         })
-      ).json().error.code,
+      ).json().code,
     ).toBe('TOPIC_NOT_FOUND')
 
     const deleted = await createTopic('已删除')
@@ -296,7 +296,7 @@ describe('StudySessions API', () => {
           headers: headers(),
           payload: { topicId: deleted.id },
         })
-      ).json().error.code,
+      ).json().code,
     ).toBe('TOPIC_NOT_FOUND')
   })
 
@@ -346,7 +346,7 @@ describe('StudySessions API', () => {
       },
     })
     expect(tooEarly.statusCode).toBe(400)
-    expect(tooEarly.json().error.code).toBe('INVALID_SESSION_END_TIME')
+    expect(tooEarly.json().code).toBe('INVALID_SESSION_END_TIME')
 
     const completed = await app.inject({
       method: 'POST',
@@ -358,7 +358,7 @@ describe('StudySessions API', () => {
         endedAt: new Date(Date.parse(session.startedAt) + 2000).toISOString(),
       },
     })
-    expect(completed.statusCode).toBe(201)
+    expect(completed.statusCode).toBe(200)
     expect(completed.json()).toMatchObject({
       session: {
         status: 'completed',
@@ -387,7 +387,7 @@ describe('StudySessions API', () => {
       headers: headers('complete-once'),
       payload: { version: 1 },
     })
-    expect(first.statusCode).toBe(201)
+    expect(first.statusCode).toBe(200)
     const created = first.json()
     expect(created.learningLog.sessionId).toBe(session.id)
     expect(created.learningLog.effectiveDurationSeconds).toBe(created.session.durationSeconds)
@@ -398,7 +398,7 @@ describe('StudySessions API', () => {
       headers: headers('complete-once'),
       payload: { version: 1 },
     })
-    expect(replay.statusCode).toBe(201)
+    expect(replay.statusCode).toBe(200)
     expect(replay.headers['idempotency-replayed']).toBe('true')
     expect(replay.json().learningLog.id).toBe(created.learningLog.id)
 

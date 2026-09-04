@@ -79,7 +79,7 @@ describe('LearningLogs API', () => {
       headers: { 'x-user-id': other },
     })
     expect(foreign.statusCode).toBe(404)
-    expect(foreign.json().error.code).toBe('LEARNING_LOG_NOT_FOUND')
+    expect(foreign.json().code).toBe('LEARNING_LOG_NOT_FOUND')
   })
 
   it('patches summary fields, no-ops unchanged text, and rejects stale versions', async () => {
@@ -116,8 +116,8 @@ describe('LearningLogs API', () => {
       payload: { version: 1, problems: '还不熟' },
     })
     expect(stale.statusCode).toBe(409)
-    expect(stale.json().error.code).toBe('LEARNING_LOG_VERSION_CONFLICT')
-    expect(stale.json().error.details.learningLog.version).toBe(2)
+    expect(stale.json().code).toBe('LEARNING_LOG_VERSION_CONFLICT')
+    expect(stale.json().data.learningLog.version).toBe(2)
 
     const foreign = await app.inject({
       method: 'PATCH',
@@ -126,7 +126,7 @@ describe('LearningLogs API', () => {
       payload: { version: 2, gains: '别人的总结' },
     })
     expect(foreign.statusCode).toBe(404)
-    expect(foreign.json().error.code).toBe('LEARNING_LOG_NOT_FOUND')
+    expect(foreign.json().code).toBe('LEARNING_LOG_NOT_FOUND')
   })
 
   it('rejects a patch with only version', async () => {
@@ -138,6 +138,6 @@ describe('LearningLogs API', () => {
       payload: { version: 1 },
     })
     expect(rejected.statusCode).toBe(400)
-    expect(rejected.json().error.code).toBe('VALIDATION_ERROR')
+    expect(rejected.json().code).toBe('VALIDATION_ERROR')
   })
 })

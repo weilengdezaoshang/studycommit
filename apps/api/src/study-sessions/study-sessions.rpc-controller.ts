@@ -20,23 +20,47 @@ function toCompletionSource(value: string | null): 'online' | 'offline_sync' | n
   return null
 }
 
-function toSessionOutput(session: StudySession) {
+function toIso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
+}
+
+function toNullableIso(value: Date | string | null): string | null {
+  return value === null ? null : toIso(value)
+}
+
+function toSessionOutput(
+  session: Omit<
+    StudySession,
+    'startedAt' | 'pausedAt' | 'completedAt' | 'createdAt' | 'updatedAt'
+  > & {
+    startedAt: Date | string
+    pausedAt: Date | string | null
+    completedAt: Date | string | null
+    createdAt: Date | string
+    updatedAt: Date | string
+  },
+) {
   return {
     ...session,
-    startedAt: session.startedAt.toISOString(),
-    pausedAt: session.pausedAt?.toISOString() ?? null,
-    completedAt: session.completedAt?.toISOString() ?? null,
+    startedAt: toIso(session.startedAt),
+    pausedAt: toNullableIso(session.pausedAt),
+    completedAt: toNullableIso(session.completedAt),
     completionSource: toCompletionSource(session.completionSource),
-    createdAt: session.createdAt.toISOString(),
-    updatedAt: session.updatedAt.toISOString(),
+    createdAt: toIso(session.createdAt),
+    updatedAt: toIso(session.updatedAt),
   }
 }
 
-function toLearningLogOutput(log: LearningLog) {
+function toLearningLogOutput(
+  log: Omit<LearningLog, 'createdAt' | 'updatedAt'> & {
+    createdAt: Date | string
+    updatedAt: Date | string
+  },
+) {
   return {
     ...log,
-    createdAt: log.createdAt.toISOString(),
-    updatedAt: log.updatedAt.toISOString(),
+    createdAt: toIso(log.createdAt),
+    updatedAt: toIso(log.updatedAt),
   }
 }
 

@@ -74,7 +74,7 @@ describe('Auth API', () => {
     await send()
     const invalid = await verify({ phone, code: '000000', deviceType: 'mobile' })
     expect(invalid.statusCode).toBe(400)
-    expect(invalid.json().error.code).toBe('AUTH_CODE_INVALID')
+    expect(invalid.json().code).toBe('AUTH_CODE_INVALID')
 
     const missing = await verify({
       phone: '13900139000',
@@ -82,14 +82,14 @@ describe('Auth API', () => {
       deviceType: 'mobile',
     })
     expect(missing.statusCode).toBe(400)
-    expect(missing.json().error.code).toBe('AUTH_CODE_EXPIRED')
+    expect(missing.json().code).toBe('AUTH_CODE_EXPIRED')
   })
 
   it('冷却期内重复发码被拒绝且刷新令牌可轮换', async () => {
     await send()
     const cooldown = await send()
     expect(cooldown.statusCode).toBe(429)
-    expect(cooldown.json().error.code).toBe('AUTH_CODE_COOLDOWN')
+    expect(cooldown.json().code).toBe('AUTH_CODE_COOLDOWN')
 
     const session = (await verify()).json()
     const refreshed = await app.inject({
@@ -144,7 +144,7 @@ describe('Auth API', () => {
     expect((await app.inject({ method: 'GET', url: '/api/me' })).statusCode).toBe(401)
     expect((await app.inject({ method: 'POST', url: '/api/auth/logout' })).statusCode).toBe(401)
     expect((await send({ phone: '1380013800' })).statusCode).toBe(400)
-    expect((await send({ phone: '1380013800' })).json().error.code).toBe('VALIDATION_ERROR')
+    expect((await send({ phone: '1380013800' })).json().code).toBe('BAD_REQUEST')
   })
 
   it('停用账户不能登录', async () => {
@@ -162,7 +162,7 @@ describe('Auth API', () => {
     await send({ phone: disabledPhone })
     const blocked = await verify({ phone: disabledPhone, code, deviceType: 'mobile' })
     expect(blocked.statusCode).toBe(401)
-    expect(blocked.json().error.code).toBe('AUTH_ACCOUNT_DISABLED')
+    expect(blocked.json().code).toBe('AUTH_ACCOUNT_DISABLED')
   })
 
   it('同一验证码并发验证只会建立一个会话', async () => {
@@ -172,7 +172,7 @@ describe('Auth API', () => {
     expect(statuses).toEqual([200, 400])
     const succeeded = first.statusCode === 200 ? first : second
     const failed = first.statusCode === 200 ? second : first
-    expect(failed.json().error.code).toBe('AUTH_CODE_EXPIRED')
+    expect(failed.json().code).toBe('AUTH_CODE_EXPIRED')
     const sessions = await pool.query('select count(*)::int as count from auth_sessions')
     expect(sessions.rows[0].count).toBe(1)
     expect(succeeded.json().user.id).toEqual(expect.any(String))
@@ -249,7 +249,7 @@ describe('Auth API', () => {
       deviceType: 'desktop',
     })
     expect(unregistered.statusCode).toBe(401)
-    expect(unregistered.json().error.code).toBe('AUTH_INVALID_CREDENTIALS')
+    expect(unregistered.json().code).toBe('AUTH_INVALID_CREDENTIALS')
 
     const first = await accountLogin({
       account: 'demo_user',
@@ -274,7 +274,7 @@ describe('Auth API', () => {
     await accountRegister({ account: 'exists_user', password: 'secret123' })
     const duplicate = await accountRegister({ account: 'Exists_User', password: 'other-pass' })
     expect(duplicate.statusCode).toBe(409)
-    expect(duplicate.json().error.code).toBe('AUTH_ACCOUNT_EXISTS')
+    expect(duplicate.json().code).toBe('AUTH_ACCOUNT_EXISTS')
   })
 
   it('错误密码不暴露账号是否存在', async () => {
@@ -288,7 +288,7 @@ describe('Auth API', () => {
       deviceType: 'desktop',
     })
     expect(wrong.statusCode).toBe(401)
-    expect(wrong.json().error.code).toBe('AUTH_INVALID_CREDENTIALS')
+    expect(wrong.json().code).toBe('AUTH_INVALID_CREDENTIALS')
   })
 
   it('过短密码拒绝', async () => {

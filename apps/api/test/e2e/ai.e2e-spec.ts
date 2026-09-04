@@ -61,6 +61,6 @@ describe('AI API', () => {
     const token = await registerAndLogin()
     const response = await followup({ content: 'React 的批处理会合并多次更新。' }, token)
     expect(response.statusCode).toBe(503)
-    expect(response.json().error.code).toBe('AI_UNAVAILABLE')
+    expect(response.json().code).toBe('AI_UNAVAILABLE')
   })
 })
