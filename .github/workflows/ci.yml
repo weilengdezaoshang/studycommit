@@ -24,7 +24,21 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
+      # 按包串行执行：避免共享契约构建与测试竞态，失败时也能直接定位应用。
+      - name: Test RPC contracts
+        run: pnpm --filter @studycommit/rpc-contracts test:run
+      - name: Test design tokens
+        run: pnpm --filter @studycommit/design-tokens test:run
+      - name: Test observability
+        run: pnpm --filter @studycommit/observability test:run
+      - name: Test shared package
+        run: pnpm --filter @studycommit/common test:run
+      - name: Test API unit suite
+        run: pnpm --filter @studycommit/api test:run
+      - name: Test mini program
+        run: pnpm --filter @studycommit/miniprogram test:run
+      - name: Test mobile app
+        run: pnpm --filter @studycommit/mobile test:run
       - run: pnpm --filter @studycommit/api build
       - run: pnpm --filter @studycommit/desktop build
       - name: Check mini program when present
