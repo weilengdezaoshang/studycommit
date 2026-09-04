@@ -330,6 +330,15 @@ importers:
 
   common:
     dependencies:
+      '@orpc/client':
+        specifier: ^1.15.0
+        version: 1.15.0
+      '@orpc/contract':
+        specifier: ^1.15.0
+        version: 1.15.0
+      '@orpc/openapi-client':
+        specifier: ^1.15.0
+        version: 1.15.0
       '@studycommit/rpc-contracts':
         specifier: workspace:*
         version: link:../packages/rpc-contracts

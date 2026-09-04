@@ -12,6 +12,7 @@
     "./topic": "./src/clients/topic/index.ts",
     "./learning-log": "./src/clients/learning-log/index.ts",
     "./study-session-runtime": "./src/study-session-runtime/index.ts",
+    "./topic-store-runtime": "./src/topic-store-runtime/index.ts",
     "./study-session-react": "./src/study-session-react/index.ts",
     "./toast-react": "./src/toast-react/index.ts",
     "./ports": "./src/ports/index.ts",
@@ -29,6 +30,9 @@
     "react": "^19.0.0"
   },
   "dependencies": {
+    "@orpc/client": "^1.15.0",
+    "@orpc/contract": "^1.15.0",
+    "@orpc/openapi-client": "^1.15.0",
     "zod": "^4.4.3",
     "@studycommit/rpc-contracts": "workspace:*"
   },

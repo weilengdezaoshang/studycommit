@@ -34,6 +34,12 @@ import type {
   UpdatePaperInput,
 } from '../../contracts/paper'
 import type { ApplicationServices } from '../../ports'
+export { createOrpcTopicService, createTopicOrpcClient } from './topic-service'
+export type {
+  CreateTopicOrpcClientOptions,
+  OrpcClientContext,
+  TopicOrpcClient,
+} from './topic-service'
 
 type Procedure<TInput, TOutput> = (input: TInput) => Promise<TOutput>
 

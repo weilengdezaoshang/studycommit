@@ -9,6 +9,10 @@ export type {
   PaperApi,
   StudySessionApi,
   TopicApi,
+  TopicMutationApi,
   TopicQueryApi,
+  RemoveTopicInput,
+  RemoveTopicOutput,
+  UpdateTopicInput,
 } from './application-services'
 export type { AiApi } from './ai'

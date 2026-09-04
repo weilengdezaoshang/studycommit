@@ -39,6 +39,31 @@ export interface TopicApi {
   create(input: CreateTopicInput): Promise<Topic>
 }
 
+export interface TopicMutationApi extends TopicApi {
+  update(input: UpdateTopicInput): Promise<Topic>
+  remove(input: RemoveTopicInput): Promise<RemoveTopicOutput>
+}
+
+export interface UpdateTopicInput {
+  id: string
+  name?: string
+  description?: string | null
+  color?: string
+  status?: 'active' | 'archived'
+  version: number
+}
+
+export interface RemoveTopicInput {
+  id: string
+  version: number
+}
+
+export interface RemoveTopicOutput {
+  id: string
+  version: number
+  deletedAt: string
+}
+
 /** @deprecated Use TopicApi for new code. */
 export type TopicQueryApi = TopicApi
 
