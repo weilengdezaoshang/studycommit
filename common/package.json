@@ -23,7 +23,7 @@
   },
   "scripts": {
     "test": "vitest",
-    "test:run": "vitest run",
+    "test:run": "pnpm --filter @studycommit/rpc-contracts build && vitest run",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
