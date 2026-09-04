@@ -1,11 +1,13 @@
+import * as Crypto from 'expo-crypto'
 import { HttpError, createHttpError } from '@studycommit/common/http'
+import { createOrpcTopicService, createTopicOrpcClient } from '@studycommit/common/adapters/orpc'
 import { createServices } from '@studycommit/common/services'
 import type {
   AiApi,
   LearningLogApi,
   PaperApi,
   StudySessionApi,
-  TopicApi,
+  TopicMutationApi,
 } from '@studycommit/common/ports'
 import {
   allowsInsecureHttpFor,
@@ -19,7 +21,7 @@ import { ReactNativeFetchTransport } from './react-native-fetch-transport'
 
 export interface MobileServices {
   studySessions: StudySessionApi
-  topics: TopicApi
+  topics: TopicMutationApi
   learningLogs: LearningLogApi
   papers: PaperApi
   ai: AiApi
@@ -30,12 +32,27 @@ export function createMobileServices(options?: {
   getHeaders?: () => Promise<Readonly<Record<string, string>>>
   developmentUserId?: string
 }): MobileServices {
+  const fetchImpl = options?.fetchImpl ?? fetch
   const transport = new ReactNativeFetchTransport({
     origin: getMobileApiOrigin(),
     apiPrefix: getMobileApiPrefix(),
-    fetchImpl: options?.fetchImpl,
     allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
+    fetchImpl,
     defaultTimeoutMs: 10_000,
+    getHeaders:
+      options?.getHeaders ??
+      (async () => {
+        const developmentHeaders = await createDevelopmentHeaderProvider(
+          options?.developmentUserId ?? getMobileDevelopmentUserId(),
+        )()
+        return { ...developmentHeaders, ...(await getAuthHeaders()) }
+      }),
+  })
+  const topicClient = createTopicOrpcClient({
+    origin: getMobileApiOrigin(),
+    apiPrefix: getMobileApiPrefix(),
+    allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
+    fetchImpl,
     getHeaders:
       options?.getHeaders ??
       (async () => {
@@ -47,6 +64,7 @@ export function createMobileServices(options?: {
   })
   return {
     ...createServices({ transport: 'rest', httpTransport: transport }),
+    topics: createOrpcTopicService(topicClient, () => Crypto.randomUUID()),
   }
 }
 
@@ -83,6 +101,8 @@ function createUnavailableServices(error: HttpError): MobileServices {
     topics: {
       listActive: reject,
       create: reject,
+      update: reject,
+      remove: reject,
     },
     learningLogs: {
       list: reject,

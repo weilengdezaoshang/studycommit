@@ -12,6 +12,7 @@ export interface DialogFieldOptions {
   label: string
   type?: 'text' | 'datetime-local'
   defaultValue: string
+  maxLength?: number
   min?: string
   required?: boolean
   helperText?: string
@@ -108,6 +109,7 @@ export function useDialog() {
           error={fieldError ?? undefined}
           helperText={options.field.helperText}
           label={options.field.label}
+          maxLength={options.field.maxLength}
           onChangeText={(value) => {
             setFieldValue(value)
             setFieldError(null)
