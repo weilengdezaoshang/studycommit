@@ -68,7 +68,7 @@ describe('IdentityGuard', () => {
       headers: { ...headers, 'idempotency-key': crypto.randomUUID() },
       payload: { name: '系统设计' },
     })
-    expect(topic.statusCode).toBe(201)
+    expect(topic.statusCode).toBe(200)
     expect(topic.json().name).toBe('系统设计')
 
     const templates = await app.inject({

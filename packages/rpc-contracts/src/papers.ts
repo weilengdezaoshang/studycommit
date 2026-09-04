@@ -58,7 +58,7 @@ export const deletePaperOutputSchema = z.object({
 
 export const paperContract = {
   create: oc
-    .route({ method: 'POST', path: '/papers', summary: '记录文字内容' })
+    .route({ method: 'POST', path: '/papers', successStatus: 201, summary: '记录文字内容' })
     .input(createPaperInputSchema)
     .output(paperSchema),
   list: oc

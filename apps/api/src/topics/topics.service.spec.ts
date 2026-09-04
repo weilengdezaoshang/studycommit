@@ -154,4 +154,20 @@ describe('TopicsService', () => {
       response: { code: TOPIC_ERROR.versionConflict.code },
     })
   })
+
+  it('删除成功时返回新版本和软删除时间', async () => {
+    const deletedAt = new Date('2026-09-03T12:00:00.000Z')
+    const id = crypto.randomUUID()
+    const repository = {
+      remove: vi.fn().mockResolvedValue({
+        kind: TOPIC_REMOVE_KIND.removed,
+        id,
+        version: 2,
+        deletedAt,
+      }),
+    }
+    await expect(
+      new TopicsService(repository as never).remove(crypto.randomUUID(), id, 1),
+    ).resolves.toEqual({ id, version: 2, deletedAt: deletedAt.toISOString() })
+  })
 })

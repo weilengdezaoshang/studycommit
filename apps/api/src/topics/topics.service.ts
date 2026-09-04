@@ -104,6 +104,11 @@ export class TopicsService {
     if (result.kind !== TOPIC_REMOVE_KIND.removed) {
       throw removeErrors[result.kind]()
     }
+    return {
+      id: result.id,
+      version: result.version,
+      deletedAt: result.deletedAt.toISOString(),
+    }
   }
 
   private handleCreateResult(result: Awaited<ReturnType<TopicsRepository['create']>>) {

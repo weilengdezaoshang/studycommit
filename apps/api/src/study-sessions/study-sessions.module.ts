@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common'
-import { StudySessionsController } from './study-sessions.controller'
+import { StudySessionsRpcController } from './study-sessions.rpc-controller'
 import { StudySessionsRepository } from './study-sessions.repository'
 import { StudySessionsService } from './study-sessions.service'
 
 @Module({
-  controllers: [StudySessionsController],
+  controllers: [StudySessionsRpcController],
   providers: [StudySessionsRepository, StudySessionsService],
   exports: [StudySessionsRepository],
 })

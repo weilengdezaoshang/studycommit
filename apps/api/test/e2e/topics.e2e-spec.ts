@@ -42,9 +42,9 @@ describe('Topics API', () => {
       payload: body,
     })
 
-  it('creates, lists, updates and soft deletes a topic', async () => {
+  it('创建、查询、更新并软删除箱子', async () => {
     const created = await create()
-    expect(created.statusCode).toBe(201)
+    expect(created.statusCode).toBe(200)
     const topic = created.json()
     expect(topic).toMatchObject({
       name: 'Node.js',
@@ -68,9 +68,10 @@ describe('Topics API', () => {
     const removed = await app.inject({
       method: 'DELETE',
       url: `/api/topics/${topic.id}`,
-      headers: { 'x-user-id': userA, 'if-match': '"2"' },
+      headers: { 'x-user-id': userA },
+      payload: { version: 2 },
     })
-    expect(removed.statusCode).toBe(204)
+    expect(removed.statusCode).toBe(200)
     const missing = await app.inject({
       method: 'GET',
       url: `/api/topics/${topic.id}`,
@@ -78,7 +79,7 @@ describe('Topics API', () => {
     })
     expect(missing.statusCode).toBe(404)
   })
-  it('isolates users as not found', async () => {
+  it('跨用户访问时返回不存在', async () => {
     const topic = (await create()).json()
     const response = await app.inject({
       method: 'GET',
@@ -87,16 +88,16 @@ describe('Topics API', () => {
     })
     expect(response.statusCode).toBe(404)
   })
-  it('replays equal requests and rejects changed content', async () => {
+  it('相同幂等请求重放且不同内容被拒绝', async () => {
     const first = await create(userA, 'same-key')
     const replay = await create(userA, 'same-key')
     expect(replay.json().id).toBe(first.json().id)
     expect(replay.headers['idempotency-replayed']).toBe('true')
     const conflict = await create(userA, 'same-key', { name: 'Different', color: '#000000' })
     expect(conflict.statusCode).toBe(409)
-    expect(conflict.json().error.code).toBe('IDEMPOTENCY_KEY_REUSED')
+    expect(conflict.json().code).toBe('IDEMPOTENCY_KEY_REUSED')
   })
-  it('validates input, identity and optimistic versions', async () => {
+  it('校验输入、身份和乐观锁版本', async () => {
     expect((await create(userA, crypto.randomUUID(), { name: '', color: 'red' })).statusCode).toBe(
       400,
     )
@@ -110,7 +111,7 @@ describe('Topics API', () => {
     })
     expect(conflict.statusCode).toBe(409)
   })
-  it('paginates without duplicates and rejects malformed cursors', async () => {
+  it('分页不重复且拒绝非法游标', async () => {
     await create(userA, 'a', { name: 'A', color: '#000000' })
     await create(userA, 'b', { name: 'B', color: '#FFFFFF' })
     const page1 = (
@@ -139,7 +140,7 @@ describe('Topics API', () => {
 
   it('只填名称时创建箱子并关联默认模板', async () => {
     const created = await create(userA, crypto.randomUUID(), { name: ' 系统设计 ' })
-    expect(created.statusCode).toBe(201)
+    expect(created.statusCode).toBe(200)
     expect(created.json()).toMatchObject({
       name: '系统设计',
       color: DEFAULT_TOPIC_COLOR,
@@ -164,7 +165,7 @@ describe('Topics API', () => {
     })
     const duplicate = await create(userA, crypto.randomUUID(), { name: '前端架构' })
     expect(duplicate.statusCode).toBe(409)
-    expect(duplicate.json().error.code).toBe('TOPIC_NAME_CONFLICT')
+    expect(duplicate.json().code).toBe('TOPIC_NAME_CONFLICT')
   })
 
   it('省略模板和显式默认模板可用同一幂等键重试', async () => {
@@ -174,8 +175,8 @@ describe('Topics API', () => {
       name: '幂等模板',
       templateId: DEFAULT_TEMPLATE_ID,
     })
-    expect(first.statusCode).toBe(201)
-    expect(replay.statusCode).toBe(201)
+    expect(first.statusCode).toBe(200)
+    expect(replay.statusCode).toBe(200)
     expect(replay.json().id).toBe(first.json().id)
     expect(replay.headers['idempotency-replayed']).toBe('true')
   })
@@ -190,7 +191,7 @@ describe('Topics API', () => {
       payload: { name: '系统设计', version: second.version },
     })
     expect(conflict.statusCode).toBe(409)
-    expect(conflict.json().error.code).toBe('TOPIC_NAME_CONFLICT')
+    expect(conflict.json().code).toBe('TOPIC_NAME_CONFLICT')
     expect(
       (
         await app.inject({
@@ -208,7 +209,7 @@ describe('Topics API', () => {
       templateId: crypto.randomUUID(),
     })
     expect(missing.statusCode).toBe(404)
-    expect(missing.json().error.code).toBe('TEMPLATE_NOT_FOUND')
+    expect(missing.json().code).toBe('TEMPLATE_NOT_FOUND')
   })
 
   const createPaper = (user = userA, body: object = { content: '一段记录' }) =>
@@ -290,9 +291,10 @@ describe('Topics API', () => {
     const removed = await app.inject({
       method: 'DELETE',
       url: `/api/topics/${topic.id}`,
-      headers: { 'x-user-id': userA, 'if-match': `"${topic.version}"` },
+      headers: { 'x-user-id': userA },
+      payload: { version: topic.version },
     })
-    expect(removed.statusCode).toBe(204)
+    expect(removed.statusCode).toBe(200)
     const inbox = (
       await app.inject({
         method: 'GET',

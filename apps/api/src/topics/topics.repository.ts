@@ -32,7 +32,9 @@ export type TopicCreateResult =
   | { kind: typeof TOPIC_CREATE_KIND.idempotencyConflict }
   | { kind: typeof TOPIC_CREATE_KIND.nameConflict }
   | { kind: typeof TOPIC_CREATE_KIND.templateNotFound }
-export type TopicRemoveResult = { kind: TopicRemoveKind }
+export type TopicRemoveResult =
+  | { kind: typeof TOPIC_REMOVE_KIND.removed; id: string; version: number; deletedAt: Date }
+  | { kind: Exclude<TopicRemoveKind, typeof TOPIC_REMOVE_KIND.removed> }
 
 const templateSummary = {
   id: templates.id,
@@ -288,9 +290,10 @@ export class TopicsRepository {
         })
         .where(and(eq(papers.userId, userId), eq(papers.topicId, id), isNull(papers.deletedAt)))
 
+      const deletedAt = new Date()
       const [removed] = await tx
         .update(topics)
-        .set({ deletedAt: new Date(), version: sql`${topics.version} + 1`, updatedAt: new Date() })
+        .set({ deletedAt, version: sql`${topics.version} + 1`, updatedAt: deletedAt })
         .where(
           and(
             eq(topics.id, id),
@@ -299,8 +302,15 @@ export class TopicsRepository {
             isNull(topics.deletedAt),
           ),
         )
-        .returning({ id: topics.id })
-      return { kind: removed ? TOPIC_REMOVE_KIND.removed : TOPIC_REMOVE_KIND.versionConflict }
+        .returning({ id: topics.id, version: topics.version, deletedAt: topics.deletedAt })
+      return removed
+        ? {
+            kind: TOPIC_REMOVE_KIND.removed,
+            id: removed.id,
+            version: removed.version,
+            deletedAt: removed.deletedAt!,
+          }
+        : { kind: TOPIC_REMOVE_KIND.versionConflict }
     })
   }
 }

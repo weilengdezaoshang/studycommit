@@ -1,3 +1,4 @@
+import { oc } from '@orpc/contract'
 import { z } from 'zod'
 
 /**
@@ -103,6 +104,17 @@ export const paperExplainOutputSchema = z.object({
 export const confirmPaperExplainOutputSchema = z.object({ confirmed: z.literal(true) })
 
 export const agentRunStatusSchema = z.enum(['pending', 'completed', 'failed'])
+
+export const aiContract = {
+  explainPaper: oc
+    .route({ method: 'POST', path: '/ai/papers/explain', summary: '生成直观解释卡' })
+    .input(paperExplainInputSchema)
+    .output(paperExplainOutputSchema),
+  confirmPaperExplain: oc
+    .route({ method: 'POST', path: '/ai/runs/{runId}/confirm', summary: '确认解释卡候选' })
+    .input(confirmPaperExplainInputSchema)
+    .output(confirmPaperExplainOutputSchema),
+}
 
 export type ExplainViewType = z.infer<typeof explainViewTypeSchema>
 export type ExplainView = z.infer<typeof explainViewSchema>

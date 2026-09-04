@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common'
-import { TemplatesController } from './templates.controller'
+import { TemplatesRpcController } from './templates.rpc-controller'
 import { TemplatesRepository } from './templates.repository'
 import { TemplatesService } from './templates.service'
 
 @Module({
-  controllers: [TemplatesController],
+  controllers: [TemplatesRpcController],
   providers: [TemplatesRepository, TemplatesService],
 })
 export class TemplatesModule {}

@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common'
-import { LearningLogsController } from './learning-logs.controller'
+import { LearningLogsRpcController } from './learning-logs.rpc-controller'
 import { LearningLogsRepository } from './learning-logs.repository'
 import { LearningLogsService } from './learning-logs.service'
 
 @Module({
-  controllers: [LearningLogsController],
+  controllers: [LearningLogsRpcController],
   providers: [LearningLogsRepository, LearningLogsService],
 })
 export class LearningLogsModule {}

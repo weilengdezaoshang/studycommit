@@ -135,10 +135,11 @@ describe('StudySessions API', () => {
     const removed = await app.inject({
       method: 'DELETE',
       url: `/api/topics/${topic.id}`,
-      headers: { 'x-user-id': user, 'if-match': '1' },
+      headers: { 'x-user-id': user },
+      payload: { version: 1 },
     })
     expect(removed.statusCode).toBe(409)
-    expect(removed.json().error.code).toBe('TOPIC_HAS_ACTIVE_SESSION')
+    expect(removed.json().code).toBe('TOPIC_HAS_ACTIVE_SESSION')
   })
 
   it('serializes concurrent starts and duplicate pause commands', async () => {
@@ -284,7 +285,8 @@ describe('StudySessions API', () => {
     await app.inject({
       method: 'DELETE',
       url: `/api/topics/${deleted.id}`,
-      headers: { 'x-user-id': user, 'if-match': '1' },
+      headers: { 'x-user-id': user },
+      payload: { version: 1 },
     })
     expect(
       (
@@ -317,9 +319,10 @@ describe('StudySessions API', () => {
     const removed = await app.inject({
       method: 'DELETE',
       url: `/api/topics/${topic.id}`,
-      headers: { 'x-user-id': user, 'if-match': '1' },
+      headers: { 'x-user-id': user },
+      payload: { version: 1 },
     })
-    expect(removed.statusCode).toBe(204)
+    expect(removed.statusCode).toBe(200)
   })
 
   it('accepts offline completion and rejects an end time before start', async () => {

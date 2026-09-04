@@ -1,3 +1,4 @@
+import { oc } from '@orpc/contract'
 import { z } from 'zod'
 
 export const authUserSchema = z.object({
@@ -90,6 +91,47 @@ export const accountRegisterOutputSchema = z.object({
 export const accountLoginInputSchema = accountCredentialSchema.extend({
   deviceType: deviceTypeSchema,
 })
+
+export const authContract = {
+  sendPhoneCode: oc
+    .route({ method: 'POST', path: '/auth/phone/code', summary: '发送手机验证码' })
+    .input(sendPhoneCodeInputSchema)
+    .output(sendPhoneCodeOutputSchema),
+  verifyPhone: oc
+    .route({ method: 'POST', path: '/auth/phone/verify', summary: '手机验证码登录' })
+    .input(verifyPhoneInputSchema)
+    .output(verifyPhoneOutputSchema),
+  registerAccount: oc
+    .route({
+      method: 'POST',
+      path: '/auth/account/register',
+      successStatus: 201,
+      summary: '注册账号密码用户',
+    })
+    .input(accountRegisterInputSchema)
+    .output(accountRegisterOutputSchema),
+  loginAccount: oc
+    .route({ method: 'POST', path: '/auth/account/login', summary: '账号密码登录' })
+    .input(accountLoginInputSchema)
+    .output(verifyPhoneOutputSchema),
+  loginWechatMiniprogram: oc
+    .route({ method: 'POST', path: '/auth/wechat/miniprogram', summary: '微信小程序登录' })
+    .input(wechatMiniprogramLoginInputSchema)
+    .output(verifyPhoneOutputSchema),
+  refreshToken: oc
+    .route({ method: 'POST', path: '/auth/token/refresh', summary: '刷新访问令牌' })
+    .input(refreshInputSchema)
+    .output(authTokensSchema),
+  logout: oc.route({
+    method: 'POST',
+    path: '/auth/logout',
+    successStatus: 204,
+    summary: '退出登录并吊销会话',
+  }),
+  me: oc
+    .route({ method: 'GET', path: '/me', summary: '查看当前登录用户' })
+    .output(currentUserSchema),
+}
 
 export type AuthUser = z.infer<typeof authUserSchema>
 export type TokenPair = z.infer<typeof tokenPairSchema>

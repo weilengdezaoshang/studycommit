@@ -1,4 +1,8 @@
 import { z } from 'zod'
+import {
+  createTopicInputSchema,
+  updateTopicInputObjectSchema,
+} from '@studycommit/rpc-contracts/topics'
 import { DEFAULT_TOPIC_COLOR } from '../templates/template.constants'
 import { TOPIC_STATUS } from './topic.constants'
 
@@ -14,29 +18,18 @@ const description = z
   .nullable()
   .optional()
 
-export const createTopicSchema = z
-  .object({
-    name: z.string().trim().min(1).max(18),
-    description,
-    color: color.default(DEFAULT_TOPIC_COLOR),
-    templateId: z.uuid().optional(),
-    status: z.enum([TOPIC_STATUS.active, TOPIC_STATUS.archived]).default(TOPIC_STATUS.active),
-  })
+/** 契约 schema 为字段单一来源;这里只补充服务端归一化(去空白、默认色)与严格模式。 */
+export const createTopicSchema = createTopicInputSchema
+  .extend({ description, color: color.default(DEFAULT_TOPIC_COLOR) })
   .strict()
 
-export const updateTopicSchema = z
-  .object({
-    name: z.string().trim().min(1).max(18).optional(),
-    description,
-    color: color.optional(),
-    status: z.enum([TOPIC_STATUS.active, TOPIC_STATUS.archived]).optional(),
-    version: z.number().int().min(1),
-  })
+export const updateTopicSchema = updateTopicInputObjectSchema
+  .omit({ id: true })
+  .extend({ description })
   .strict()
-  .refine(
-    (value) => Object.keys(value).some((key) => key !== 'version'),
-    'at least one field must be updated',
-  )
+  .refine((value) => Object.keys(value).some((key) => key !== 'version'), {
+    message: '至少需要更新一个字段',
+  })
 
 export const listTopicsSchema = z.object({
   status: z.enum([TOPIC_STATUS.active, TOPIC_STATUS.archived]).optional(),

@@ -1,3 +1,4 @@
+import { oc } from '@orpc/contract'
 import { z } from 'zod'
 
 export const learningRecordInputSchema = z.object({
@@ -30,14 +31,73 @@ export const listLearningRecordsInputSchema = z.object({
   to: z.iso.datetime({ offset: true }).optional(),
 })
 
+/** 列表条目内嵌的主题行:来自 study_sessions -> topics 关联查询,不含模板汇总字段。 */
+export const learningRecordTopicRowSchema = z.object({
+  id: z.uuid(),
+  userId: z.uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  color: z.string(),
+  templateId: z.uuid(),
+  status: z.enum(['active', 'archived']),
+  totalDurationSeconds: z.number().int().nonnegative(),
+  version: z.number().int().min(1),
+  createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+  deletedAt: z.iso.datetime({ offset: true }).nullable(),
+})
+
+export const learningRecordListItemSchema = z.object({
+  learningLog: learningRecordSchema,
+  session: z.object({
+    id: z.uuid(),
+    userId: z.uuid(),
+    topicId: z.uuid(),
+    goal: z.string().nullable(),
+    status: z.enum(['running', 'paused', 'completed']),
+    startedAt: z.iso.datetime({ offset: true }),
+    pausedAt: z.iso.datetime({ offset: true }).nullable(),
+    totalPausedSeconds: z.number().int().nonnegative(),
+    completedAt: z.iso.datetime({ offset: true }).nullable(),
+    durationSeconds: z.number().int().nonnegative().nullable(),
+    completionSource: z.enum(['online', 'offline_sync']).nullable(),
+    version: z.number().int().min(1),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
+  }),
+  topic: learningRecordTopicRowSchema,
+})
+
 export const learningRecordPageSchema = z.object({
-  items: z.array(z.unknown()),
+  items: z.array(learningRecordListItemSchema),
   page: z.number().int().min(1),
   pageSize: z.number().int().min(1).max(100),
   total: z.number().int().nonnegative(),
 })
 
+const learningRecordBySessionInputSchema = z.object({ sessionId: z.uuid() })
+
+export const learningRecordContract = {
+  list: oc
+    .route({ method: 'GET', path: '/learning-logs', summary: '分页查询学习记录' })
+    .input(listLearningRecordsInputSchema)
+    .output(learningRecordPageSchema),
+  bySession: oc
+    .route({
+      method: 'GET',
+      path: '/study-sessions/{sessionId}/learning-log',
+      summary: '查看会话学习记录',
+    })
+    .input(learningRecordBySessionInputSchema)
+    .output(learningRecordSchema),
+  update: oc
+    .route({ method: 'PATCH', path: '/learning-logs/{id}', summary: '更新学习记录总结' })
+    .input(learningRecordInputSchema)
+    .output(learningRecordSchema),
+}
+
 export type LearningRecordInput = z.infer<typeof learningRecordInputSchema>
 export type LearningRecord = z.infer<typeof learningRecordSchema>
-export type ListLearningRecordsInput = z.infer<typeof listLearningRecordsInputSchema>
+export type ListLearningRecordsInput = z.input<typeof listLearningRecordsInputSchema>
 export type LearningRecordPage = z.infer<typeof learningRecordPageSchema>
+export type LearningRecordListItem = z.infer<typeof learningRecordListItemSchema>
