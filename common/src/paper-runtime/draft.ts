@@ -41,6 +41,8 @@ export type PaperDraftAction =
       now: number
       initial?: Partial<Omit<PaperDraft, 'paperId' | 'updatedAt' | 'attempts'>>
     }
+  /** 挂载时从本地存储恢复完整草稿:保留原 paperId 与失败次数,幂等键不换 */
+  | { type: 'restore'; draft: PaperDraft }
   | { type: 'setContent'; content: string; now: number }
   | { type: 'setQuestion'; hasQuestion: boolean; questionText?: string; now: number }
   | { type: 'attachAsset'; uploadId: string; now: number }
@@ -116,6 +118,8 @@ export function createPaperDraftReducer(
         attempts: 0,
       }
     }
+    case 'restore':
+      return action.draft
     case 'setContent': {
       if (!state) {
         return state

@@ -6,6 +6,7 @@ import type { ApplicationServices, TopicMutationApi } from '../../ports'
 export { createApiOrpcClient } from './client'
 export type { ApiOrpcClient, CreateApiOrpcClientOptions, OrpcClientContext } from './client'
 export { createOrpcTopicService } from './topic-service'
+export { createOrpcUploadsService } from './uploads-service'
 export { callOrpc, orpcToHttpError } from './errors'
 
 export interface CreateOrpcServicesOptions {
@@ -56,10 +57,12 @@ export function createOrpcServices(
     },
     papers: {
       list: (input) => call(() => client.papers.list(input ?? {}, { context: {} })),
-      create: (input) =>
+      create: (input, createOptions) =>
         call(() =>
           client.papers.create(input, {
-            context: { idempotencyKey: options.createIdempotencyKey() },
+            context: {
+              idempotencyKey: createOptions?.idempotencyKey ?? options.createIdempotencyKey(),
+            },
           }),
         ),
       update: (input) => call(() => client.papers.update(input, { context: {} })),

@@ -76,7 +76,12 @@ export interface LearningLogApi {
 
 export interface PaperApi {
   list(input?: ListPapersInput): Promise<PaperPage>
-  create(input: CreatePaperInput): Promise<Paper>
+  /**
+   * 创建纸页:options.idempotencyKey 传入草稿锚点(客户端 UUID)时,
+   * 失败重试复用同一键,服务端幂等去重保证不产生重复纸页;
+   * 不传则由适配器生成一次性键。
+   */
+  create(input: CreatePaperInput, options?: { idempotencyKey?: string }): Promise<Paper>
   update(input: UpdatePaperInput): Promise<Paper>
   organize(input: OrganizePaperInput): Promise<Paper>
   moveToInbox(input: PaperCommandInput): Promise<Paper>

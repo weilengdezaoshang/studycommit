@@ -42,6 +42,12 @@ describe('createPaperDraftReducer', () => {
     ).toBe(existing)
   })
 
+  it('restore 保留原 paperId 与失败次数,保证重试复用同一幂等键', () => {
+    const stored = draftWith({ attempts: 2, updatedAt: 5_000 })
+    const next = createPaperDraftReducer(null, { type: 'restore', draft: stored })
+    expect(next).toBe(stored)
+  })
+
   it('取消问题标记时同步清空问题文本', () => {
     const state = draftWith({ hasQuestion: true, questionText: '为什么回滚要用旧引用' })
     const next = createPaperDraftReducer(state, {

@@ -16,3 +16,11 @@ export type {
   UpdateTopicInput,
 } from './application-services'
 export type { AiApi } from './ai'
+export type {
+  AssetAccessOutput,
+  AssetKind,
+  AssetMimeType,
+  CompleteUploadOutput,
+  CreateUploadOutput,
+  UploadsApi,
+} from './uploads'
