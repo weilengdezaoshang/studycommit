@@ -5,7 +5,8 @@ import type { Paper } from '@studycommit/rpc-contracts/papers'
  * 抽屉、搜索、箱子、装订、问题、详情与 Agent 都从首页进入。
  */
 export type RootStackParamList = {
-  Home: undefined
+  /** selectedTopicId:从其他页面回到首页时带上箱子筛选;'__inbox__' 表示待整理 */
+  Home: { selectedTopicId?: string | null } | undefined
   NoteEditor: undefined
   PaperDetail: { paperId: string }
   Agent: { paperId: string }

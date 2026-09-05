@@ -44,10 +44,11 @@ export function HomeScreen() {
   const [wheelOpen, setWheelOpen] = useState(false)
   const [wheelDraft, setWheelDraft] = useState({ year: cursor.year, month: cursor.month })
   const [drawerAnim] = useState(() => new Animated.Value(0))
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
 
   const vm = useMemo(
-    () => buildHomeViewModel(state, selectedDateKey, cursor, null),
-    [state, selectedDateKey, cursor],
+    () => buildHomeViewModel(state, selectedDateKey, cursor, selectedTopicId),
+    [state, selectedDateKey, cursor, selectedTopicId],
   )
 
   const openDrawer = () => {
@@ -73,9 +74,33 @@ export function HomeScreen() {
 
   const openPaper = (paperId: string) => navigation.navigate('PaperDetail', { paperId })
 
+  /** 抽屉点箱子:筛选首页时间流;再次点同一箱子取消筛选(PRD §5.4)。 */
+  const handleSelectTopic = (topicId: string) => {
+    setSelectedTopicId((current) => (current === topicId ? null : topicId))
+    closeDrawer()
+  }
+
+  const filterLabel =
+    selectedTopicId === INBOX_TOPIC_ID
+      ? '待整理'
+      : (vm.topicRows.find((row) => row.id === selectedTopicId)?.name ?? '')
+
   return (
     <View style={[styles.page, { paddingTop: insets.top }]}>
       <HomeHeader title={vm.monthTitle} weekSummary={vm.weekSummary} onOpenDrawer={openDrawer} />
+      {selectedTopicId ? (
+        <View style={styles.filterRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`清除筛选，当前为${filterLabel}`}
+            onPress={() => setSelectedTopicId(null)}
+            style={styles.filterChip}
+          >
+            <Text style={styles.filterChipText}>{filterLabel}</Text>
+            <Ionicons name="close" size={12} color={paperColors.paper} />
+          </Pressable>
+        </View>
+      ) : null}
       <WeekStrip days={vm.weekDays} onSelect={(dateKey) => setSelectedDateKey(dateKey)} />
       <Timeline vm={vm} onOpenPaper={openPaper} />
       <Fab onPress={() => navigation.navigate('NoteEditor')} />
@@ -171,10 +196,8 @@ export function HomeScreen() {
           <Legend />
           <TopicSection
             vm={vm}
-            onSelectTopic={(topicId) => {
-              closeDrawer()
-              navigation.navigate('Collection', { mode: 'box', topicId })
-            }}
+            selectedTopicId={selectedTopicId}
+            onSelectTopic={handleSelectTopic}
             onCreateTopic={() => {
               void papersActions
                 .createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
@@ -191,10 +214,8 @@ export function HomeScreen() {
           />
           <AttentionSection
             vm={vm}
-            onSelectTopic={(topicId) => {
-              closeDrawer()
-              navigation.navigate('Collection', { mode: 'inbox', topicId })
-            }}
+            selectedTopicId={selectedTopicId}
+            onSelectTopic={handleSelectTopic}
             onOpenProblems={() => {
               closeDrawer()
               navigation.navigate('Problems')
@@ -625,11 +646,13 @@ function Legend() {
 
 function TopicSection({
   vm,
+  selectedTopicId,
   onSelectTopic,
   onCreateTopic,
   onViewAll,
 }: {
   vm: HomeViewModel
+  selectedTopicId: string | null
   onSelectTopic: (topicId: string) => void
   onCreateTopic: () => void
   onViewAll: () => void
@@ -655,7 +678,7 @@ function TopicSection({
           icon="archive-outline"
           label={row.name}
           count={row.count}
-          selected={false}
+          selected={selectedTopicId === row.id}
           onPress={() => onSelectTopic(row.id)}
         />
       ))}
@@ -670,10 +693,12 @@ function TopicSection({
 
 function AttentionSection({
   vm,
+  selectedTopicId,
   onSelectTopic,
   onOpenProblems,
 }: {
   vm: HomeViewModel
+  selectedTopicId: string | null
   onSelectTopic: (topicId: string) => void
   onOpenProblems: () => void
 }) {
@@ -686,7 +711,7 @@ function AttentionSection({
         icon="file-tray-outline"
         label="待整理的纸页"
         count={vm.inboxCount}
-        selected={false}
+        selected={selectedTopicId === INBOX_TOPIC_ID}
         onPress={() => onSelectTopic(INBOX_TOPIC_ID)}
       />
       <DrawerRow
@@ -740,6 +765,21 @@ const styles = StyleSheet.create({
   headerTitle: { color: paperColors.ink, fontSize: 18, fontWeight: '600' },
   headerSummary: { color: paperColors.muted, fontSize: 12 },
   headerSpacer: { width: 44 },
+  filterRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+    flexDirection: 'row',
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: paperColors.action,
+  },
+  filterChipText: { color: paperColors.paper, fontSize: 12, fontWeight: '500' },
   iconButton: {
     width: 44,
     height: 44,
