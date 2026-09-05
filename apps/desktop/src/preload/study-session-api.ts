@@ -29,6 +29,8 @@ export const paperPreloadApi = {
   organize: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.organize, input),
   moveToInbox: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.moveToInbox, input),
   remove: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.remove, input),
+  question: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.question, input),
+  restore: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.restore, input),
 }
 
 export const learningLogPreloadApi = {

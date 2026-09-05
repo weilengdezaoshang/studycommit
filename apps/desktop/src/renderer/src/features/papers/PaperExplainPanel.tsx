@@ -47,7 +47,8 @@ export function PaperExplainPanel({
     setLoading(true)
     try {
       await ai.confirmPaperExplain({ runId: output.runId })
-      papersActions.resolveQuestion(paper.id)
+      // 服务端确认事务内已把还在思考的问题落定为已解决,这里同步本地视图即可
+      papersActions.markQuestionConfirmed(paper.id)
       onClose()
     } catch {
       setError('确认失败，纸页仍保留在“还在思考”。')

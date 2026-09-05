@@ -53,6 +53,8 @@ describe('registerDesktopIpc', () => {
       organize: vi.fn(),
       moveToInbox: vi.fn(),
       remove: vi.fn(),
+      updateQuestion: vi.fn(),
+      restore: vi.fn(),
     },
     learningLogs: {
       list: vi.fn(),

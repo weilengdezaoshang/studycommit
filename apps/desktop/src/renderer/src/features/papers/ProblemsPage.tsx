@@ -4,7 +4,13 @@ import { RecordsListPage } from './RecordsListPage'
 export function ProblemsPage(): React.JSX.Element {
   const state = usePapersState()
   const papers = state.papers
-    .filter((paper) => !paper.deletedAt && state.extras[paper.id]?.hasQuestion)
+    // 问题回看页包含还在思考与已解决,页内筛选区分;旧演示数据缺状态时按侧车布尔兜底
+    .filter(
+      (paper) =>
+        !paper.deletedAt &&
+        (paper.questionStatus !== 'none' ||
+          (paper.questionStatus === 'none' && state.extras[paper.id]?.hasQuestion)),
+    )
     .map((paper) => ({ ...paper, extra: state.extras[paper.id] }))
   return (
     <RecordsListPage

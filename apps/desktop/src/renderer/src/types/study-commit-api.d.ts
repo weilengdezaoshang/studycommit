@@ -21,6 +21,7 @@ import type {
   TopicPage,
   UpdateLearningLogInput,
   UpdatePaperInput,
+  UpdatePaperQuestionInput,
 } from '@studycommit/common/contracts'
 import type {
   RemoveTopicInput,
@@ -52,6 +53,8 @@ export interface StudyCommitPapersApi {
   organize: (input: OrganizePaperInput) => Promise<IpcResult<Paper>>
   moveToInbox: (input: PaperCommandInput) => Promise<IpcResult<Paper>>
   remove: (input: PaperCommandInput) => Promise<IpcResult<DeletePaperOutput>>
+  question: (input: UpdatePaperQuestionInput) => Promise<IpcResult<Paper>>
+  restore: (input: PaperCommandInput) => Promise<IpcResult<Paper>>
 }
 
 export interface StudyCommitLearningLogsApi {

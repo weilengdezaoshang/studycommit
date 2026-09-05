@@ -5,11 +5,17 @@ import {
   type CalendarCell,
 } from '@studycommit/common/study-session-runtime'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
+import type { PaperQuestionStatus } from '@studycommit/rpc-contracts/paper-question'
 import { paperColors } from './paper-visual'
 import type { PapersState } from './papers-store'
 
 export type PaperWithExtra = Paper & {
-  extra: { hasQuestion: boolean; isQuestionResolved: boolean; photoPath: string | null }
+  extra: {
+    hasQuestion: boolean
+    isQuestionResolved: boolean
+    questionStatus: PaperQuestionStatus
+    photoPath: string | null
+  }
 }
 
 export type TimelineEntry = {
@@ -44,7 +50,12 @@ export function buildDateKeyOf(paper: Paper): string {
 
 export function buildHomeViewModel(state: PapersState) {
   const extrasOf = (paperId: string) =>
-    state.extras[paperId] ?? { hasQuestion: false, isQuestionResolved: false, photoPath: null }
+    state.extras[paperId] ?? {
+      hasQuestion: false,
+      isQuestionResolved: false,
+      questionStatus: 'none' as const,
+      photoPath: null,
+    }
 
   const papers: PaperWithExtra[] = state.papers
     .filter((paper) => !paper.deletedAt)

@@ -20,6 +20,7 @@ function Inbox() {
           extra: state.extras[paper.id] ?? {
             hasQuestion: false,
             isQuestionResolved: false,
+            questionStatus: 'none' as const,
             photoPath: null,
           },
         }))}
@@ -153,7 +154,16 @@ describe('长文阅读', () => {
       deletedAt: null,
       hasQuestion: false,
       isQuestionResolved: false,
-      extra: { hasQuestion: false, isQuestionResolved: false, photoPath: null },
+      questionStatus: 'none' as const,
+      questionText: null,
+      understandingText: null,
+      questionResolvedAt: null,
+      extra: {
+        hasQuestion: false,
+        isQuestionResolved: false,
+        questionStatus: 'none' as const,
+        photoPath: null,
+      },
     }
     render(
       <MemoryRouter>

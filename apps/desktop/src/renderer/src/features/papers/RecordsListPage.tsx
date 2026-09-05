@@ -62,7 +62,20 @@ export function RecordsListPage({
   const [topicDraftName, setTopicDraftName] = useState('')
   const [topicActionPending, setTopicActionPending] = useState(false)
   const isOpen = (paper: PaperWithExtra) =>
-    paper.extra.hasQuestion && !paper.extra.isQuestionResolved
+    paper.extra.questionStatus
+      ? paper.extra.questionStatus === 'thinking'
+      : paper.extra.hasQuestion && !paper.extra.isQuestionResolved
+  /** 切换问题状态并按结果提示:成功/被其他设备更改/失败三种文案。 */
+  async function runQuestionCommand(paper: PaperWithExtra, status: 'thinking' | 'resolved') {
+    const result = await papersActions.updateQuestionStatus(paper.id, status)
+    if (result === status) {
+      setMessage(status === 'resolved' ? '已标记为弄懂，原来的纸页仍然保留。' : '已改回还在思考。')
+    } else if (result !== null) {
+      setMessage('另一台设备已更改这张纸页，已为你展示最新状态。')
+    } else {
+      setMessage('暂时没能更新问题状态，请稍后再试。')
+    }
+  }
   const visible = papers
     .filter((paper) => paper.content.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
     .filter(
@@ -409,10 +422,7 @@ export function RecordsListPage({
                         ? 'collection-primary collection-resolve-primary'
                         : 'collection-resolve'
                     }
-                    onClick={() => {
-                      papersActions.resolveQuestion(selected.id)
-                      setMessage('已标记为弄懂，原来的纸页仍然保留。')
-                    }}
+                    onClick={() => void runQuestionCommand(selected, 'resolved')}
                   >
                     我已经弄懂了
                   </button>
@@ -438,10 +448,7 @@ export function RecordsListPage({
                   <button
                     type="button"
                     className="collection-resolve"
-                    onClick={() => {
-                      papersActions.reopenQuestion(selected.id)
-                      setMessage('已改回还在思考。')
-                    }}
+                    onClick={() => void runQuestionCommand(selected, 'thinking')}
                   >
                     改回还在思考
                   </button>
@@ -496,7 +503,7 @@ export function RecordsListPage({
                 记录详情
               </h1>
               {detailPaper.extra.hasQuestion && (
-                <p className="collection-detail-state">
+                <p className="collection-detail-state" key={detailPaper.extra.questionStatus}>
                   {isOpen(detailPaper) ? '还在思考' : '已经弄懂'}
                 </p>
               )}

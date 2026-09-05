@@ -4,6 +4,7 @@ import {
   organizePaperInputSchema,
   paperCommandSchema,
   updatePaperInputSchema,
+  updatePaperQuestionInputSchema,
 } from '@studycommit/common/contracts'
 import type { PaperApi } from '@studycommit/common/ports'
 import { paperIpcChannels } from '../../shared/paper-channels'
@@ -29,5 +30,11 @@ export function registerPaperIpc(host: IpcHost, papers: PaperApi): void {
   )
   host.handle(paperIpcChannels.remove, (input) =>
     papers.remove(parseIpcInput(paperCommandSchema, input)),
+  )
+  host.handle(paperIpcChannels.question, (input) =>
+    papers.updateQuestion(parseIpcInput(updatePaperQuestionInputSchema, input)),
+  )
+  host.handle(paperIpcChannels.restore, (input) =>
+    papers.restore(parseIpcInput(paperCommandSchema, input)),
   )
 }

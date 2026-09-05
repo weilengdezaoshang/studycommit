@@ -1,9 +1,9 @@
 import type { Paper } from '@studycommit/rpc-contracts/papers'
 
-/** 桌面端纸页 mock:与后端 Paper 契约字段一致;问题/照片暂以侧车承载。 */
-export type PaperExtra = {
-  hasQuestion: boolean
-  isQuestionResolved: boolean
+/** 桌面端纸页 mock:与后端 Paper 契约字段一致;问题侧车字段由状态机从纸页派生。 */
+import type { PaperQuestionExtras } from '@studycommit/common/paper-runtime'
+
+export type PaperExtra = PaperQuestionExtras & {
   photoPath: string | null
 }
 
@@ -41,6 +41,10 @@ export function buildSeedPapers(): Paper[] {
       deletedAt: null,
       hasQuestion: true,
       isQuestionResolved: false,
+      questionStatus: 'thinking',
+      questionText: '为什么 React 的状态更新不是立即生效？批处理和调度分别解决了什么问题？',
+      understandingText: null,
+      questionResolvedAt: null,
     },
     {
       id: 'p-1',
@@ -53,6 +57,10 @@ export function buildSeedPapers(): Paper[] {
       deletedAt: null,
       hasQuestion: true,
       isQuestionResolved: false,
+      questionStatus: 'thinking',
+      questionText: 'Safe Area 边界在多窗口与分屏下如何变化？',
+      understandingText: null,
+      questionResolvedAt: null,
     },
     {
       id: 'p-3',
@@ -65,13 +73,27 @@ export function buildSeedPapers(): Paper[] {
       deletedAt: null,
       hasQuestion: false,
       isQuestionResolved: false,
+      questionStatus: 'none',
+      questionText: null,
+      understandingText: null,
+      questionResolvedAt: null,
     },
   ]
 }
 
 export function buildSeedExtras(): Record<string, PaperExtra> {
   return {
-    'p-2': { hasQuestion: true, isQuestionResolved: false, photoPath: null },
-    'p-1': { hasQuestion: true, isQuestionResolved: false, photoPath: null },
+    'p-2': {
+      hasQuestion: true,
+      isQuestionResolved: false,
+      questionStatus: 'thinking',
+      photoPath: null,
+    },
+    'p-1': {
+      hasQuestion: true,
+      isQuestionResolved: false,
+      questionStatus: 'thinking',
+      photoPath: null,
+    },
   }
 }

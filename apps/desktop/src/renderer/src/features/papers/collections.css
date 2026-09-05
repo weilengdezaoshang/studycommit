@@ -613,6 +613,20 @@
 .collection-detail-state {
   color: var(--paper-action);
   font-size: var(--font-size-body-small);
+  animation: collection-state-settle var(--motion-duration-fast) ease-out;
+}
+@keyframes collection-state-settle {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collection-detail-state {
+    animation: none;
+  }
 }
 .collection-detail-content {
   white-space: pre-wrap;

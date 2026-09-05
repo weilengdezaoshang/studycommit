@@ -38,6 +38,8 @@ function createDefaultStudyCommit() {
       organize: async () => ({ ok: false as const, error: configurationError() }),
       moveToInbox: async () => ({ ok: false as const, error: configurationError() }),
       remove: async () => ({ ok: false as const, error: configurationError() }),
+      question: async () => ({ ok: false as const, error: configurationError() }),
+      restore: async () => ({ ok: false as const, error: configurationError() }),
     },
     learningLogs: {
       list: async () => ({ ok: false as const, error: configurationError() }),

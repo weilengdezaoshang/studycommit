@@ -1,5 +1,12 @@
 import { useSyncExternalStore } from 'react'
 import type { Paper, PaperPage } from '@studycommit/rpc-contracts/papers'
+import type { PaperQuestionStatus } from '@studycommit/rpc-contracts/paper-question'
+import {
+  applyQuestionCommand,
+  applyQuestionConfirmed,
+  questionExtrasOf,
+} from '@studycommit/common/paper-runtime'
+import type { SerializedHttpError } from '@studycommit/common/http'
 import {
   deleteStoreTopic,
   renameStoreTopic,
@@ -70,6 +77,21 @@ export function getPapersState(): PapersState {
 }
 
 type IpcEnvelope<T> = { ok: true; data: T } | { ok: false; error?: { message?: string } }
+
+type IpcAttempt<T> = { ok: true; data: T } | { ok: false; error: SerializedHttpError | null }
+
+function isSerializedHttpError(value: unknown): value is SerializedHttpError {
+  return typeof value === 'object' && value !== null && 'code' in value && 'details' in value
+}
+
+/** 保留错误信封(409 时 details.paper 携带服务端实体,供冲突采纳)。 */
+async function attempt<T>(promise: Promise<IpcEnvelope<T>>): Promise<IpcAttempt<T>> {
+  const result = await promise
+  if (result.ok) {
+    return { ok: true, data: result.data }
+  }
+  return { ok: false, error: isSerializedHttpError(result.error) ? result.error : null }
+}
 
 function papersApi(): import('../../types/study-commit-api').StudyCommitPapersApi | null {
   return typeof window !== 'undefined' && window.studyCommit?.papers
@@ -203,19 +225,60 @@ const papersActions = {
   selectDate(dateKey: string) {
     setState({ selectedDateKey: dateKey })
   },
-  resolveQuestion(paperId: string) {
-    const extra = state.extras[paperId]
-    if (!extra) {
-      return
+  /**
+   * 切换问题状态:乐观更新 + 失败回滚;409 时采纳服务端实体。
+   * 返回最终生效的问题状态,供页面区分"成功/被其他设备更改/失败"。
+   */
+  async updateQuestionStatus(
+    paperId: string,
+    status: PaperQuestionStatus,
+    questionText?: string,
+  ): Promise<PaperQuestionStatus | null> {
+    const previous = state.papers.find((paper) => paper.id === paperId)
+    if (!previous || previous.deletedAt) {
+      return null
     }
-    setState({ extras: { ...state.extras, [paperId]: { ...extra, isQuestionResolved: true } } })
+    const nowIso = new Date().toISOString()
+    const optimistic = applyQuestionCommand(previous, { status, questionText }, nowIso)
+    if (optimistic === previous) {
+      return previous.questionStatus
+    }
+    commitPaper(optimistic)
+
+    const api = papersApi()
+    if (api && state.source === 'server') {
+      const result = await attempt(
+        api.question({ id: paperId, version: previous.version, status, questionText }),
+      )
+      if (result.ok) {
+        commitPaper(result.data)
+        return result.data.questionStatus
+      }
+      const serverPaper = conflictPaperOf(result.error)
+      if (serverPaper) {
+        commitPaper(serverPaper)
+        // 目标状态已被另一台设备完成时静默采纳,否则交给页面提示
+        return serverPaper.questionStatus
+      }
+      // 其他失败回滚到操作前状态
+      commitPaper(previous)
+      return null
+    }
+    return optimistic.questionStatus
   },
-  reopenQuestion(paperId: string) {
-    const extra = state.extras[paperId]
-    if (!extra) {
+  async resolveQuestion(paperId: string): Promise<PaperQuestionStatus | null> {
+    return papersActions.updateQuestionStatus(paperId, 'resolved')
+  },
+  async reopenQuestion(paperId: string): Promise<PaperQuestionStatus | null> {
+    return papersActions.updateQuestionStatus(paperId, 'thinking')
+  },
+  /** AI 解释卡确认成功后本地落定已解决;服务端已在确认事务内写入,不再发起状态请求。 */
+  markQuestionConfirmed(paperId: string) {
+    const previous = state.papers.find((paper) => paper.id === paperId)
+    if (!previous) {
       return
     }
-    setState({ extras: { ...state.extras, [paperId]: { ...extra, isQuestionResolved: false } } })
+    commitPaper(applyQuestionConfirmed(previous, new Date().toISOString()))
   },
   async renameTopic(topicId: string, name: string): Promise<DesktopTopic | undefined> {
     return renameStoreTopic(createTopicStoreHost(topicsApi()), topicId, name)
@@ -265,7 +328,44 @@ function replacePaper(saved: Paper) {
   })
 }
 
-/** 用服务端数据替换本地数据;问题标记(本地 sidecar)仅保留仍存在的纸页。 */
+/** 写回纸页并按状态机派生同步问题侧车字段,保证 extras 与 paper 单一来源一致。 */
+function commitPaper(paper: Paper) {
+  setState({
+    papers: state.papers.map((item) => (item.id === paper.id ? paper : item)),
+    extras: withQuestionExtras(state.extras, paper),
+  })
+}
+
+function withQuestionExtras(
+  extras: Record<string, PaperExtra>,
+  paper: Paper,
+): Record<string, PaperExtra> {
+  const questionExtras = questionExtrasOf(paper)
+  const photoPath = extras[paper.id]?.photoPath ?? null
+  if (questionExtras.questionStatus === 'none' && !photoPath) {
+    const next = { ...extras }
+    delete next[paper.id]
+    return next
+  }
+  return { ...extras, [paper.id]: { ...questionExtras, photoPath } }
+}
+
+/** 从 409 错误信封中取服务端最新实体;不可信时返回 null。 */
+function conflictPaperOf(error: SerializedHttpError | null): Paper | null {
+  const details = error?.details as { paper?: unknown } | null | undefined
+  const candidate = details?.paper as Paper | undefined
+  if (
+    candidate &&
+    typeof candidate.id === 'string' &&
+    typeof candidate.version === 'number' &&
+    typeof candidate.questionStatus === 'string'
+  ) {
+    return candidate
+  }
+  return null
+}
+
+/** 用服务端数据替换本地数据;问题侧车由状态机派生,仅保留仍存在的纸页与本地照片。 */
 function mergeServerState(
   previous: PapersState,
   items: Paper[],
@@ -273,13 +373,10 @@ function mergeServerState(
 ): Partial<PapersState> {
   const extras: Record<string, PaperExtra> = {}
   for (const paper of items) {
-    const previousExtra = previous.extras[paper.id]
-    if (paper.hasQuestion || paper.isQuestionResolved || previousExtra?.photoPath) {
-      extras[paper.id] = {
-        hasQuestion: paper.hasQuestion,
-        isQuestionResolved: paper.isQuestionResolved,
-        photoPath: previousExtra?.photoPath ?? null,
-      }
+    const questionExtras = questionExtrasOf(paper)
+    const photoPath = previous.extras[paper.id]?.photoPath ?? null
+    if (questionExtras.questionStatus !== 'none' || photoPath) {
+      extras[paper.id] = { ...questionExtras, photoPath }
     }
   }
   return { papers: items, topics, extras, source: 'server' }

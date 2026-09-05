@@ -64,6 +64,8 @@ describe('桌面纸页数据通路', () => {
         remove: vi.fn(),
         organize: vi.fn(),
         moveToInbox: vi.fn(),
+        question: vi.fn(),
+        restore: vi.fn(),
       },
       topics: {
         listActive: vi.fn().mockResolvedValue(
@@ -278,5 +280,157 @@ describe('桌面纸页数据通路', () => {
       status: 'inbox',
       version: 2,
     })
+  })
+})
+
+describe('桌面问题状态切换', () => {
+  const thinkingPaper = {
+    ...serverPaper,
+    hasQuestion: true,
+    isQuestionResolved: false,
+    questionStatus: 'thinking' as const,
+    questionText: '为什么状态更新不是立即生效',
+    understandingText: null,
+    questionResolvedAt: null,
+  }
+
+  it('解决问题成功后同步侧车字段与服务端版本', async () => {
+    const question = vi.fn().mockResolvedValue(
+      okEnvelope({
+        ...thinkingPaper,
+        questionStatus: 'resolved',
+        isQuestionResolved: true,
+        questionResolvedAt: '2026-09-02T08:00:00.000Z',
+        version: 2,
+      }),
+    )
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [thinkingPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
+        question,
+      },
+    })
+    await papersActions.loadRemote()
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).resolves.toBe('resolved')
+
+    expect(question).toHaveBeenCalledWith({
+      id: thinkingPaper.id,
+      version: 1,
+      status: 'resolved',
+      questionText: undefined,
+    })
+    const state = getPapersState()
+    expect(state.papers[0]).toMatchObject({ questionStatus: 'resolved', version: 2 })
+    expect(state.extras[thinkingPaper.id]).toMatchObject({
+      questionStatus: 'resolved',
+      isQuestionResolved: true,
+    })
+  })
+
+  it('版本冲突时采纳服务端实体并报告服务端状态', async () => {
+    const serverState = {
+      ...thinkingPaper,
+      questionStatus: 'resolved' as const,
+      isQuestionResolved: true,
+      version: 5,
+    }
+    const question = vi.fn().mockResolvedValue({
+      ok: false as const,
+      error: {
+        code: 'CONFLICT',
+        message: '记录版本冲突',
+        status: 409,
+        backendCode: 'PAPER_VERSION_CONFLICT',
+        requestId: null,
+        details: { paper: serverState },
+      },
+    })
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [thinkingPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
+        question,
+      },
+    })
+    await papersActions.loadRemote()
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).resolves.toBe('resolved')
+
+    expect(getPapersState().papers[0]).toMatchObject({ questionStatus: 'resolved', version: 5 })
+  })
+
+  it('非冲突失败时回滚到操作前状态并返回空', async () => {
+    const question = vi.fn().mockResolvedValue(failEnvelope())
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [thinkingPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
+        question,
+      },
+    })
+    await papersActions.loadRemote()
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).resolves.toBeNull()
+
+    expect(getPapersState().papers[0]).toMatchObject({ questionStatus: 'thinking', version: 1 })
+  })
+
+  it('演示数据下解决问题只更新本地状态', async () => {
+    // store 是模块级单例,前面的用例已把 source 切到 server;重置模块拿一份全新演示状态
+    vi.resetModules()
+    const fresh = await import('./papers-store')
+    const seedPaper = fresh
+      .getPapersState()
+      .papers.find((item) => item.questionStatus === 'thinking')
+    expect(seedPaper).toBeDefined()
+
+    await expect(fresh.papersActions.resolveQuestion(seedPaper!.id)).resolves.toBe('resolved')
+    expect(fresh.getPapersState().source).toBe('seed')
+    expect(fresh.getPapersState().extras[seedPaper!.id]).toMatchObject({
+      questionStatus: 'resolved',
+    })
+  })
+
+  it('AI 解释卡确认后本地落定已解决且不再发起状态请求', async () => {
+    const question = vi.fn()
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [thinkingPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
+        question,
+      },
+    })
+    await papersActions.loadRemote()
+
+    papersActions.markQuestionConfirmed(thinkingPaper.id)
+
+    expect(getPapersState().papers[0]).toMatchObject({
+      questionStatus: 'resolved',
+      isQuestionResolved: true,
+      version: 2,
+    })
+    expect(question).not.toHaveBeenCalled()
   })
 })
