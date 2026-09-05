@@ -307,4 +307,30 @@ describe('mobile papers store create idempotency', () => {
     ).rejects.toThrow('网络不可用')
     expect(getPapersState().papers.some((item) => item.content === '会失败的记录')).toBe(false)
   })
+
+  it('携带已完成直传的图片创建纸页时透传资产上传会话', async () => {
+    papers.create = jest.fn().mockResolvedValue({
+      ...paper,
+      id: '6a6a6a6a-6a6a-4a6a-8a6a-6a6a6a6a6a6a',
+      status: 'inbox',
+      topicId: null,
+      content: '带图片的记录',
+      version: 1,
+    })
+
+    await papersActions.createPaper({
+      content: '带图片的记录',
+      idempotencyKey: '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c9c',
+      assetUploadIds: ['9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b9b'],
+    })
+
+    expect(papers.create).toHaveBeenCalledWith(
+      {
+        content: '带图片的记录',
+        hasQuestion: false,
+        assetUploadIds: ['9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b9b'],
+      },
+      { idempotencyKey: '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c9c' },
+    )
+  })
 })

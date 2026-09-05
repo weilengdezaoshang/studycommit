@@ -13,6 +13,10 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
 
+jest.mock('../../core/MobileServicesProvider', () => ({
+  useMobileServices: () => ({ uploads: {} }),
+}))
+
 const storedDraft: PaperDraft = {
   paperId: '9a1b2c3d-4e5f-4a6b-8c9d-0e1f2a3b4c5d',
   content: '上次没保存的正文',

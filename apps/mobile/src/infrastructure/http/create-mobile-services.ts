@@ -7,6 +7,7 @@ import type {
   PaperApi,
   StudySessionApi,
   TopicMutationApi,
+  UploadsApi,
 } from '@studycommit/common/ports'
 import {
   allowsInsecureHttpFor,
@@ -23,6 +24,7 @@ export interface MobileServices {
   learningLogs: LearningLogApi
   papers: PaperApi
   ai: AiApi
+  uploads: UploadsApi
 }
 
 export function createMobileServices(options?: {
@@ -103,6 +105,12 @@ function createUnavailableServices(error: HttpError): MobileServices {
     ai: {
       explainPaper: reject,
       confirmPaperExplain: reject,
+    },
+    uploads: {
+      create: reject,
+      complete: reject,
+      remove: reject,
+      access: reject,
     },
   }
 }

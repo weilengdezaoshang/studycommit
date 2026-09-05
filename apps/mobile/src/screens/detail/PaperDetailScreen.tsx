@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { paperColors } from '../../features/papers/paper-visual'
@@ -98,7 +98,9 @@ export function PaperDetailScreen() {
           </View>
         )}
         <Text style={styles.content}>{paper.content}</Text>
-        {extra?.photoPath && <View style={styles.photoPlaceholder} />}
+        {extra?.photoPath ? (
+          <Image source={{ uri: extra.photoPath }} style={styles.photoPreview} />
+        ) : null}
       </ScrollView>
 
       {hasOpenQuestion && (
@@ -269,8 +271,9 @@ const styles = StyleSheet.create({
   },
   topicChipText: { color: paperColors.action, fontSize: 11 },
   content: { color: paperColors.ink, fontSize: 16, lineHeight: 28 },
-  photoPlaceholder: {
-    height: 160,
+  photoPreview: {
+    width: '100%',
+    height: 200,
     borderRadius: 12,
     marginTop: 16,
     backgroundColor: paperColors.actionSurface,

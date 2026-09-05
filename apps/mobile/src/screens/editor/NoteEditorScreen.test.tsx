@@ -13,6 +13,10 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
 }))
 
+jest.mock('../../core/MobileServicesProvider', () => ({
+  useMobileServices: () => ({ uploads: {} }),
+}))
+
 async function renderEditor() {
   const view = await render(<NoteEditorScreen />)
   // 用真实定时器冲刷挂载时的草稿加载状态更新

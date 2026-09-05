@@ -170,6 +170,8 @@ export const papersActions = {
     questionText?: string
     /** 草稿锚点(客户端 UUID):重试复用同键,服务端幂等去重防重复纸页 */
     idempotencyKey?: string
+    /** 已完成直传的图片上传会话,创建时事务内绑定到纸页 */
+    assetUploadIds?: string[]
   }): Promise<Paper> {
     const now = new Date().toISOString()
     const questionFields = questionFieldsForCreate({
@@ -216,6 +218,7 @@ export const papersActions = {
             content: paper.content,
             hasQuestion: Boolean(input.hasQuestion),
             ...(input.questionText ? { questionText: input.questionText } : {}),
+            ...(input.assetUploadIds?.length ? { assetUploadIds: input.assetUploadIds } : {}),
           },
           { idempotencyKey: paper.id },
         )

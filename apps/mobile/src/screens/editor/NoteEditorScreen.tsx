@@ -1,22 +1,20 @@
-import { useMemo, useState } from 'react'
-import { AppState } from 'react-native'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AppState, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { KeyboardAvoidingView, Platform } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRecoverableDraft } from '@studycommit/common/paper-react'
+import { useAssetUpload, useRecoverableDraft } from '@studycommit/common/paper-react'
 import type { PaperDraftStorage } from '@studycommit/common/paper-react'
 import { paperColors } from '../../features/papers/paper-visual'
 import { createMobileDraftStorage } from '../../features/papers/draft-storage'
 import { papersActions, uuid } from '../../features/papers/papers-store'
+import { useMobileServices } from '../../core/MobileServicesProvider'
+import {
+  pickLocalImage,
+  putLocalFile,
+  sha256OfLocalFile,
+} from '../../infrastructure/media/image-upload'
 
 /** 前后台订阅:切到后台立即把草稿落盘,进程被杀也不丢内容。 */
 function subscribeAppState(listener: (state: 'active' | 'background') => void): () => void {
@@ -32,20 +30,39 @@ function subscribeAppState(listener: (state: 'active' | 'background') => void): 
 export function NoteEditorScreen() {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
-  const [photoAttached, setPhotoAttached] = useState(false)
+  const { uploads } = useMobileServices()
   const [recoveryDismissed, setRecoveryDismissed] = useState(false)
+  const [pickError, setPickError] = useState<string | null>(null)
   const draftStorage = useMemo<PaperDraftStorage>(() => createMobileDraftStorage(), [])
+  const localPhotoUriRef = useRef<string | null>(null)
   const controller = useRecoverableDraft({
     draftStorage,
     papers: {
       create: (input, options) =>
-        papersActions.createPaper({ ...input, idempotencyKey: options?.idempotencyKey }),
+        papersActions.createPaper({
+          ...input,
+          idempotencyKey: options?.idempotencyKey,
+          photoPath: localPhotoUriRef.current ?? undefined,
+        }),
     },
     createDraftId: uuid,
     subscribeAppState,
   })
+  const assetUpload = useAssetUpload({
+    uploads,
+    putFile: putLocalFile,
+    sha256: sha256OfLocalFile,
+    createUploadId: uuid,
+  })
   const draft = controller.draft
   const hasRecoveredContent = controller.recovered && !recoveryDismissed
+  const photoUri = draft?.localPhotoUri ?? null
+  const photoUploadId = draft?.assetUploadIds[0] ?? null
+
+  // 保存时创建网关需要当前图片引用:在 effect 中同步,渲染期不读 ref
+  useEffect(() => {
+    localPhotoUriRef.current = photoUri
+  }, [photoUri])
 
   const save = async () => {
     const saved = await controller.save()
@@ -61,15 +78,63 @@ export function NoteEditorScreen() {
     })
   }
 
-  const statusHint = controller.loading
-    ? ''
-    : controller.saving
-      ? '正在保存…'
-      : controller.saveError
-        ? controller.saveError
-        : controller.savedAt
-          ? `草稿已保存 ${formatTime(controller.savedAt)}`
-          : '自动保存中'
+  /** 选图 → 直传 → 进草稿;取消/拒绝/超限给出轻提示,不打断正文输入。 */
+  const addPhoto = async () => {
+    if (assetUpload.uploading) {
+      return
+    }
+    setPickError(null)
+    const picked = await pickLocalImage()
+    if (picked.status === 'denied') {
+      setPickError('未获得相册权限，请在系统设置中开启')
+      return
+    }
+    if (picked.status === 'tooLarge') {
+      setPickError('图片超过 10MB，请换一张')
+      return
+    }
+    if (picked.status !== 'picked') {
+      return
+    }
+    // 单图语义:替换旧图前先清理旧上传会话
+    if (photoUploadId) {
+      void assetUpload.cancelUpload(photoUploadId)
+    }
+    const uploadId = await assetUpload.uploadFile({
+      localUri: picked.localUri,
+      kind: 'image',
+      mimeType: picked.mimeType,
+      sizeBytes: picked.sizeBytes,
+    })
+    if (!uploadId) {
+      return
+    }
+    controller.dispatch({ type: 'attachAsset', uploadId, now: Date.now() })
+    controller.dispatch({ type: 'setLocalPhotoUri', uri: picked.localUri, now: Date.now() })
+  }
+
+  const removePhoto = () => {
+    if (!photoUploadId) {
+      return
+    }
+    void assetUpload.cancelUpload(photoUploadId).then(() => {
+      controller.dispatch({ type: 'detachAsset', uploadId: photoUploadId, now: Date.now() })
+      controller.dispatch({ type: 'setLocalPhotoUri', uri: null, now: Date.now() })
+    })
+  }
+
+  const statusHint =
+    pickError ??
+    assetUpload.uploadError ??
+    (controller.loading
+      ? ''
+      : controller.saving
+        ? '正在保存…'
+        : controller.saveError
+          ? controller.saveError
+          : controller.savedAt
+            ? `草稿已保存 ${formatTime(controller.savedAt)}`
+            : '自动保存中')
 
   return (
     <KeyboardAvoidingView
@@ -128,18 +193,33 @@ export function NoteEditorScreen() {
           }
           textAlignVertical="top"
         />
-        {photoAttached && <View style={styles.photoPlaceholder} />}
+        {photoUri ? (
+          <View style={styles.photoRow}>
+            <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="移除图片"
+              onPress={removePhoto}
+              style={styles.photoRemove}
+            >
+              <Ionicons name="close" size={14} color={paperColors.paper} />
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <View style={[styles.tools, { paddingBottom: insets.bottom + 16 }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={photoAttached ? '重新选择图片' : '添加图片'}
-          onPress={() => setPhotoAttached((value) => !value)}
-          style={[styles.tool, photoAttached && styles.toolActive]}
+          accessibilityLabel={photoUri ? '重新选择图片' : '添加图片'}
+          onPress={addPhoto}
+          disabled={assetUpload.uploading}
+          style={[styles.tool, photoUri && styles.toolActive]}
         >
           <Ionicons name="image-outline" size={16} color={paperColors.muted} />
-          <Text style={styles.toolText}>图片</Text>
+          <Text style={styles.toolText}>
+            {assetUpload.uploading ? '上传中…' : photoUri ? '已添加图片' : '图片'}
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -157,7 +237,10 @@ export function NoteEditorScreen() {
           <Text style={styles.toolText}>标记问题</Text>
         </Pressable>
         <Text
-          style={[styles.hint, controller.saveError && styles.hintError]}
+          style={[
+            styles.hint,
+            (pickError || assetUpload.uploadError || controller.saveError) && styles.hintError,
+          ]}
           accessibilityLiveRegion="polite"
         >
           {statusHint}
@@ -250,11 +333,26 @@ const styles = StyleSheet.create({
   },
   dateText: { color: paperColors.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1 },
   input: { flex: 1, color: paperColors.ink, fontSize: 15, lineHeight: 24, padding: 0 },
-  photoPlaceholder: {
-    height: 110,
+  photoRow: {
     marginTop: 10,
+    flexDirection: 'row',
+  },
+  photoPreview: {
+    width: 132,
+    height: 110,
     borderRadius: 10,
     backgroundColor: paperColors.actionSurface,
+  },
+  photoRemove: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
   tools: {
     flexDirection: 'row',
