@@ -6,6 +6,7 @@ import { paperContract } from './papers.js'
 import { studySessionContract } from './study-sessions.js'
 import { templateContract } from './templates.js'
 import { topicContract } from './topics.js'
+import { uploadsContract } from './uploads.js'
 
 export const apiContract = {
   health: healthContract,
@@ -16,4 +17,5 @@ export const apiContract = {
   studySessions: studySessionContract,
   learningLogs: learningRecordContract,
   ai: aiContract,
+  uploads: uploadsContract,
 }
