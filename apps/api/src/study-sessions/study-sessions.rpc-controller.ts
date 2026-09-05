@@ -1,7 +1,7 @@
 import { Controller, Headers, Inject, Req, UseGuards } from '@nestjs/common'
 import { Implement, implement } from '@orpc/nest'
 import { studySessionContract } from '@studycommit/rpc-contracts/study-sessions'
-import type { AuthedRequest } from '../auth/access-token.guard'
+import type { AuthedRequest } from '../auth/identity.guard'
 import { IdentityGuard } from '../auth/identity.guard'
 import { handleOrpc } from '../common/orpc-error'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'

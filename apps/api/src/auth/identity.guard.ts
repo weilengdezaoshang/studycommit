@@ -6,10 +6,21 @@ import {
   UnauthorizedException,
 } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
+import type { FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { AUTH_ERROR } from './auth.constants'
 import { AuthService } from './auth.service'
-import { readBearerToken, type AuthedRequest } from './access-token.guard'
+
+export type AuthedRequest = FastifyRequest & {
+  userId: string
+  sessionId: string
+  accessToken: string
+}
+
+export function readBearerToken(header: string | string[] | undefined) {
+  const value = Array.isArray(header) ? header[0] : header
+  return /^Bearer (.+)$/.exec(value ?? '')?.[1]
+}
 
 @Injectable()
 export class IdentityGuard implements CanActivate {

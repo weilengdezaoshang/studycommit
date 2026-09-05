@@ -1,7 +1,7 @@
 import { Controller, Inject, Req, UseGuards } from '@nestjs/common'
 import { Implement, implement } from '@orpc/nest'
 import { aiContract } from '@studycommit/rpc-contracts/ai'
-import type { AuthedRequest } from '../auth/access-token.guard'
+import type { AuthedRequest } from '../auth/identity.guard'
 import { IdentityGuard } from '../auth/identity.guard'
 import { handleOrpc } from '../common/orpc-error'
 import { AiService } from './ai.service'
