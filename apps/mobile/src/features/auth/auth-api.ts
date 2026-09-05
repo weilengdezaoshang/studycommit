@@ -1,31 +1,23 @@
-import { HttpError } from '@studycommit/common/http'
-import type { AuthTokens, CurrentUser } from '@studycommit/rpc-contracts/auth'
-import {
-  accountRegisterOutputSchema,
-  verifyPhoneOutputSchema,
-} from '@studycommit/rpc-contracts/auth'
+import { callOrpc, createApiOrpcClient } from '@studycommit/common/adapters/orpc'
+import type { CurrentUser } from '@studycommit/rpc-contracts/auth'
+import type { AuthTokens } from '@studycommit/rpc-contracts/auth'
 import {
   allowsInsecureHttpFor,
   getMobileApiOrigin,
   getMobileApiPrefix,
 } from '../../infrastructure/config/api-config'
-import { ReactNativeFetchTransport } from '../../infrastructure/http/react-native-fetch-transport'
 import { setAuthSession } from '../../infrastructure/auth/session-store'
 
-function createTransport() {
-  return new ReactNativeFetchTransport({
+function createClient() {
+  return createApiOrpcClient({
     origin: getMobileApiOrigin(),
     apiPrefix: getMobileApiPrefix(),
     allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
-    defaultTimeoutMs: 10_000,
     getHeaders: async () => ({ accept: 'application/json' }),
   })
 }
 
 function toErrorMessage(error: unknown): string {
-  if (error instanceof HttpError) {
-    return error.message
-  }
   if (error instanceof Error) {
     return error.message
   }
@@ -34,12 +26,9 @@ function toErrorMessage(error: unknown): string {
 
 export async function registerAccount(account: string, password: string): Promise<void> {
   try {
-    await createTransport().request({
-      method: 'POST',
-      path: '/auth/account/register',
-      body: { account, password },
-      responseSchema: accountRegisterOutputSchema,
-    })
+    await callOrpc(() =>
+      createClient().auth.registerAccount({ account, password }, { context: {} }),
+    )
   } catch (error) {
     throw new Error(toErrorMessage(error))
   }
@@ -48,12 +37,12 @@ export async function registerAccount(account: string, password: string): Promis
 export async function loginWithAccount(account: string, password: string): Promise<void> {
   let response: { user: CurrentUser; tokens: AuthTokens }
   try {
-    response = await createTransport().request({
-      method: 'POST',
-      path: '/auth/account/login',
-      body: { account, password, deviceType: 'mobile' },
-      responseSchema: verifyPhoneOutputSchema,
-    })
+    response = await callOrpc(() =>
+      createClient().auth.loginAccount(
+        { account, password, deviceType: 'mobile' as const },
+        { context: {} },
+      ),
+    )
   } catch (error) {
     throw new Error(toErrorMessage(error))
   }

@@ -1,7 +1,6 @@
 import * as Crypto from 'expo-crypto'
 import { HttpError, createHttpError } from '@studycommit/common/http'
-import { createOrpcTopicService, createTopicOrpcClient } from '@studycommit/common/adapters/orpc'
-import { createServices } from '@studycommit/common/services'
+import { createApiOrpcClient, createOrpcServices } from '@studycommit/common/adapters/orpc'
 import type {
   AiApi,
   LearningLogApi,
@@ -17,7 +16,6 @@ import {
   getMobileDevelopmentUserId,
 } from '../config/api-config'
 import { getAuthHeaders } from '../auth/session-store'
-import { ReactNativeFetchTransport } from './react-native-fetch-transport'
 
 export interface MobileServices {
   studySessions: StudySessionApi
@@ -33,39 +31,22 @@ export function createMobileServices(options?: {
   developmentUserId?: string
 }): MobileServices {
   const fetchImpl = options?.fetchImpl ?? fetch
-  const transport = new ReactNativeFetchTransport({
+  const getHeaders =
+    options?.getHeaders ??
+    (async () => {
+      const developmentHeaders = await createDevelopmentHeaderProvider(
+        options?.developmentUserId ?? getMobileDevelopmentUserId(),
+      )()
+      return { ...developmentHeaders, ...(await getAuthHeaders()) }
+    })
+  const client = createApiOrpcClient({
     origin: getMobileApiOrigin(),
     apiPrefix: getMobileApiPrefix(),
     allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
     fetchImpl,
-    defaultTimeoutMs: 10_000,
-    getHeaders:
-      options?.getHeaders ??
-      (async () => {
-        const developmentHeaders = await createDevelopmentHeaderProvider(
-          options?.developmentUserId ?? getMobileDevelopmentUserId(),
-        )()
-        return { ...developmentHeaders, ...(await getAuthHeaders()) }
-      }),
+    getHeaders,
   })
-  const topicClient = createTopicOrpcClient({
-    origin: getMobileApiOrigin(),
-    apiPrefix: getMobileApiPrefix(),
-    allowInsecureHttp: allowsInsecureHttpFor(getMobileApiOrigin()),
-    fetchImpl,
-    getHeaders:
-      options?.getHeaders ??
-      (async () => {
-        const developmentHeaders = await createDevelopmentHeaderProvider(
-          options?.developmentUserId ?? getMobileDevelopmentUserId(),
-        )()
-        return { ...developmentHeaders, ...(await getAuthHeaders()) }
-      }),
-  })
-  return {
-    ...createServices({ transport: 'rest', httpTransport: transport }),
-    topics: createOrpcTopicService(topicClient, () => Crypto.randomUUID()),
-  }
+  return createOrpcServices(client, { createIdempotencyKey: () => Crypto.randomUUID() })
 }
 
 export function resolveMobileServices(
@@ -116,6 +97,8 @@ function createUnavailableServices(error: HttpError): MobileServices {
       organize: reject,
       moveToInbox: reject,
       remove: reject,
+      updateQuestion: reject,
+      restore: reject,
     },
     ai: {
       explainPaper: reject,
