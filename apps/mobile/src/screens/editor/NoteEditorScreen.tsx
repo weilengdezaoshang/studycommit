@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { AppState } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import {
   KeyboardAvoidingView,
@@ -11,30 +12,64 @@ import {
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useRecoverableDraft } from '@studycommit/common/paper-react'
+import type { PaperDraftStorage } from '@studycommit/common/paper-react'
 import { paperColors } from '../../features/papers/paper-visual'
-import { papersActions } from '../../features/papers/papers-store'
+import { createMobileDraftStorage } from '../../features/papers/draft-storage'
+import { papersActions, uuid } from '../../features/papers/papers-store'
+
+/** 前后台订阅:切到后台立即把草稿落盘,进程被杀也不丢内容。 */
+function subscribeAppState(listener: (state: 'active' | 'background') => void): () => void {
+  const subscription = AppState.addEventListener('change', (status) => {
+    listener(status === 'active' ? 'active' : 'background')
+  })
+  return () => {
+    subscription.remove()
+  }
+}
 
 /** 编辑器:只支持文本与图片;标题、主题与学习目标均非必填。 */
 export function NoteEditorScreen() {
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
-  const [content, setContent] = useState('')
-  const [isQuestionActive, setQuestionActive] = useState(false)
   const [photoAttached, setPhotoAttached] = useState(false)
-  const [saveError, setSaveError] = useState<string | null>(null)
+  const [recoveryDismissed, setRecoveryDismissed] = useState(false)
+  const draftStorage = useMemo<PaperDraftStorage>(() => createMobileDraftStorage(), [])
+  const controller = useRecoverableDraft({
+    draftStorage,
+    papers: {
+      create: (input, options) =>
+        papersActions.createPaper({ ...input, idempotencyKey: options?.idempotencyKey }),
+    },
+    createDraftId: uuid,
+    subscribeAppState,
+  })
+  const draft = controller.draft
+  const hasRecoveredContent = controller.recovered && !recoveryDismissed
 
   const save = async () => {
-    if (!content.trim()) {
-      setSaveError('先写点什么再记下')
-      return
-    }
-    try {
-      await papersActions.createPaper({ content: content.trim(), hasQuestion: isQuestionActive })
+    const saved = await controller.save()
+    if (saved) {
       navigation.goBack()
-    } catch {
-      setSaveError('保存失败，请检查网络后重试')
     }
   }
+
+  const discardRecovered = () => {
+    setRecoveryDismissed(true)
+    void controller.discard().then(() => {
+      controller.dispatch({ type: 'start', paperId: uuid(), now: Date.now() })
+    })
+  }
+
+  const statusHint = controller.loading
+    ? ''
+    : controller.saving
+      ? '正在保存…'
+      : controller.saveError
+        ? controller.saveError
+        : controller.savedAt
+          ? `草稿已保存 ${formatTime(controller.savedAt)}`
+          : '自动保存中'
 
   return (
     <KeyboardAvoidingView
@@ -50,10 +85,31 @@ export function NoteEditorScreen() {
           <Text style={styles.cancelText}>取消</Text>
         </Pressable>
         <Text style={styles.title}>新记录</Text>
-        <Pressable accessibilityRole="button" onPress={save} style={styles.topButton}>
-          <Text style={styles.saveText}>记下</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="记下"
+          onPress={save}
+          disabled={controller.saving}
+          style={styles.topButton}
+        >
+          <Text style={[styles.saveText, controller.saving && styles.saveTextDisabled]}>记下</Text>
         </Pressable>
       </View>
+
+      {hasRecoveredContent && !recoveryDismissed && (
+        <View style={styles.recoveryBanner}>
+          <Text style={styles.recoveryText} accessibilityLiveRegion="polite">
+            已恢复上次未保存的内容
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="丢弃恢复的草稿"
+            onPress={discardRecovered}
+          >
+            <Text style={styles.recoveryDiscard}>丢弃</Text>
+          </Pressable>
+        </View>
+      )}
 
       <View style={styles.sheet}>
         <View style={styles.dateRow}>
@@ -66,11 +122,10 @@ export function NoteEditorScreen() {
           autoFocus
           placeholder="写点什么吧……"
           placeholderTextColor={paperColors.mutedFaint}
-          value={content}
-          onChangeText={(value) => {
-            setContent(value)
-            setSaveError(null)
-          }}
+          value={draft?.content ?? ''}
+          onChangeText={(value) =>
+            controller.dispatch({ type: 'setContent', content: value, now: Date.now() })
+          }
           textAlignVertical="top"
         />
         {photoAttached && <View style={styles.photoPlaceholder} />}
@@ -88,14 +143,25 @@ export function NoteEditorScreen() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={isQuestionActive ? '取消问题标记' : '标记为问题'}
-          onPress={() => setQuestionActive((value) => !value)}
-          style={[styles.tool, isQuestionActive && styles.toolActive]}
+          accessibilityLabel={draft?.hasQuestion ? '取消问题标记' : '标记为问题'}
+          onPress={() =>
+            controller.dispatch({
+              type: 'setQuestion',
+              hasQuestion: !draft?.hasQuestion,
+              now: Date.now(),
+            })
+          }
+          style={[styles.tool, draft?.hasQuestion && styles.toolActive]}
         >
           <Ionicons name="help-circle-outline" size={16} color={paperColors.muted} />
           <Text style={styles.toolText}>标记问题</Text>
         </Pressable>
-        <Text style={styles.hint}>{saveError ?? '草稿已自动保存'}</Text>
+        <Text
+          style={[styles.hint, controller.saveError && styles.hintError]}
+          accessibilityLiveRegion="polite"
+        >
+          {statusHint}
+        </Text>
       </View>
     </KeyboardAvoidingView>
   )
@@ -120,6 +186,12 @@ function formatToday(): string {
   return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`
 }
 
+function formatTime(timestamp: number): string {
+  const date = new Date(timestamp)
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: paperColors.canvas },
   topBar: {
@@ -141,6 +213,20 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
   },
+  saveTextDisabled: { opacity: 0.6 },
+  recoveryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: 12,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: paperColors.actionSurface,
+  },
+  recoveryText: { color: paperColors.muted, fontSize: 12 },
+  recoveryDiscard: { color: paperColors.action, fontSize: 12, fontWeight: '600' },
   sheet: {
     flex: 1,
     margin: 12,
@@ -190,4 +276,5 @@ const styles = StyleSheet.create({
   toolActive: { borderColor: paperColors.line, backgroundColor: paperColors.actionSurface },
   toolText: { color: paperColors.muted, fontSize: 12 },
   hint: { marginLeft: 'auto', color: paperColors.mutedFaint, fontSize: 11 },
+  hintError: { color: paperColors.action },
 })

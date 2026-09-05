@@ -168,6 +168,8 @@ export const papersActions = {
     hasQuestion?: boolean
     photoPath?: string
     questionText?: string
+    /** 草稿锚点(客户端 UUID):重试复用同键,服务端幂等去重防重复纸页 */
+    idempotencyKey?: string
   }): Promise<Paper> {
     const now = new Date().toISOString()
     const questionFields = questionFieldsForCreate({
@@ -176,7 +178,7 @@ export const papersActions = {
       questionText: input.questionText,
     })
     const paper: Paper = {
-      id: uuid(),
+      id: input.idempotencyKey ?? uuid(),
       content: input.content,
       status: 'inbox',
       topicId: null,
@@ -209,11 +211,14 @@ export const papersActions = {
     })
     if (remoteServices && state.source === 'server') {
       try {
-        const saved = await remoteServices.papers.create({
-          content: paper.content,
-          hasQuestion: Boolean(input.hasQuestion),
-          ...(input.questionText ? { questionText: input.questionText } : {}),
-        })
+        const saved = await remoteServices.papers.create(
+          {
+            content: paper.content,
+            hasQuestion: Boolean(input.hasQuestion),
+            ...(input.questionText ? { questionText: input.questionText } : {}),
+          },
+          { idempotencyKey: paper.id },
+        )
         setState({
           papers: state.papers.map((item) => (item.id === paper.id ? saved : item)),
           extras: {

@@ -248,3 +248,63 @@ describe('mobile papers store question commands', () => {
     })
   })
 })
+
+describe('mobile papers store create idempotency', () => {
+  const topics = {
+    listActive: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  } satisfies Record<keyof TopicMutationApi, jest.Mock>
+  const papers = {
+    list: jest.fn(),
+    create: jest.fn(),
+  } as unknown as PaperApi
+
+  beforeEach(async () => {
+    topics.listActive.mockResolvedValue({
+      items: [],
+      pageInfo: { hasNextPage: false, nextCursor: null },
+    })
+    papers.list = jest.fn().mockResolvedValue({
+      items: [],
+      pageInfo: { hasNextPage: false, nextCursor: null },
+    })
+    papers.create = jest.fn()
+    configurePapersServices({ papers, topics })
+    await loadRemote()
+  })
+
+  it('创建纸页时复用草稿锚点作为幂等键', async () => {
+    papers.create = jest.fn().mockResolvedValue({
+      ...paper,
+      id: '66666666-6666-4666-8666-666666666666',
+      status: 'inbox',
+      topicId: null,
+      content: '带锚点的记录',
+      version: 1,
+    })
+
+    await papersActions.createPaper({
+      content: '带锚点的记录',
+      idempotencyKey: '77777777-7777-4777-8777-777777777777',
+    })
+
+    expect(papers.create).toHaveBeenCalledWith(
+      { content: '带锚点的记录', hasQuestion: false },
+      { idempotencyKey: '77777777-7777-4777-8777-777777777777' },
+    )
+  })
+
+  it('保存失败时移除本地乐观纸页并把错误抛给页面', async () => {
+    papers.create = jest.fn().mockRejectedValue(new Error('网络不可用'))
+
+    await expect(
+      papersActions.createPaper({
+        content: '会失败的记录',
+        idempotencyKey: '88888888-8888-4888-8888-888888888888',
+      }),
+    ).rejects.toThrow('网络不可用')
+    expect(getPapersState().papers.some((item) => item.content === '会失败的记录')).toBe(false)
+  })
+})
