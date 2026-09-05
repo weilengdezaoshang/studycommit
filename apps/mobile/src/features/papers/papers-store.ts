@@ -125,6 +125,17 @@ export function uuid(): string {
   return Crypto.randomUUID()
 }
 
+/** 退出登录:丢弃远端同步数据,回到演示种子状态;重新登录后由 loadRemote 覆盖。 */
+export function resetPapersStore() {
+  setState({
+    papers: buildSeedPapers(),
+    topics: buildSeedTopics(),
+    extras: buildSeedPaperExtras(),
+    source: 'seed',
+    syncing: false,
+  })
+}
+
 /** 写回纸页并按状态机派生同步问题侧车字段,保证 extras 与 paper 单一来源一致。 */
 function withQuestionExtras(
   extras: Record<string, PaperExtra>,

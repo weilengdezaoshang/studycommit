@@ -1,7 +1,13 @@
 import type { PaperApi, TopicMutationApi } from '@studycommit/common/ports'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
 import type { Topic } from '@studycommit/rpc-contracts/topics'
-import { configurePapersServices, getPapersState, loadRemote, papersActions } from './papers-store'
+import {
+  configurePapersServices,
+  getPapersState,
+  loadRemote,
+  papersActions,
+  resetPapersStore,
+} from './papers-store'
 
 const topic: Topic = {
   id: '33333333-3333-4333-8333-333333333333',
@@ -331,6 +337,29 @@ describe('mobile papers store create idempotency', () => {
         assetUploadIds: ['9b9b9b9b-9b9b-4b9b-8b9b-9b9b9b9b9b9b'],
       },
       { idempotencyKey: '9c9c9c9c-9c9c-4c9c-8c9c-9c9c9c9c9c9c' },
+    )
+  })
+
+  it('重置纸页仓库时回到演示种子状态', async () => {
+    papers.create = jest.fn().mockResolvedValue({
+      ...paper,
+      id: '9d9d9d9d-9d9d-4d9d-8d9d-9d9d9d9d9d9d',
+      status: 'inbox',
+      topicId: null,
+      content: '退出登录前创建的记录',
+      version: 1,
+    })
+    await papersActions.createPaper({
+      content: '退出登录前创建的记录',
+      idempotencyKey: '9d9d9d9d-9d9d-4d9d-8d9d-9d9d9d9d9d9d',
+    })
+    expect(getPapersState().source).toBe('server')
+
+    resetPapersStore()
+
+    expect(getPapersState().source).toBe('seed')
+    expect(getPapersState().papers.some((item) => item.content === '退出登录前创建的记录')).toBe(
+      false,
     )
   })
 })

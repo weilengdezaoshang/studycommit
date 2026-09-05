@@ -1,12 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  Alert,
+  Animated,
+  Easing,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
 import { paperColors, questionFoldStyle } from '../../features/papers/paper-visual'
 import { papersActions, usePapersState } from '../../features/papers/papers-store'
+import { resetPapersStore } from '../../features/papers/papers-store'
+import { useAuthSession, clearAuthSession } from '../../infrastructure/auth/session-store'
 import {
   buildHomeViewModel,
   INBOX_TOPIC_ID,
@@ -424,17 +435,45 @@ function Fab({ onPress }: { onPress: () => void }) {
 }
 
 function DrawerProfile({ onSearch, onClose }: { onSearch: () => void; onClose: () => void }) {
+  const session = useAuthSession()
+  const nickname = session?.user.nickname?.trim() || '我的学习'
+  const avatarText = nickname.slice(0, 2)
+
+  const confirmLogout = () => {
+    Alert.alert('退出登录', '确定要退出当前账号吗？退出后需重新登录。', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '退出',
+        style: 'destructive',
+        onPress: () => {
+          onClose()
+          resetPapersStore()
+          clearAuthSession()
+        },
+      },
+    ])
+  }
+
   return (
     <View style={styles.drawerProfile}>
       <View style={styles.avatar}>
-        <Text style={styles.avatarText}>hi</Text>
+        <Text style={styles.avatarText}>{avatarText}</Text>
       </View>
-      <Text style={styles.profileName}>我的学习</Text>
+      <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
+        {nickname}
+      </Text>
       <View style={styles.drawerActions}>
         <IconButton
           name="search"
           label="搜索纸页与主题"
           onPress={onSearch}
+          iconSize={16}
+          buttonSize={32}
+        />
+        <IconButton
+          name="log-out-outline"
+          label="退出登录"
+          onPress={confirmLogout}
           iconSize={16}
           buttonSize={32}
         />

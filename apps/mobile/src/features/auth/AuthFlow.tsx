@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Ionicons } from '@expo/vector-icons'
 import {
   KeyboardAvoidingView,
   Platform,
@@ -7,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAppTheme } from '../../theme/ThemeProvider'
@@ -18,23 +20,31 @@ export function AuthFlow() {
   const theme = useAppTheme()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [account, setAccount] = useState('')
+  const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [agreed, setAgreed] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const accountValid = account.trim().length >= 2
+  const nicknameValid =
+    mode === 'login' || (nickname.trim().length >= 2 && nickname.trim().length <= 30)
   const passwordValid = password.length >= 8
   const confirmValid = mode === 'login' || password === confirmPassword
-  const canSubmit = accountValid && passwordValid && confirmValid && !submitting
+  const agreementValid = mode === 'login' || agreed
+  const canSubmit =
+    accountValid && nicknameValid && passwordValid && confirmValid && agreementValid && !submitting
 
   const switchMode = (next: 'login' | 'register') => {
     setMode(next)
     setError(null)
     setNotice(null)
+    setNickname('')
     setPassword('')
     setConfirmPassword('')
+    setAgreed(false)
   }
 
   const submit = async () => {
@@ -47,10 +57,16 @@ export function AuthFlow() {
           setError('两次输入的密码不一致')
           return
         }
-        await registerAccount(account.trim(), password)
+        if (!agreed) {
+          setError('请先勾选同意《用户协议》和《隐私政策》')
+          return
+        }
+        await registerAccount(account.trim(), password, nickname.trim())
         setMode('login')
+        setNickname('')
         setPassword('')
         setConfirmPassword('')
+        setAgreed(false)
         setNotice('注册成功，请登录')
         return
       }
@@ -111,17 +127,29 @@ export function AuthFlow() {
           onChangeText={setPassword}
         />
         {mode === 'register' ? (
-          <TextInput
-            style={styles.field}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            maxLength={128}
-            placeholder="确认密码"
-            placeholderTextColor={paperColors.mutedFaint}
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
+          <>
+            <TextInput
+              style={styles.field}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={30}
+              placeholder="昵称（2-30 字，可选）"
+              placeholderTextColor={paperColors.mutedFaint}
+              value={nickname}
+              onChangeText={setNickname}
+            />
+            <TextInput
+              style={styles.field}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={128}
+              placeholder="确认密码"
+              placeholderTextColor={paperColors.mutedFaint}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+            />
+          </>
         ) : null}
 
         {notice ? <Text style={styles.hint}>{notice}</Text> : null}
@@ -130,6 +158,23 @@ export function AuthFlow() {
             {error}
           </Text>
         )}
+
+        {mode === 'register' ? (
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            accessibilityLabel="同意用户协议和隐私政策"
+            onPress={() => setAgreed((value) => !value)}
+            style={styles.agreementRow}
+          >
+            <View style={[styles.checkbox, agreed && styles.checkboxChecked]}>
+              {agreed ? <Ionicons name="checkmark" size={14} color={paperColors.paper} /> : null}
+            </View>
+            <Text style={styles.agreementCheckboxText}>
+              我已阅读并同意《用户协议》和《隐私政策》
+            </Text>
+          </Pressable>
+        ) : null}
 
         <Pressable
           accessibilityRole="button"
@@ -182,6 +227,25 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   errorText: { fontSize: 12, marginBottom: 8 },
+  agreementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    marginBottom: 12,
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 5,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: paperColors.line,
+    backgroundColor: paperColors.surfaceSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: { backgroundColor: paperColors.action, borderColor: paperColors.action },
+  agreementCheckboxText: { color: paperColors.muted, fontSize: 12, flex: 1 },
   loginButton: {
     minHeight: 48,
     borderRadius: 14,

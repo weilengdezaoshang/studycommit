@@ -24,10 +24,17 @@ function toErrorMessage(error: unknown): string {
   return '网络异常，请稍后重试'
 }
 
-export async function registerAccount(account: string, password: string): Promise<void> {
+export async function registerAccount(
+  account: string,
+  password: string,
+  nickname?: string,
+): Promise<void> {
   try {
     await callOrpc(() =>
-      createClient().auth.registerAccount({ account, password }, { context: {} }),
+      createClient().auth.registerAccount(
+        nickname ? { account, password, nickname } : { account, password },
+        { context: {} },
+      ),
     )
   } catch (error) {
     throw new Error(toErrorMessage(error))
