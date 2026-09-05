@@ -37,6 +37,45 @@ services:
       timeout: 3s
       retries: 10
 
+  minio:
+    image: minio/minio:latest
+    container_name: studycommit-minio
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-studycommit}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-studycommit_dev_only}
+    ports:
+      - '${S3_PORT:-9000}:9000'
+      - '9001:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: studycommit-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    restart: on-failure
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD" &&
+        mc mb --ignore-existing "local/$$S3_BUCKET" &&
+        mc anonymous set none "local/$$S3_BUCKET"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-studycommit}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-studycommit_dev_only}
+      S3_BUCKET: ${S3_BUCKET:-studycommit-assets}
+
 volumes:
   postgres_data:
   redis_data:
+  minio_data:
