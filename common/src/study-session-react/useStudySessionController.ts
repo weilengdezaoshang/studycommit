@@ -3,9 +3,9 @@ import type { LearningLog } from '../contracts/learning-log'
 import { learningLogSchema } from '../contracts/learning-log'
 import type { StudySession } from '../contracts/study-session'
 import { studySessionSchema } from '../contracts/study-session'
-import type { LearningLogApi } from '../clients/learning-log/learning-log-client'
-import type { StudySessionApi } from '../clients/study-session/study-session-client'
-import type { TopicQueryApi } from '../clients/topic/topic-client'
+import type { LearningLogApi } from '../ports'
+import type { StudySessionApi } from '../ports'
+import type { TopicQueryApi } from '../ports'
 import {
   canPerformSessionAction,
   createIdempotencyKey,

@@ -6,20 +6,14 @@
   "exports": {
     ".": "./src/index.ts",
     "./contracts": "./src/contracts/index.ts",
-    "./ai": "./src/clients/ai/index.ts",
     "./http": "./src/http/index.ts",
-    "./study-session": "./src/clients/study-session/index.ts",
-    "./topic": "./src/clients/topic/index.ts",
-    "./learning-log": "./src/clients/learning-log/index.ts",
     "./study-session-runtime": "./src/study-session-runtime/index.ts",
     "./topic-store-runtime": "./src/topic-store-runtime/index.ts",
+    "./paper-runtime": "./src/paper-runtime/index.ts",
     "./study-session-react": "./src/study-session-react/index.ts",
     "./toast-react": "./src/toast-react/index.ts",
     "./ports": "./src/ports/index.ts",
-    "./adapters/rest": "./src/adapters/rest/index.ts",
-    "./adapters/orpc": "./src/adapters/orpc/index.ts",
-    "./services": "./src/services/index.ts",
-    "./paper": "./src/clients/paper/index.ts"
+    "./adapters/orpc": "./src/adapters/orpc/index.ts"
   },
   "scripts": {
     "test": "vitest",

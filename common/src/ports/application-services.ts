@@ -23,6 +23,7 @@ import type {
   PaperCommandInput,
   PaperPage,
   UpdatePaperInput,
+  UpdatePaperQuestionInput,
 } from '../contracts/paper'
 
 export interface StudySessionApi {
@@ -80,6 +81,8 @@ export interface PaperApi {
   organize(input: OrganizePaperInput): Promise<Paper>
   moveToInbox(input: PaperCommandInput): Promise<Paper>
   remove(input: PaperCommandInput): Promise<DeletePaperOutput>
+  updateQuestion(input: UpdatePaperQuestionInput): Promise<Paper>
+  restore(input: PaperCommandInput): Promise<Paper>
 }
 
 export interface ApplicationServices {

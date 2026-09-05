@@ -1,117 +1,78 @@
-import type {
-  LearningLog,
-  LearningLogPage,
-  ListLearningLogsInput,
-  UpdateLearningLogInput,
-} from '../../contracts/learning-log'
-import type {
-  ActiveStudySessionResponse,
-  CompleteStudySessionInput,
-  CompleteStudySessionResult,
-  CreateStudySessionInput,
-  SessionCommandInput,
-  StudySession,
-} from '../../contracts/study-session'
-import type {
-  CreateTopicInput,
-  ListActiveTopicsInput,
-  Topic,
-  TopicPage,
-} from '../../contracts/topic'
-import type {
-  ConfirmPaperExplainOutput,
-  PaperExplainInput,
-  PaperExplainOutput,
-} from '@studycommit/rpc-contracts/ai'
-import type {
-  CreatePaperInput,
-  DeletePaperOutput,
-  ListPapersInput,
-  OrganizePaperInput,
-  Paper,
-  PaperCommandInput,
-  PaperPage,
-  UpdatePaperInput,
-} from '../../contracts/paper'
-import type { ApplicationServices } from '../../ports'
-export { createOrpcTopicService, createTopicOrpcClient } from './topic-service'
-export type {
-  CreateTopicOrpcClientOptions,
-  OrpcClientContext,
-  TopicOrpcClient,
-} from './topic-service'
+import type { ApiOrpcClient } from './client'
+import { createOrpcTopicService } from './topic-service'
+import { callOrpc as call } from './errors'
+import type { ApplicationServices, TopicMutationApi } from '../../ports'
 
-type Procedure<TInput, TOutput> = (input: TInput) => Promise<TOutput>
+export { createApiOrpcClient } from './client'
+export type { ApiOrpcClient, CreateApiOrpcClientOptions, OrpcClientContext } from './client'
+export { createOrpcTopicService } from './topic-service'
+export { callOrpc, orpcToHttpError } from './errors'
 
-/**
- * The smallest shape required from a generated oRPC client. The real client
- * can be injected without making the common package depend on a transport
- * implementation or on a specific oRPC link.
- */
-export interface OrpcRawClient {
-  studySessions: {
-    start: Procedure<CreateStudySessionInput, StudySession>
-    active: Procedure<void, ActiveStudySessionResponse>
-    byId: Procedure<string, StudySession>
-    pause: Procedure<SessionCommandInput, StudySession>
-    resume: Procedure<SessionCommandInput, StudySession>
-    complete: Procedure<CompleteStudySessionInput, CompleteStudySessionResult>
-  }
-  topics: {
-    list: Procedure<ListActiveTopicsInput | undefined, TopicPage>
-    create: Procedure<CreateTopicInput, Topic>
-  }
-  learningLogs: {
-    list: Procedure<ListLearningLogsInput | undefined, LearningLogPage>
-    bySession: Procedure<string, LearningLog>
-    update: Procedure<UpdateLearningLogInput, LearningLog>
-  }
-  papers: {
-    list: Procedure<ListPapersInput | undefined, PaperPage>
-    create: Procedure<CreatePaperInput, Paper>
-    update: Procedure<UpdatePaperInput, Paper>
-    organize: Procedure<OrganizePaperInput, Paper>
-    moveToInbox: Procedure<PaperCommandInput, Paper>
-    remove: Procedure<PaperCommandInput, DeletePaperOutput>
-  }
-  ai: {
-    explainPaper: Procedure<PaperExplainInput, PaperExplainOutput>
-    confirmPaperExplain: Procedure<{ runId: string }, ConfirmPaperExplainOutput>
-  }
+export interface CreateOrpcServicesOptions {
+  /** 幂等键生成器:POST 类操作(创建纸页等)自动附带。 */
+  createIdempotencyKey: () => string
 }
 
-export type OrpcServices = ApplicationServices
+export type OrpcServices = ApplicationServices & {
+  /** oRPC 契约完整实现了箱子的更新与删除,这里提供更精确的类型。 */
+  topics: TopicMutationApi
+}
 
-export function createOrpcServices(client: OrpcRawClient): OrpcServices {
+export function createOrpcServices(
+  client: ApiOrpcClient,
+  options: CreateOrpcServicesOptions,
+): OrpcServices {
+  const topics = createOrpcTopicService(client, options.createIdempotencyKey)
   return {
     studySessions: {
-      create: (input) => client.studySessions.start(input),
-      getActive: () => client.studySessions.active(undefined),
-      getById: (sessionId) => client.studySessions.byId(sessionId),
-      pause: (input) => client.studySessions.pause(input),
-      resume: (input) => client.studySessions.resume(input),
-      complete: (input) => client.studySessions.complete(input),
+      create: ({ idempotencyKey, ...body }) =>
+        call(() => client.studySessions.start(body, { context: { idempotencyKey } })),
+      getActive: () => call(() => client.studySessions.active(undefined, { context: {} })),
+      getById: (sessionId) =>
+        call(() => client.studySessions.byId({ id: sessionId }, { context: {} })),
+      pause: ({ sessionId, version, idempotencyKey }) =>
+        call(() =>
+          client.studySessions.pause({ id: sessionId, version }, { context: { idempotencyKey } }),
+        ),
+      resume: ({ sessionId, version, idempotencyKey }) =>
+        call(() =>
+          client.studySessions.resume({ id: sessionId, version }, { context: { idempotencyKey } }),
+        ),
+      complete: ({ sessionId, idempotencyKey, ...body }) =>
+        call(() =>
+          client.studySessions.complete(
+            { id: sessionId, ...body },
+            { context: { idempotencyKey } },
+          ),
+        ),
     },
-    topics: {
-      listActive: (input?: ListActiveTopicsInput): Promise<TopicPage> => client.topics.list(input),
-      create: (input: CreateTopicInput): Promise<Topic> => client.topics.create(input),
-    },
+    topics,
     learningLogs: {
-      list: (input) => client.learningLogs.list(input),
-      getBySession: (sessionId) => client.learningLogs.bySession(sessionId),
-      update: (input) => client.learningLogs.update(input),
+      list: (input) => call(() => client.learningLogs.list(input ?? {}, { context: {} })),
+      getBySession: (sessionId) =>
+        call(() => client.learningLogs.bySession({ sessionId }, { context: {} })),
+      update: ({ id, ...body }) =>
+        call(() => client.learningLogs.update({ id, ...body }, { context: {} })),
     },
     papers: {
-      list: (input) => client.papers.list(input),
-      create: (input) => client.papers.create(input),
-      update: (input) => client.papers.update(input),
-      organize: (input) => client.papers.organize(input),
-      moveToInbox: (input) => client.papers.moveToInbox(input),
-      remove: (input) => client.papers.remove(input),
+      list: (input) => call(() => client.papers.list(input ?? {}, { context: {} })),
+      create: (input) =>
+        call(() =>
+          client.papers.create(input, {
+            context: { idempotencyKey: options.createIdempotencyKey() },
+          }),
+        ),
+      update: (input) => call(() => client.papers.update(input, { context: {} })),
+      organize: (input) => call(() => client.papers.organize(input, { context: {} })),
+      moveToInbox: (input) => call(() => client.papers.moveToInbox(input, { context: {} })),
+      remove: (input) => call(() => client.papers.remove(input, { context: {} })),
+      updateQuestion: (input) => call(() => client.papers.question(input, { context: {} })),
+      restore: (input) => call(() => client.papers.restore(input, { context: {} })),
     },
     ai: {
-      explainPaper: (input) => client.ai.explainPaper(input),
-      confirmPaperExplain: (input) => client.ai.confirmPaperExplain(input),
+      explainPaper: (input) => call(() => client.ai.explainPaper(input, { context: {} })),
+      confirmPaperExplain: (input) =>
+        call(() => client.ai.confirmPaperExplain(input, { context: {} })),
     },
   }
 }
