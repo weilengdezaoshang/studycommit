@@ -1,5 +1,6 @@
 import type { ApiOrpcClient } from './client'
 import { createOrpcTopicService } from './topic-service'
+import { createOrpcUploadsService } from './uploads-service'
 import { callOrpc as call } from './errors'
 import type { ApplicationServices, TopicMutationApi } from '../../ports'
 
@@ -77,5 +78,6 @@ export function createOrpcServices(
       confirmPaperExplain: (input) =>
         call(() => client.ai.confirmPaperExplain(input, { context: {} })),
     },
+    uploads: createOrpcUploadsService(client),
   }
 }
