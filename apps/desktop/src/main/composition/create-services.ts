@@ -1,6 +1,5 @@
 import { HttpError, createHttpError } from '@studycommit/common/http'
-import { createOrpcTopicService, createTopicOrpcClient } from '@studycommit/common/adapters/orpc'
-import { createServices } from '@studycommit/common/services'
+import { createApiOrpcClient, createOrpcServices } from '@studycommit/common/adapters/orpc'
 import type {
   AiApi,
   LearningLogApi,
@@ -11,7 +10,6 @@ import type {
 import { net } from 'electron'
 import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
 import { DesktopAuthSessionStore } from '../auth/session-store'
-import { ElectronNetTransport } from '../http/electron-net-transport'
 
 export interface DesktopServices {
   studySessions: StudySessionApi
@@ -35,26 +33,7 @@ export function createDesktopServices(
   const allowInsecureHttp =
     env.NODE_ENV !== 'production' || env.STUDYCOMMIT_ALLOW_INSECURE_HTTP === 'true'
   const sessions = options?.sessionStore ?? new DesktopAuthSessionStore()
-  const transportOptions = {
-    origin,
-    apiPrefix,
-    allowInsecureHttp,
-    defaultTimeoutMs: 10_000,
-    fetchImpl: options?.fetchImpl,
-  }
-  const publicTransport = new ElectronNetTransport({
-    ...transportOptions,
-    getHeaders: async () => ({ accept: 'application/json' }),
-  })
-  const transport = new ElectronNetTransport({
-    ...transportOptions,
-    getHeaders: async () => ({
-      accept: 'application/json',
-      ...(await sessions.authorizationHeaders()),
-      ...createDesktopDevHeaders(env),
-    }),
-  })
-  const topicClient = createTopicOrpcClient({
+  const client = createApiOrpcClient({
     origin,
     apiPrefix,
     allowInsecureHttp,
@@ -65,11 +44,10 @@ export function createDesktopServices(
       ...createDesktopDevHeaders(env),
     }),
   })
-  const auth = new DesktopAuthApi(sessions, publicTransport)
+  const auth = new DesktopAuthApi(sessions, client)
   sessions.bindRefresh((refreshToken) => auth.refresh(refreshToken))
   return {
-    ...createServices({ transport: 'rest', httpTransport: transport }),
-    topics: createOrpcTopicService(topicClient, () => crypto.randomUUID()),
+    ...createOrpcServices(client, { createIdempotencyKey: () => crypto.randomUUID() }),
     auth,
   }
 }
@@ -116,6 +94,8 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       organize: reject,
       moveToInbox: reject,
       remove: reject,
+      updateQuestion: reject,
+      restore: reject,
     },
     ai: {
       explainPaper: reject,

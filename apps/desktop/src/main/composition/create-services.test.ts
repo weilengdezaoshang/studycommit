@@ -36,7 +36,7 @@ describe('createDesktopServices', () => {
   it('登录后的业务请求带上 Authorization', async () => {
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
     const fetchImpl = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      const url = String(input)
+      const url = input instanceof Request ? input.url : String(input)
       if (url.endsWith('/auth/account/login')) {
         return new Response(
           JSON.stringify({
@@ -69,7 +69,8 @@ describe('createDesktopServices', () => {
     )
     await services.auth.loginAccount('demo', 'secret123')
     await services.studySessions.getActive()
-    const headers = fetchImpl.mock.calls[1]?.[1]?.headers as Record<string, string>
-    expect(headers.authorization).toBe('Bearer access-token')
+    const request = fetchImpl.mock.calls[1]?.[0]
+    expect(request).toBeInstanceOf(Request)
+    expect((request as Request).headers.get('authorization')).toBe('Bearer access-token')
   })
 })

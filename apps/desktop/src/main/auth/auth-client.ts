@@ -1,9 +1,4 @@
-import {
-  accountRegisterOutputSchema,
-  authTokensSchema,
-  verifyPhoneOutputSchema,
-} from '@studycommit/rpc-contracts/auth'
-import type { ElectronNetTransport } from '../http/electron-net-transport'
+import { callOrpc, type ApiOrpcClient } from '@studycommit/common/adapters/orpc'
 import type { DesktopAuthSessionStore } from './session-store'
 
 export type DesktopAuthApiPort = Pick<DesktopAuthApi, 'registerAccount' | 'loginAccount'>
@@ -11,35 +6,25 @@ export type DesktopAuthApiPort = Pick<DesktopAuthApi, 'registerAccount' | 'login
 export class DesktopAuthApi {
   constructor(
     private readonly sessions: DesktopAuthSessionStore,
-    private readonly publicTransport: ElectronNetTransport,
+    private readonly client: ApiOrpcClient,
   ) {}
 
   registerAccount(account: string, password: string) {
-    return this.publicTransport.request({
-      method: 'POST',
-      path: '/auth/account/register',
-      body: { account, password },
-      responseSchema: accountRegisterOutputSchema,
-    })
+    return callOrpc(() => this.client.auth.registerAccount({ account, password }, { context: {} }))
   }
 
   async loginAccount(account: string, password: string) {
-    const session = await this.publicTransport.request({
-      method: 'POST',
-      path: '/auth/account/login',
-      body: { account, password, deviceType: 'desktop' as const },
-      responseSchema: verifyPhoneOutputSchema,
-    })
+    const session = await callOrpc(() =>
+      this.client.auth.loginAccount(
+        { account, password, deviceType: 'desktop' as const },
+        { context: {} },
+      ),
+    )
     this.sessions.setSession(session)
     return session
   }
 
   refresh(refreshToken: string) {
-    return this.publicTransport.request({
-      method: 'POST',
-      path: '/auth/token/refresh',
-      body: { refreshToken },
-      responseSchema: authTokensSchema,
-    })
+    return callOrpc(() => this.client.auth.refreshToken({ refreshToken }, { context: {} }))
   }
 }

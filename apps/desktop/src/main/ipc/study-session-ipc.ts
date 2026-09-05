@@ -4,7 +4,7 @@ import {
   sessionCommandInputSchema,
   sessionIdSchema,
 } from '@studycommit/common/contracts'
-import type { StudySessionApi } from '@studycommit/common/study-session'
+import type { StudySessionApi } from '@studycommit/common/ports'
 import { studySessionIpcChannels } from '../../shared/study-session-channels'
 import { parseIpcInput, type IpcHost } from './ipc-host'
 

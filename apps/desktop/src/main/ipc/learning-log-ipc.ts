@@ -3,7 +3,7 @@ import {
   sessionIdSchema,
   updateLearningLogInputSchema,
 } from '@studycommit/common/contracts'
-import type { LearningLogApi } from '@studycommit/common/learning-log'
+import type { LearningLogApi } from '@studycommit/common/ports'
 import { learningLogIpcChannels } from '../../shared/learning-log-channels'
 import { parseIpcInput, type IpcHost } from './ipc-host'
 
