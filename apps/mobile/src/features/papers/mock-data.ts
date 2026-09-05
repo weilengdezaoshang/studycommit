@@ -1,6 +1,8 @@
 import type { Template, TemplateSummary } from '@studycommit/rpc-contracts/templates'
 import type { Topic } from '@studycommit/rpc-contracts/topics'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
+import type { PaperQuestionExtras } from '@studycommit/common/paper-runtime'
+import { questionStatusOfBooleans } from '@studycommit/common/paper-runtime'
 
 /**
  * 按 rpc-contracts 契约生成的 mock 数据:
@@ -251,6 +253,10 @@ export function buildSeedTopics(): Topic[] {
 export function buildSeedPapers(): Paper[] {
   return PAPER_SEEDS.map((seed) => {
     const createdAt = iso(seed.daysAgo, seed.hour, seed.minute)
+    const hasQuestion = Boolean(seed.hasQuestion)
+    const isQuestionResolved = hasQuestion && Boolean(seed.isQuestionResolved)
+    // 与后端迁移回填规则一致:标记疑问的存量行以正文截断充当问题文本
+    const questionStatus = questionStatusOfBooleans(hasQuestion, isQuestionResolved)
     return {
       id: seed.id,
       content: seed.content,
@@ -260,25 +266,33 @@ export function buildSeedPapers(): Paper[] {
       createdAt,
       updatedAt: createdAt,
       deletedAt: null,
-      hasQuestion: Boolean(seed.hasQuestion),
-      isQuestionResolved: Boolean(seed.isQuestionResolved),
+      hasQuestion,
+      isQuestionResolved,
+      questionStatus,
+      questionText: hasQuestion ? seed.content.slice(0, 2_000) : null,
+      understandingText: null,
+      questionResolvedAt: questionStatus === 'resolved' ? createdAt : null,
     }
   })
 }
 
-export type PaperExtra = {
-  hasQuestion: boolean
-  isQuestionResolved: boolean
+/** 问题侧车字段由状态机从纸页派生,这里只补 photoPath 等本地专属数据。 */
+export type PaperExtra = PaperQuestionExtras & {
   photoPath: string | null
 }
 
 export function buildSeedPaperExtras(): Record<string, PaperExtra> {
   const extras: Record<string, PaperExtra> = {}
-  for (const seed of PAPER_SEEDS) {
-    if (seed.hasQuestion || seed.isQuestionResolved || seed.photoPath) {
-      extras[seed.id] = {
-        hasQuestion: Boolean(seed.hasQuestion),
-        isQuestionResolved: Boolean(seed.isQuestionResolved),
+  for (const paper of buildSeedPapers()) {
+    const seed = PAPER_SEEDS.find((item) => item.id === paper.id)
+    if (!seed) {
+      continue
+    }
+    if (paper.questionStatus !== 'none' || seed.photoPath) {
+      extras[paper.id] = {
+        hasQuestion: paper.hasQuestion,
+        isQuestionResolved: paper.isQuestionResolved,
+        questionStatus: paper.questionStatus,
         photoPath: seed.photoPath ?? null,
       }
     }

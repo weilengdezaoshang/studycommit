@@ -50,7 +50,12 @@ export function buildHomeViewModel(
   selectedTopicId: string | null,
 ) {
   const extrasOf = (paperId: string) =>
-    state.extras[paperId] ?? { hasQuestion: false, isQuestionResolved: false, photoPath: null }
+    state.extras[paperId] ?? {
+      hasQuestion: false,
+      isQuestionResolved: false,
+      questionStatus: 'none' as const,
+      photoPath: null,
+    }
 
   const papers: PaperWithExtra[] = state.papers
     .filter((paper) => !paper.deletedAt)

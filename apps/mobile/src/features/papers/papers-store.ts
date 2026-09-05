@@ -12,6 +12,12 @@ import {
 } from '@studycommit/common/topic-store-runtime'
 import type { PaperApi, TopicMutationApi } from '@studycommit/common/ports'
 import {
+  applyQuestionCommand,
+  applyQuestionConfirmed,
+  questionFieldsForCreate,
+} from '@studycommit/common/paper-runtime'
+import type { PaperQuestionStatus } from '@studycommit/rpc-contracts/paper-question'
+import {
   MOCK_TEMPLATES,
   buildSeedPaperExtras,
   buildSeedPapers,
@@ -88,15 +94,13 @@ async function loadRemote(): Promise<void> {
       papers: papers.items,
       extras: Object.fromEntries(
         papers.items
-          .filter(
-            (paper) =>
-              paper.hasQuestion || paper.isQuestionResolved || state.extras[paper.id]?.photoPath,
-          )
+          .filter((paper) => paper.questionStatus !== 'none' || state.extras[paper.id]?.photoPath)
           .map((paper) => [
             paper.id,
             {
               hasQuestion: paper.hasQuestion,
               isQuestionResolved: paper.isQuestionResolved,
+              questionStatus: paper.questionStatus,
               photoPath: state.extras[paper.id]?.photoPath ?? null,
             },
           ]),
@@ -121,13 +125,56 @@ export function uuid(): string {
   return Crypto.randomUUID()
 }
 
+/** 写回纸页并按状态机派生同步问题侧车字段,保证 extras 与 paper 单一来源一致。 */
+function withQuestionExtras(
+  extras: Record<string, PaperExtra>,
+  paper: Paper,
+): Record<string, PaperExtra> {
+  const questionExtras: PaperExtra = {
+    hasQuestion: paper.hasQuestion,
+    isQuestionResolved: paper.isQuestionResolved,
+    questionStatus: paper.questionStatus,
+    photoPath: extras[paper.id]?.photoPath ?? null,
+  }
+  if (questionExtras.questionStatus === 'none' && !questionExtras.photoPath) {
+    const next = { ...extras }
+    delete next[paper.id]
+    return next
+  }
+  return { ...extras, [paper.id]: questionExtras }
+}
+
+/** 从 409 错误中取服务端最新实体;不可信时返回 null。 */
+function conflictPaperOf(error: unknown): Paper | null {
+  const details =
+    typeof error === 'object' && error !== null && 'serialized' in error
+      ? (error as { serialized?: { details?: { paper?: unknown } } }).serialized?.details
+      : null
+  const candidate = details?.paper as Paper | undefined
+  if (
+    candidate &&
+    typeof candidate.id === 'string' &&
+    typeof candidate.version === 'number' &&
+    typeof candidate.questionStatus === 'string'
+  ) {
+    return candidate
+  }
+  return null
+}
+
 export const papersActions = {
   async createPaper(input: {
     content: string
     hasQuestion?: boolean
     photoPath?: string
+    questionText?: string
   }): Promise<Paper> {
     const now = new Date().toISOString()
+    const questionFields = questionFieldsForCreate({
+      content: input.content,
+      hasQuestion: input.hasQuestion,
+      questionText: input.questionText,
+    })
     const paper: Paper = {
       id: uuid(),
       content: input.content,
@@ -137,38 +184,46 @@ export const papersActions = {
       createdAt: now,
       updatedAt: now,
       deletedAt: null,
-      hasQuestion: Boolean(input.hasQuestion),
+      hasQuestion: questionFields.questionStatus !== 'none',
       isQuestionResolved: false,
+      questionStatus: questionFields.questionStatus,
+      questionText: questionFields.questionText,
+      understandingText: null,
+      questionResolvedAt: null,
     }
+    const withExtras =
+      questionFields.questionStatus !== 'none' || input.photoPath
+        ? {
+            ...state.extras,
+            [paper.id]: {
+              hasQuestion: paper.hasQuestion,
+              isQuestionResolved: false,
+              questionStatus: paper.questionStatus,
+              photoPath: input.photoPath ?? null,
+            },
+          }
+        : state.extras
     setState({
       papers: [...state.papers, paper],
-      extras:
-        input.hasQuestion || input.photoPath
-          ? {
-              ...state.extras,
-              [paper.id]: {
-                hasQuestion: Boolean(input.hasQuestion),
-                isQuestionResolved: false,
-                photoPath: input.photoPath ?? null,
-              },
-            }
-          : state.extras,
+      extras: withExtras,
     })
     if (remoteServices && state.source === 'server') {
       try {
         const saved = await remoteServices.papers.create({
           content: paper.content,
           hasQuestion: Boolean(input.hasQuestion),
+          ...(input.questionText ? { questionText: input.questionText } : {}),
         })
         setState({
           papers: state.papers.map((item) => (item.id === paper.id ? saved : item)),
           extras: {
             ...state.extras,
-            ...(input.hasQuestion || input.photoPath
+            ...(saved.questionStatus !== 'none' || input.photoPath
               ? {
                   [saved.id]: {
                     hasQuestion: saved.hasQuestion,
                     isQuestionResolved: saved.isQuestionResolved,
+                    questionStatus: saved.questionStatus,
                     photoPath: input.photoPath ?? null,
                   },
                 }
@@ -225,13 +280,78 @@ export const papersActions = {
     return state.papers.find((paper) => paper.id === id)
   },
 
-  resolveQuestion(id: string) {
-    const extra = state.extras[id]
-    if (!extra) {
-      return
+  /**
+   * 切换问题状态:乐观更新 + 失败回滚 + 抛错交给页面提示。
+   * 与 organizePaper 不同:演示数据(未同步服务端)不发请求,避免对云端不存在的纸页 404。
+   */
+  async updateQuestionStatus(
+    id: string,
+    status: PaperQuestionStatus,
+  ): Promise<PaperQuestionStatus | null> {
+    const previous = state.papers.find((paper) => paper.id === id)
+    if (!previous || previous.deletedAt) {
+      return null
+    }
+    const nowIso = new Date().toISOString()
+    const optimistic = applyQuestionCommand(previous, { status }, nowIso)
+    if (optimistic === previous) {
+      return previous.questionStatus
     }
     setState({
-      extras: { ...state.extras, [id]: { ...extra, isQuestionResolved: true } },
+      papers: state.papers.map((paper) => (paper.id === id ? optimistic : paper)),
+      extras: withQuestionExtras(state.extras, optimistic),
+    })
+    if (remoteServices && state.source === 'server') {
+      try {
+        const saved = await remoteServices.papers.updateQuestion({
+          id,
+          version: previous.version,
+          status,
+        })
+        setState({
+          papers: state.papers.map((paper) => (paper.id === id ? saved : paper)),
+          extras: withQuestionExtras(state.extras, saved),
+        })
+        return saved.questionStatus
+      } catch (error) {
+        // 版本冲突:采纳服务端实体,目标已被另一台设备完成视为成功
+        const conflict = conflictPaperOf(error)
+        if (conflict) {
+          setState({
+            papers: state.papers.map((paper) => (paper.id === id ? conflict : paper)),
+            extras: withQuestionExtras(state.extras, conflict),
+          })
+          return conflict.questionStatus
+        }
+        // 其他失败回滚到操作前状态
+        setState({
+          papers: state.papers.map((paper) => (paper.id === id ? previous : paper)),
+          extras: withQuestionExtras(state.extras, previous),
+        })
+        throw error
+      }
+    }
+    return optimistic.questionStatus
+  },
+
+  async resolveQuestion(id: string): Promise<PaperQuestionStatus | null> {
+    return papersActions.updateQuestionStatus(id, 'resolved')
+  },
+
+  async reopenQuestion(id: string): Promise<PaperQuestionStatus | null> {
+    return papersActions.updateQuestionStatus(id, 'thinking')
+  },
+
+  /** AI 解释卡确认成功后本地落定已解决;服务端已在确认事务内写入,不再发起状态请求。 */
+  markQuestionConfirmed(id: string) {
+    const previous = state.papers.find((paper) => paper.id === id)
+    if (!previous) {
+      return
+    }
+    const confirmed = applyQuestionConfirmed(previous, new Date().toISOString())
+    setState({
+      papers: state.papers.map((paper) => (paper.id === id ? confirmed : paper)),
+      extras: withQuestionExtras(state.extras, confirmed),
     })
   },
 

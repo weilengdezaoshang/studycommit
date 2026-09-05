@@ -37,6 +37,10 @@ const paper: Paper = {
   deletedAt: null,
   hasQuestion: false,
   isQuestionResolved: false,
+  questionStatus: 'none',
+  questionText: null,
+  understandingText: null,
+  questionResolvedAt: null,
 }
 
 describe('mobile papers store box mutations', () => {
@@ -93,5 +97,154 @@ describe('mobile papers store box mutations', () => {
 
     await expect(papersActions.renameTopic(topic.id, '冲突名称')).rejects.toThrow('版本冲突')
     expect(getPapersState().topics[0]).toMatchObject({ name: topic.name, version: topic.version })
+  })
+})
+
+describe('mobile papers store question commands', () => {
+  const thinkingPaper: Paper = {
+    ...paper,
+    id: '55555555-5555-4555-8555-555555555555',
+    status: 'inbox',
+    topicId: null,
+    hasQuestion: true,
+    isQuestionResolved: false,
+    questionStatus: 'thinking',
+    questionText: '为什么状态更新不是立即生效',
+  }
+  const topics = {
+    listActive: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
+  } satisfies Record<keyof TopicMutationApi, jest.Mock>
+  const papers = {
+    list: jest.fn(),
+    updateQuestion: jest.fn(),
+  } as unknown as PaperApi
+
+  beforeEach(async () => {
+    topics.listActive.mockResolvedValue({
+      items: [],
+      pageInfo: { hasNextPage: false, nextCursor: null },
+    })
+    papers.list = jest.fn().mockResolvedValue({
+      items: [thinkingPaper],
+      pageInfo: { hasNextPage: false, nextCursor: null },
+    })
+    papers.updateQuestion = jest.fn()
+    configurePapersServices({ papers, topics })
+    await loadRemote()
+  })
+
+  it('解决问题时携带版本调用服务端并同步侧车字段', async () => {
+    papers.updateQuestion = jest.fn().mockResolvedValue({
+      ...thinkingPaper,
+      questionStatus: 'resolved',
+      isQuestionResolved: true,
+      questionResolvedAt: '2026-09-04T08:00:00.000Z',
+      version: 3,
+    })
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).resolves.toBe('resolved')
+
+    expect(papers.updateQuestion).toHaveBeenCalledWith({
+      id: thinkingPaper.id,
+      version: 2,
+      status: 'resolved',
+    })
+    expect(getPapersState().papers[0]).toMatchObject({ questionStatus: 'resolved', version: 3 })
+    expect(getPapersState().extras[thinkingPaper.id]).toMatchObject({
+      questionStatus: 'resolved',
+      isQuestionResolved: true,
+    })
+  })
+
+  it('版本冲突时采纳服务端实体并按目标状态报告成功', async () => {
+    const error = new Error('记录版本冲突') as Error & {
+      serialized?: Record<string, unknown>
+    }
+    error.serialized = {
+      code: 'CONFLICT',
+      status: 409,
+      details: {
+        paper: {
+          ...thinkingPaper,
+          questionStatus: 'resolved',
+          isQuestionResolved: true,
+          version: 6,
+        },
+      },
+    }
+    papers.updateQuestion = jest.fn().mockRejectedValue(error)
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).resolves.toBe('resolved')
+    expect(getPapersState().papers[0]).toMatchObject({ questionStatus: 'resolved', version: 6 })
+  })
+
+  it('其他失败时回滚到操作前状态并抛出错误', async () => {
+    papers.updateQuestion = jest.fn().mockRejectedValue(new Error('网络不可用'))
+
+    await expect(papersActions.resolveQuestion(thinkingPaper.id)).rejects.toThrow('网络不可用')
+    expect(getPapersState().papers[0]).toMatchObject({ questionStatus: 'thinking', version: 2 })
+    expect(getPapersState().extras[thinkingPaper.id]).toMatchObject({
+      questionStatus: 'thinking',
+    })
+  })
+
+  it('重新打开问题时清空解决时间', async () => {
+    papers.list = jest.fn().mockResolvedValue({
+      items: [
+        {
+          ...thinkingPaper,
+          questionStatus: 'resolved',
+          isQuestionResolved: true,
+          questionResolvedAt: '2026-09-04T08:00:00.000Z',
+        },
+      ],
+      pageInfo: { hasNextPage: false, nextCursor: null },
+    })
+    await loadRemote()
+    papers.updateQuestion = jest.fn().mockResolvedValue({
+      ...thinkingPaper,
+      questionStatus: 'thinking',
+      isQuestionResolved: false,
+      questionResolvedAt: null,
+      version: 3,
+    })
+
+    await expect(papersActions.reopenQuestion(thinkingPaper.id)).resolves.toBe('thinking')
+    expect(getPapersState().papers[0]).toMatchObject({
+      questionStatus: 'thinking',
+      questionResolvedAt: null,
+      version: 3,
+    })
+  })
+
+  it('AI 解释卡确认后本地落定已解决且不再发起状态请求', async () => {
+    papers.updateQuestion = jest.fn()
+
+    papersActions.markQuestionConfirmed(thinkingPaper.id)
+
+    expect(getPapersState().papers[0]).toMatchObject({
+      questionStatus: 'resolved',
+      isQuestionResolved: true,
+      version: 3,
+    })
+    expect(papers.updateQuestion).not.toHaveBeenCalled()
+  })
+
+  it('演示数据未同步服务端时不发请求只更新本地状态', async () => {
+    // 重置服务端配置,回到纯演示模式;使用演示种子里还在思考的纸页
+    const seedThinking = getPapersState().papers.find((item) => item.questionStatus === 'thinking')
+    expect(seedThinking).toBeDefined()
+    configurePapersServices(undefined as never)
+
+    const result = await papersActions.resolveQuestion(seedThinking!.id)
+
+    expect(result).toBe('resolved')
+    expect(papers.updateQuestion).not.toHaveBeenCalled()
+    expect(getPapersState().extras[seedThinking!.id]).toMatchObject({
+      questionStatus: 'resolved',
+    })
   })
 })

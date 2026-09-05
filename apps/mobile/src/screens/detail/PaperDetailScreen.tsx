@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { paperColors } from '../../features/papers/paper-visual'
 import { papersActions, usePapersState } from '../../features/papers/papers-store'
 import { formatDateLabelOf } from '../../features/papers/view-model'
+import { Toast } from '../../components/toast/Toast'
 
 /** 纸页详情:优先呈现日期、状态、所属箱子和正文;继续弄懂是唯一常驻动作。 */
 export function PaperDetailScreen() {
@@ -15,6 +16,7 @@ export function PaperDetailScreen() {
   const state = usePapersState()
   const [manageOpen, setManageOpen] = useState(false)
   const [topicChoicesOpen, setTopicChoicesOpen] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: 'default' | 'error' } | null>(null)
 
   const paper = useMemo(
     () => state.papers.find((item) => item.id === route.params.paperId),
@@ -27,7 +29,33 @@ export function PaperDetailScreen() {
     return <View style={styles.page} />
   }
 
-  const hasOpenQuestion = Boolean(extra?.hasQuestion && !extra?.isQuestionResolved)
+  // 问题状态以纸页三态为准,旧演示数据缺状态时按侧车布尔兜底
+  const questionStatus =
+    paper.questionStatus ??
+    (extra?.hasQuestion ? (extra?.isQuestionResolved ? 'resolved' : 'thinking') : 'none')
+  const hasOpenQuestion = questionStatus === 'thinking'
+
+  async function runQuestionCommand(status: 'thinking' | 'resolved') {
+    let result: string | null
+    try {
+      result = await papersActions.updateQuestionStatus(paper!.id, status)
+    } catch {
+      // 服务端失败已回滚;给非阻塞提示,不打断浏览
+      setToast({ message: '暂时没能更新问题状态，请稍后再试。', type: 'error' })
+      return
+    }
+    if (result === status) {
+      setToast(
+        status === 'resolved'
+          ? { message: '已标记为弄懂，原来的纸页仍然保留。', type: 'default' }
+          : { message: '已改回还在思考。', type: 'default' },
+      )
+    } else if (result !== null) {
+      setToast({ message: '另一台设备已更改这张纸页，已为你展示最新状态。', type: 'default' })
+    } else {
+      setToast({ message: '暂时没能更新问题状态，请稍后再试。', type: 'error' })
+    }
+  }
 
   return (
     <View style={styles.page}>
@@ -56,10 +84,10 @@ export function PaperDetailScreen() {
           <Text style={styles.time}>
             {formatDateLabelOf(paper.createdAt)} · {formatTimeOf(paper.createdAt)}
           </Text>
-          {extra?.hasQuestion && (
+          {questionStatus !== 'none' && (
             <View style={styles.stateChip}>
               <Text style={styles.stateChipText}>
-                {extra.isQuestionResolved ? '已解决' : '还在思考'}
+                {questionStatus === 'resolved' ? '已解决' : '还在思考'}
               </Text>
             </View>
           )}
@@ -150,12 +178,11 @@ export function PaperDetailScreen() {
                   把这张纸页整理到一个学习主题中，纸页模板保持不变
                 </Text>
               </Pressable>
-              {extra?.hasQuestion && !extra.isQuestionResolved && (
+              {questionStatus === 'thinking' && (
                 <Pressable
                   accessibilityRole="button"
                   onPress={() => {
-                    papersActions.resolveQuestion(paper.id)
-                    setManageOpen(false)
+                    void runQuestionCommand('resolved').then(() => setManageOpen(false))
                   }}
                   style={styles.manageAction}
                 >
@@ -163,10 +190,24 @@ export function PaperDetailScreen() {
                   <Text style={styles.manageActionHint}>只更新问题状态，不删除或改写原记录</Text>
                 </Pressable>
               )}
+              {questionStatus === 'resolved' && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    void runQuestionCommand('thinking').then(() => setManageOpen(false))
+                  }}
+                  style={styles.manageAction}
+                >
+                  <Text style={styles.manageActionTitle}>重新打开问题</Text>
+                  <Text style={styles.manageActionHint}>理解会改变，重新打开后可以继续弄懂</Text>
+                </Pressable>
+              )}
             </View>
           )}
         </View>
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </View>
   )
 }
