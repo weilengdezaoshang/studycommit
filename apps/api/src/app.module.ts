@@ -22,6 +22,8 @@ import { PapersModule } from './papers/papers.module'
 import { TemplatesModule } from './templates/templates.module'
 import { AuthModule } from './auth/auth.module'
 import { AiModule } from './ai/ai.module'
+import { UploadsModule } from './uploads/uploads.module'
+import { ScheduleModule } from '@nestjs/schedule'
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { AiModule } from './ai/ai.module'
       context: {},
       plugins: [new ResponseHeadersPlugin()],
     }),
+    ScheduleModule.forRoot(),
     LoggerModule.forRoot(
       createLoggingConfig((process.env.NODE_ENV ?? 'development') as RuntimeEnvironment),
     ),
@@ -48,6 +51,7 @@ import { AiModule } from './ai/ai.module'
     TemplatesModule,
     AuthModule,
     AiModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

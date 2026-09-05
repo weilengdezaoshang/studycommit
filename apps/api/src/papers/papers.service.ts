@@ -13,6 +13,7 @@ import type {
   Paper,
   PaperCommandInput,
   UpdatePaperInput,
+  UpdatePaperQuestionInput,
 } from '@studycommit/rpc-contracts/papers'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY, isConstraint } from '../common/idempotency'
 import { TOPIC_ERROR } from '../topics/topic.constants'
@@ -21,6 +22,7 @@ import {
   PAPER_CREATE_KIND,
   PAPER_ERROR,
   PAPER_ORGANIZE_KIND,
+  PAPER_QUESTION_KIND,
 } from './papers.constants'
 import {
   PapersRepository,
@@ -52,6 +54,10 @@ type PaperRow = {
   deletedAt: Date | null
   hasQuestion: boolean
   isQuestionResolved: boolean
+  questionStatus: 'none' | 'thinking' | 'resolved'
+  questionText: string | null
+  understandingText: string | null
+  questionResolvedAt: Date | null
 }
 
 @Injectable()
@@ -98,6 +104,31 @@ export class PapersService {
 
   async update(userId: string, input: UpdatePaperInput) {
     return this.mapWrite(await this.repository.update(userId, input))
+  }
+
+  async updateQuestion(userId: string, input: UpdatePaperQuestionInput) {
+    const result = await this.repository.updateQuestion(userId, input)
+    if (result.kind === PAPER_QUESTION_KIND.ok) {
+      return this.toPaper(result.paper)
+    }
+    if (result.kind === PAPER_QUESTION_KIND.versionConflict) {
+      throw new ConflictException({
+        ...PAPER_ERROR.versionConflict,
+        details: { paper: this.toPaper(result.paper) },
+      })
+    }
+    if (result.kind === PAPER_QUESTION_KIND.invalidTransition) {
+      throw new BadRequestException(
+        result.reason === 'question_text_required'
+          ? PAPER_ERROR.questionTextRequired
+          : PAPER_ERROR.questionTransitionInvalid,
+      )
+    }
+    throw new NotFoundException(PAPER_ERROR.notFound)
+  }
+
+  async restore(userId: string, input: PaperCommandInput) {
+    return this.mapWrite(await this.repository.restore(userId, input))
   }
 
   async moveToInbox(userId: string, input: PaperCommandInput) {
@@ -169,6 +200,10 @@ export class PapersService {
       deletedAt: row.deletedAt?.toISOString() ?? null,
       hasQuestion: row.hasQuestion,
       isQuestionResolved: row.isQuestionResolved,
+      questionStatus: row.questionStatus,
+      questionText: row.questionText,
+      understandingText: row.understandingText,
+      questionResolvedAt: row.questionResolvedAt?.toISOString() ?? null,
     }
   }
 }

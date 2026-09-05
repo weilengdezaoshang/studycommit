@@ -5,6 +5,8 @@ export const testEnv = {
   REDIS_URL: 'redis://localhost:6380',
   AUTH_OTP_STUB: '123456',
   AUTH_WECHAT_STUB: '1',
+  // 测试走内存对象存储,不需要 MinIO 容器
+  S3_DRIVER: 'memory',
 }
 export function applyTestEnv() {
   Object.assign(process.env, testEnv)

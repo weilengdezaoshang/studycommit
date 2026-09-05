@@ -78,6 +78,20 @@
       "when": 1788319200000,
       "tag": "0010_paper_question_state",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788405600000,
+      "tag": "0011_paper_question_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788492000000,
+      "tag": "0012_paper_assets",
+      "breakpoints": true
     }
   ]
 }

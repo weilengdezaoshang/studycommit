@@ -1,3 +1,4 @@
+import { desc, sql } from 'drizzle-orm'
 import {
   check,
   index,
@@ -13,7 +14,6 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
 
 export const topicStatus = pgEnum('topic_status', ['active', 'archived'])
 export const studySessionStatus = pgEnum('study_session_status', ['running', 'paused', 'completed'])
@@ -28,6 +28,7 @@ export const knowledgeNodeStatus = pgEnum('knowledge_node_status', [
 ])
 export const memoryStatus = pgEnum('shared_memory_status', ['active', 'deleted'])
 export const paperBackground = pgEnum('paper_background', ['plain', 'dot', 'rule', 'grid'])
+export const paperQuestionStatus = pgEnum('paper_question_status', ['none', 'thinking', 'resolved'])
 export const userStatus = pgEnum('user_status', ['active', 'disabled', 'merged'])
 export const agentRunKind = pgEnum('agent_run_kind', ['companion_followup', 'paper_explain'])
 export const agentRunStatus = pgEnum('agent_run_status', ['pending', 'completed', 'failed'])
@@ -161,6 +162,14 @@ export const papers = pgTable(
     topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'set null' }),
     hasQuestion: boolean('has_question').notNull().default(false),
     isQuestionResolved: boolean('is_question_resolved').notNull().default(false),
+    /** 问题三态;与 has_question/is_question_resolved 双写,契约切换完成前布尔列保留。 */
+    questionStatus: paperQuestionStatus('question_status').notNull().default('none'),
+    /** 用户确认的问题文本;none 时必为空。 */
+    questionText: text('question_text'),
+    /** 用户对问题的理解文本。 */
+    understandingText: text('understanding_text'),
+    /** 标记解决的服务端时间;resolved 必非空,thinking 必为空。 */
+    questionResolvedAt: timestamp('question_resolved_at', { withTimezone: true }),
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -170,6 +179,18 @@ export const papers = pgTable(
     check('papers_content_not_blank', sql`length(trim(${table.content})) > 0`),
     check('papers_content_length', sql`length(${table.content}) <= 20000`),
     check('papers_version_positive', sql`${table.version} >= 1`),
+    check(
+      'papers_question_state',
+      sql`
+    (${table.questionStatus} = 'resolved' AND ${table.questionResolvedAt} IS NOT NULL AND ${table.questionText} IS NOT NULL AND length(trim(${table.questionText})) > 0 AND length(${table.questionText}) <= 2000)
+    OR (${table.questionStatus} = 'thinking' AND ${table.questionResolvedAt} IS NULL AND ${table.questionText} IS NOT NULL AND length(trim(${table.questionText})) > 0 AND length(${table.questionText}) <= 2000)
+    OR (${table.questionStatus} = 'none' AND ${table.questionResolvedAt} IS NULL AND ${table.questionText} IS NULL)
+  `,
+    ),
+    check(
+      'papers_understanding_text_length',
+      sql`${table.understandingText} IS NULL OR length(${table.understandingText}) <= 20000`,
+    ),
     index('papers_user_created_idx').on(table.userId, table.createdAt, table.id),
     index('papers_user_topic_created_idx').on(
       table.userId,
@@ -177,6 +198,9 @@ export const papers = pgTable(
       table.createdAt,
       table.id,
     ),
+    index('papers_user_thinking_created_idx')
+      .on(table.userId, desc(table.createdAt), desc(table.id))
+      .where(sql`${table.questionStatus} = 'thinking' AND ${table.deletedAt} IS NULL`),
   ],
 )
 
@@ -205,6 +229,49 @@ export const agentRuns = pgTable(
   },
   (table) => [
     index('agent_runs_user_kind_created_idx').on(table.userId, table.kind, table.createdAt),
+  ],
+)
+
+export const paperAssetKind = pgEnum('paper_asset_kind', ['image', 'source_screenshot'])
+export const paperAssetStatus = pgEnum('paper_asset_status', [
+  'pending',
+  'uploaded',
+  'attached',
+  'deleted',
+])
+
+/**
+ * 图片资产:三步直传会话与私有对象存储引用(BE-308)。
+ * status=pending 的会话过期后由清理任务删除对象并软删行;
+ * attached 必须有 paper_id,其余状态必须没有(paper_assets_state CHECK)。
+ */
+export const paperAssets = pgTable(
+  'paper_assets',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id').notNull(),
+    paperId: uuid('paper_id'),
+    uploadId: uuid('upload_id').notNull(),
+    kind: paperAssetKind('kind').notNull(),
+    status: paperAssetStatus('status').notNull().default('pending'),
+    storageKey: text('storage_key').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    width: integer('width'),
+    height: integer('height'),
+    sha256: text('sha256').notNull(),
+    ocrText: text('ocr_text'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('paper_assets_user_upload_id_idx').on(table.userId, table.uploadId),
+    index('paper_assets_paper_id_idx').on(table.paperId),
+    index('paper_assets_pending_expiry_idx')
+      .on(table.userId, table.status, table.expiresAt)
+      .where(sql`status = 'pending'`),
   ],
 )
 

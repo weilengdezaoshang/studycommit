@@ -539,4 +539,247 @@ describe('Papers API', () => {
     expect(page2.items.map((item: { id: string }) => item.id)).toEqual(all.slice(2))
     expect(page2.pageInfo.hasNextPage).toBe(false)
   })
+
+  const updateQuestion = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'PATCH',
+      url: `/api/papers/${paperId}/question`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
+  const restore = (paperId: string, body: object, user = userA) =>
+    app.inject({
+      method: 'POST',
+      url: `/api/papers/${paperId}/restore`,
+      headers: { 'x-user-id': user },
+      payload: body,
+    })
+
+  it('创建时携带问题文本记为还在思考', async () => {
+    const created = await create(userA, crypto.randomUUID(), {
+      content: '读了事件循环这一节',
+      questionText: '  宏任务和微任务的执行顺序  ',
+    })
+    expect(created.statusCode).toBe(201)
+    expect(created.json()).toMatchObject({
+      questionStatus: 'thinking',
+      questionText: '宏任务和微任务的执行顺序',
+      hasQuestion: true,
+      isQuestionResolved: false,
+      questionResolvedAt: null,
+    })
+  })
+
+  it('标记疑问但未写问题文本时以正文充当问题文本', async () => {
+    const created = await create(userA, crypto.randomUUID(), {
+      content: '为什么索引会让写入变慢',
+      hasQuestion: true,
+    })
+    expect(created.statusCode).toBe(201)
+    expect(created.json()).toMatchObject({
+      questionStatus: 'thinking',
+      questionText: '为什么索引会让写入变慢',
+      hasQuestion: true,
+    })
+  })
+
+  it('解决问题后记录解决时间并双写布尔字段', async () => {
+    const paper = (
+      await create(userA, crypto.randomUUID(), {
+        content: '  记下一段内容  ',
+        hasQuestion: true,
+      })
+    ).json()
+    const resolved = await updateQuestion(paper.id, { version: 1, status: 'resolved' })
+    expect(resolved.statusCode).toBe(200)
+    expect(resolved.json()).toMatchObject({
+      id: paper.id,
+      questionStatus: 'resolved',
+      hasQuestion: true,
+      isQuestionResolved: true,
+      version: 2,
+    })
+    expect(resolved.json().questionResolvedAt).toEqual(expect.any(String))
+
+    const replay = await updateQuestion(paper.id, { version: 2, status: 'resolved' })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json()).toMatchObject({
+      questionStatus: 'resolved',
+      questionResolvedAt: resolved.json().questionResolvedAt,
+      version: 2,
+    })
+  })
+
+  it('重新打开问题后清空解决时间', async () => {
+    const paper = (
+      await create(userA, crypto.randomUUID(), {
+        content: '  记下一段内容  ',
+        hasQuestion: true,
+      })
+    ).json()
+    await updateQuestion(paper.id, { version: 1, status: 'resolved' })
+    const reopened = await updateQuestion(paper.id, { version: 2, status: 'thinking' })
+    expect(reopened.statusCode).toBe(200)
+    expect(reopened.json()).toMatchObject({
+      questionStatus: 'thinking',
+      isQuestionResolved: false,
+      questionResolvedAt: null,
+      version: 3,
+    })
+    expect(reopened.json().questionText).toBe(paper.content)
+  })
+
+  it('移除问题后清空问题文本和解决时间', async () => {
+    const paper = (
+      await create(userA, crypto.randomUUID(), {
+        content: '  记下一段内容  ',
+        hasQuestion: true,
+      })
+    ).json()
+    await updateQuestion(paper.id, { version: 1, status: 'resolved' })
+    const removed = await updateQuestion(paper.id, { version: 2, status: 'none' })
+    expect(removed.statusCode).toBe(200)
+    expect(removed.json()).toMatchObject({
+      questionStatus: 'none',
+      questionText: null,
+      questionResolvedAt: null,
+      hasQuestion: false,
+      isQuestionResolved: false,
+      version: 3,
+    })
+  })
+
+  it('从无问题直接标记解决或缺少文本时拒绝', async () => {
+    const paper = (await create()).json()
+    const invalid = await updateQuestion(paper.id, { version: 1, status: 'resolved' })
+    expect(invalid.statusCode).toBe(400)
+    expect(invalid.json().code).toBe('PAPER_QUESTION_TRANSITION_INVALID')
+
+    const noText = await updateQuestion(paper.id, { version: 1, status: 'thinking' })
+    expect(noText.statusCode).toBe(400)
+    expect(noText.json().code).toBe('PAPER_QUESTION_TEXT_REQUIRED')
+  })
+
+  it('问题状态版本冲突时带服务端最新实体', async () => {
+    const paper = (
+      await create(userA, crypto.randomUUID(), {
+        content: '  记下一段内容  ',
+        hasQuestion: true,
+      })
+    ).json()
+    await updateQuestion(paper.id, { version: 1, status: 'resolved' })
+    const conflict = await updateQuestion(paper.id, { version: 1, status: 'none' })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().data.paper).toMatchObject({
+      questionStatus: 'resolved',
+      version: 2,
+    })
+  })
+
+  it('已删除记录不能修改问题状态', async () => {
+    const paper = (await create()).json()
+    await remove(paper.id, { version: 1 })
+    const deleted = await updateQuestion(paper.id, { version: 2, status: 'resolved' })
+    expect(deleted.statusCode).toBe(404)
+    expect(deleted.json().code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('其他用户不能修改不属于自己的问题状态', async () => {
+    const paper = (await create()).json()
+    const foreign = await updateQuestion(paper.id, { version: 1, status: 'resolved' }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().code).toBe('PAPER_NOT_FOUND')
+  })
+
+  it('并发解决问题只升一次版本', async () => {
+    const paper = (
+      await create(userA, crypto.randomUUID(), {
+        content: '  记下一段内容  ',
+        hasQuestion: true,
+      })
+    ).json()
+    const [first, second] = await Promise.all([
+      updateQuestion(paper.id, { version: 1, status: 'resolved' }),
+      updateQuestion(paper.id, { version: 1, status: 'resolved' }),
+    ])
+    expect(first.statusCode).toBe(200)
+    expect(second.statusCode).toBe(200)
+    expect(new Set([first.json().version, second.json().version])).toEqual(new Set([2]))
+  })
+
+  it('按问题状态筛选列表并在翻页时不重不漏', async () => {
+    const thinking = (
+      await create(userA, crypto.randomUUID(), { content: '还在思考的记录', hasQuestion: true })
+    ).json()
+    await create(userA, crypto.randomUUID(), { content: '没有问题的记录' })
+    const resolvedSource = (
+      await create(userA, crypto.randomUUID(), { content: '已解决的记录', hasQuestion: true })
+    ).json()
+    await updateQuestion(resolvedSource.id, { version: 1, status: 'resolved' })
+
+    const thinkingList = await list('?questionStatus=thinking')
+    expect(thinkingList.statusCode).toBe(200)
+    expect((thinkingList.json().items as { id: string }[]).map((item) => item.id)).toEqual([
+      thinking.id,
+    ])
+
+    const page1 = (await list('?questionStatus=all&limit=1')).json()
+    expect(page1.items).toHaveLength(1)
+    expect(page1.pageInfo.hasNextPage).toBe(true)
+    const page2 = (
+      await list(
+        `?questionStatus=all&limit=1&cursor=${encodeURIComponent(page1.pageInfo.nextCursor)}`,
+      )
+    ).json()
+    expect(page2.items).toHaveLength(1)
+    expect(page2.pageInfo.hasNextPage).toBe(false)
+    const combined = [...page1.items, ...page2.items].map((item: { id: string }) => item.id)
+    expect(new Set(combined)).toEqual(new Set([thinking.id, resolvedSource.id]))
+  })
+
+  it('恢复已删除记录后重新可见并增加版本', async () => {
+    const paper = (await create()).json()
+    await remove(paper.id, { version: 1 })
+    const restored = await restore(paper.id, { version: 2 })
+    expect(restored.statusCode).toBe(200)
+    expect(restored.json()).toMatchObject({
+      id: paper.id,
+      deletedAt: null,
+      version: 3,
+    })
+    const fetched = await app.inject({
+      method: 'GET',
+      url: `/api/papers/${paper.id}`,
+      headers: { 'x-user-id': userA },
+    })
+    expect(fetched.statusCode).toBe(200)
+    expect(fetched.json().deletedAt).toBeNull()
+  })
+
+  it('未删除记录恢复时幂等且不增加版本', async () => {
+    const paper = (await create()).json()
+    const restored = await restore(paper.id, { version: 1 })
+    expect(restored.statusCode).toBe(200)
+    expect(restored.json()).toMatchObject({ id: paper.id, version: 1, deletedAt: null })
+  })
+
+  it('恢复时版本不一致返回记录版本冲突', async () => {
+    const paper = (await create()).json()
+    await update(paper.id, { content: '先改一版', version: 1 })
+    await remove(paper.id, { version: 2 })
+    const conflict = await restore(paper.id, { version: 1 })
+    expect(conflict.statusCode).toBe(409)
+    expect(conflict.json().code).toBe('PAPER_VERSION_CONFLICT')
+    expect(conflict.json().data.paper).toMatchObject({ version: 3 })
+    expect(conflict.json().data.paper.deletedAt).toEqual(expect.any(String))
+  })
+
+  it('其他用户无法恢复不属于自己的记录', async () => {
+    const paper = (await create()).json()
+    const foreign = await restore(paper.id, { version: 1 }, userB)
+    expect(foreign.statusCode).toBe(404)
+    expect(foreign.json().code).toBe('PAPER_NOT_FOUND')
+  })
 })

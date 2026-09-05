@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { NotFoundException } from '@nestjs/common'
+import { ConflictException, NotFoundException } from '@nestjs/common'
 import { BadRequestException } from '@nestjs/common'
 import { IDEMPOTENCY_ERROR, IDEMPOTENCY_RECORDS_PKEY } from '../common/idempotency'
 import { TOPIC_ERROR } from '../topics/topic.constants'
@@ -8,6 +8,7 @@ import {
   PAPER_CREATE_KIND,
   PAPER_ERROR,
   PAPER_ORGANIZE_KIND,
+  PAPER_QUESTION_KIND,
 } from './papers.constants'
 import { PapersService } from './papers.service'
 
@@ -22,6 +23,12 @@ const row = {
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   deletedAt: null,
+  hasQuestion: false,
+  isQuestionResolved: false,
+  questionStatus: 'none',
+  questionText: null,
+  understandingText: null,
+  questionResolvedAt: null,
 }
 
 describe('PapersService', () => {
@@ -44,6 +51,12 @@ describe('PapersService', () => {
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
         deletedAt: null,
+        hasQuestion: false,
+        isQuestionResolved: false,
+        questionStatus: 'none',
+        questionText: null,
+        understandingText: null,
+        questionResolvedAt: null,
       },
       replayed: false,
     })
@@ -250,6 +263,147 @@ describe('PapersService', () => {
         code: PAPER_ERROR.versionConflict.code,
         details: { paper: expect.objectContaining({ version: 2 }) },
       },
+    })
+  })
+
+  it('解决问题后返回带解决时间与三态的记录', async () => {
+    const resolvedAt = new Date('2026-01-02T08:00:00.000Z')
+    const repository = {
+      updateQuestion: vi.fn().mockResolvedValue({
+        kind: PAPER_QUESTION_KIND.ok,
+        paper: {
+          ...row,
+          questionStatus: 'resolved',
+          hasQuestion: true,
+          isQuestionResolved: true,
+          questionResolvedAt: resolvedAt,
+          version: 2,
+        },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).resolves.toMatchObject({
+      questionStatus: 'resolved',
+      questionResolvedAt: resolvedAt.toISOString(),
+      version: 2,
+    })
+  })
+
+  it('非法问题迁移映射为错误请求并区分缺少文本', async () => {
+    const invalidRepository = {
+      updateQuestion: vi.fn().mockResolvedValue({
+        kind: PAPER_QUESTION_KIND.invalidTransition,
+        reason: 'invalid_transition',
+      }),
+    }
+    await expect(
+      new PapersService(invalidRepository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).rejects.toMatchObject({
+      response: { code: PAPER_ERROR.questionTransitionInvalid.code },
+    })
+    await expect(
+      new PapersService(invalidRepository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
+
+    const textRepository = {
+      updateQuestion: vi.fn().mockResolvedValue({
+        kind: PAPER_QUESTION_KIND.invalidTransition,
+        reason: 'question_text_required',
+      }),
+    }
+    await expect(
+      new PapersService(textRepository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'thinking',
+      }),
+    ).rejects.toMatchObject({ response: { code: PAPER_ERROR.questionTextRequired.code } })
+  })
+
+  it('问题状态版本冲突时带上服务端最新记录', async () => {
+    const repository = {
+      updateQuestion: vi.fn().mockResolvedValue({
+        kind: PAPER_QUESTION_KIND.versionConflict,
+        paper: { ...row, questionStatus: 'thinking', hasQuestion: true, version: 3 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).rejects.toBeInstanceOf(ConflictException)
+    await expect(
+      new PapersService(repository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).rejects.toMatchObject({
+      response: {
+        code: PAPER_ERROR.versionConflict.code,
+        details: { paper: expect.objectContaining({ version: 3, questionStatus: 'thinking' }) },
+      },
+    })
+  })
+
+  it('已删除记录不能修改问题状态', async () => {
+    const repository = {
+      updateQuestion: vi.fn().mockResolvedValue({ kind: PAPER_QUESTION_KIND.notFound }),
+    }
+    await expect(
+      new PapersService(repository as never).updateQuestion(userId, {
+        id: paperId,
+        version: 1,
+        status: 'resolved',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException)
+  })
+
+  it('恢复已删除记录后返回未删除状态', async () => {
+    const repository = {
+      restore: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.ok,
+        paper: { ...row, version: 3, deletedAt: null },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).restore(userId, { id: paperId, version: 2 }),
+    ).resolves.toMatchObject({ deletedAt: null, version: 3 })
+  })
+
+  it('恢复未删除或冲突的记录沿用命令错误映射', async () => {
+    const idempotentRepository = {
+      restore: vi.fn().mockResolvedValue({ kind: PAPER_COMMAND_KIND.ok, paper: row }),
+    }
+    await expect(
+      new PapersService(idempotentRepository as never).restore(userId, { id: paperId, version: 1 }),
+    ).resolves.toMatchObject({ id: paperId })
+
+    const conflictRepository = {
+      restore: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.versionConflict,
+        paper: { ...row, version: 5 },
+      }),
+    }
+    await expect(
+      new PapersService(conflictRepository as never).restore(userId, { id: paperId, version: 1 }),
+    ).rejects.toMatchObject({
+      response: { code: PAPER_ERROR.versionConflict.code },
     })
   })
 })

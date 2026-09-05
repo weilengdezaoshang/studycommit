@@ -1,10 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import type {
   CreatePaperInput,
   ListPapersInput,
   OrganizePaperInput,
   PaperCommandInput,
+  UpdatePaperQuestionInput,
   UpdatePaperInput,
 } from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
@@ -15,8 +16,11 @@ import {
   PAPER_COMMAND_KIND,
   PAPER_CREATE_KIND,
   PAPER_ORGANIZE_KIND,
+  PAPER_QUESTION_KIND,
   PAPER_RESOURCE_TYPE,
 } from './papers.constants'
+import { planQuestionTransition } from '@studycommit/rpc-contracts/paper-question'
+import { UploadsRepository } from '../uploads/uploads.repository'
 
 export type Paper = typeof papers.$inferSelect
 export type PaperCreateResult =
@@ -34,6 +38,15 @@ export type PaperCommandResult =
   | { kind: typeof PAPER_COMMAND_KIND.ok; paper: Paper }
   | { kind: typeof PAPER_COMMAND_KIND.notFound }
   | { kind: typeof PAPER_COMMAND_KIND.versionConflict; paper: Paper }
+
+export type PaperQuestionResult =
+  | { kind: typeof PAPER_QUESTION_KIND.ok; paper: Paper }
+  | { kind: typeof PAPER_QUESTION_KIND.notFound }
+  | { kind: typeof PAPER_QUESTION_KIND.versionConflict; paper: Paper }
+  | {
+      kind: typeof PAPER_QUESTION_KIND.invalidTransition
+      reason: 'invalid_transition' | 'question_text_required'
+    }
 
 type Cursor = { createdAt: string; id: string }
 
@@ -53,7 +66,11 @@ function decodeCursor(value: string): Cursor {
 
 @Injectable()
 export class PapersRepository {
-  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
+  // 显式注入:vitest 的 esbuild 转译不生成装饰器参数元数据
+  constructor(
+    @Inject(DatabaseService) private readonly database: DatabaseService,
+    @Inject(UploadsRepository) private readonly uploads: UploadsRepository,
+  ) {}
 
   async findById(userId: string, id: string) {
     const [paper] = await this.database.db
@@ -94,15 +111,30 @@ export class PapersRepository {
           : { kind: PAPER_CREATE_KIND.idempotencyConflict }
       }
 
+      const questionFields = input.questionText
+        ? { questionStatus: 'thinking' as const, questionText: input.questionText }
+        : input.hasQuestion
+          ? // 标记疑问但未写问题文本:以正文截断充当问题文本,与迁移回填规则一致
+            { questionStatus: 'thinking' as const, questionText: input.content.slice(0, 2_000) }
+          : { questionStatus: 'none' as const, questionText: null }
+
       const [paper] = await tx
         .insert(papers)
         .values({
           userId,
           content: input.content,
           topicId: null,
-          hasQuestion: input.hasQuestion ?? false,
+          hasQuestion: questionFields.questionStatus !== 'none',
+          isQuestionResolved: false,
+          questionStatus: questionFields.questionStatus,
+          questionText: questionFields.questionText,
+          understandingText: input.understandingText ?? null,
         })
         .returning()
+      if (input.assetUploadIds?.length) {
+        // 同一事务内绑定已直传资产;任一会话不可用即回滚创建
+        await this.uploads.attachToPaper(tx, userId, paper.id, input.assetUploadIds)
+      }
       await tx.insert(idempotencyRecords).values({
         userId,
         key: idempotency.key,
@@ -153,7 +185,7 @@ export class PapersRepository {
         .set({
           topicId: input.topicId,
           version: sql`${papers.version} + 1`,
-          updatedAt: new Date(),
+          updatedAt: sql`now()`,
         })
         .where(
           and(
@@ -206,7 +238,7 @@ export class PapersRepository {
         .set({
           content: input.content,
           version: sql`${papers.version} + 1`,
-          updatedAt: new Date(),
+          updatedAt: sql`now()`,
         })
         .where(
           and(
@@ -259,7 +291,7 @@ export class PapersRepository {
         .set({
           topicId: null,
           version: sql`${papers.version} + 1`,
-          updatedAt: new Date(),
+          updatedAt: sql`now()`,
         })
         .where(
           and(
@@ -343,6 +375,132 @@ export class PapersRepository {
     })
   }
 
+  async updateQuestion(
+    userId: string,
+    input: UpdatePaperQuestionInput,
+  ): Promise<PaperQuestionResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_QUESTION_KIND.notFound }
+      }
+
+      const result = planQuestionTransition({
+        current: paper.questionStatus,
+        command: { status: input.status, questionText: input.questionText },
+        currentQuestionText: paper.questionText,
+      })
+      if (!result.ok) {
+        return { kind: PAPER_QUESTION_KIND.invalidTransition, reason: result.reason }
+      }
+      const { plan } = result
+      if (!plan.changed) {
+        return { kind: PAPER_QUESTION_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_QUESTION_KIND.versionConflict, paper }
+      }
+
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          questionStatus: plan.questionStatus,
+          questionText: plan.questionText,
+          questionResolvedAt:
+            plan.questionResolvedAt === 'now'
+              ? new Date()
+              : plan.questionResolvedAt === 'clear'
+                ? null
+                : paper.questionResolvedAt,
+          hasQuestion: plan.hasQuestion,
+          isQuestionResolved: plan.isQuestionResolved,
+          version: sql`${papers.version} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            isNull(papers.deletedAt),
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_QUESTION_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id), isNull(papers.deletedAt)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_QUESTION_KIND.notFound }
+      }
+      return { kind: PAPER_QUESTION_KIND.versionConflict, paper: latest }
+    })
+  }
+
+  /** 恢复软删除纸页;与 remove 对称,未删除时幂等返回且不校验版本。 */
+  async restore(userId: string, input: PaperCommandInput): Promise<PaperCommandResult> {
+    return this.database.db.transaction(async (tx) => {
+      const [paper] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id)))
+        .for('update')
+        .limit(1)
+      if (!paper) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (!paper.deletedAt) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper }
+      }
+      if (paper.version !== input.version) {
+        return { kind: PAPER_COMMAND_KIND.versionConflict, paper }
+      }
+
+      const [updated] = await tx
+        .update(papers)
+        .set({
+          deletedAt: null,
+          version: sql`${papers.version} + 1`,
+          updatedAt: sql`now()`,
+        })
+        .where(
+          and(
+            eq(papers.userId, userId),
+            eq(papers.id, input.id),
+            eq(papers.version, input.version),
+            sql`${papers.deletedAt} is not null`,
+          ),
+        )
+        .returning()
+      if (updated) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: updated }
+      }
+
+      const [latest] = await tx
+        .select()
+        .from(papers)
+        .where(and(eq(papers.userId, userId), eq(papers.id, input.id)))
+        .limit(1)
+      if (!latest) {
+        return { kind: PAPER_COMMAND_KIND.notFound }
+      }
+      if (!latest.deletedAt) {
+        return { kind: PAPER_COMMAND_KIND.ok, paper: latest }
+      }
+      return { kind: PAPER_COMMAND_KIND.versionConflict, paper: latest }
+    })
+  }
+
   async list(userId: string, input: ListPapersInput) {
     const conditions = [eq(papers.userId, userId), isNull(papers.deletedAt)]
     if (input.topicId) {
@@ -353,6 +511,15 @@ export class PapersRepository {
     }
     if (input.status === 'organized') {
       conditions.push(sql`${papers.topicId} is not null`)
+    }
+    if (input.questionStatus === 'thinking') {
+      conditions.push(eq(papers.questionStatus, 'thinking'))
+    }
+    if (input.questionStatus === 'resolved') {
+      conditions.push(eq(papers.questionStatus, 'resolved'))
+    }
+    if (input.questionStatus === 'all') {
+      conditions.push(ne(papers.questionStatus, 'none'))
     }
     if (input.cursor) {
       const cursor = decodeCursor(input.cursor)

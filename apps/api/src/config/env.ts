@@ -30,6 +30,16 @@ export const envSchema = z.object({
   AI_BASE_URL: z.url().optional(),
   AI_MODEL: z.string().min(1).max(120).optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(15_000),
+  /**
+   * 图片资产存储(BE-308):S3 兼容对象存储,开发环境用 MinIO 容器。
+   * driver=memory 仅供测试;S3 凭据未配置时上传功能整体降级为 503。
+   */
+  S3_DRIVER: z.enum(['s3', 'memory']).default('s3'),
+  S3_ENDPOINT: z.url().optional(),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(1).default('studycommit-assets'),
+  S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
 })
 export type AppEnv = z.infer<typeof envSchema>
 
@@ -54,6 +64,9 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   }
   if (result.data.NODE_ENV === 'production' && result.data.AUTH_WECHAT_STUB) {
     throw new Error('Environment validation failed: AUTH_WECHAT_STUB cannot be set in production')
+  }
+  if (result.data.NODE_ENV === 'production' && result.data.S3_DRIVER === 'memory') {
+    throw new Error('Environment validation failed: S3_DRIVER=memory cannot be set in production')
   }
   return result.data
 }

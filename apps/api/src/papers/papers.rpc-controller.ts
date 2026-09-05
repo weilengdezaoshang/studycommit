@@ -7,8 +7,9 @@ import {
   paperCommandSchema,
   paperContract,
   updatePaperInputSchema,
+  updatePaperQuestionInputSchema,
 } from '@studycommit/rpc-contracts/papers'
-import type { AuthedRequest } from '../auth/access-token.guard'
+import type { AuthedRequest } from '../auth/identity.guard'
 import { IdentityGuard } from '../auth/identity.guard'
 import { handleOrpc } from '../common/orpc-error'
 import { IDEMPOTENCY_REPLAYED_HEADER, requireIdempotencyKey } from '../common/idempotency'
@@ -59,6 +60,14 @@ export class PapersRpcController {
       ),
       remove: implement(paperContract.remove).handler(({ input }) =>
         handleOrpc(() => this.papers.remove(request.userId, paperCommandSchema.parse(input))),
+      ),
+      question: implement(paperContract.question).handler(({ input }) =>
+        handleOrpc(() =>
+          this.papers.updateQuestion(request.userId, updatePaperQuestionInputSchema.parse(input)),
+        ),
+      ),
+      restore: implement(paperContract.restore).handler(({ input }) =>
+        handleOrpc(() => this.papers.restore(request.userId, paperCommandSchema.parse(input))),
       ),
     }
   }

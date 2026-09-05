@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common'
-import { and, eq, sql } from 'drizzle-orm'
+import { Inject, Injectable } from '@nestjs/common'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import type { PaperExplainInput, PaperExplainOutput } from '@studycommit/rpc-contracts/ai'
 import { DatabaseService } from '../database/database.service'
 import { agentRuns, papers } from '../database/schema'
@@ -9,7 +9,8 @@ export type AgentRun = typeof agentRuns.$inferSelect
 
 @Injectable()
 export class AiRepository {
-  constructor(private readonly database: DatabaseService) {}
+  // 显式注入:vitest 的 esbuild 转译不生成装饰器参数元数据
+  constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
 
   async createExplainRun(
     userId: string,
@@ -83,14 +84,26 @@ export class AiRepository {
           ? input.paperId
           : null
       if (paperId) {
+        // 只有"还在思考"的纸页随确认落定为已解决,与 papers 的状态机一致;
+        // 无问题或已解决的纸页只确认运行记录,避免绕过双写字段与乐观锁。
         await tx
           .update(papers)
           .set({
+            questionStatus: 'resolved',
+            questionResolvedAt: new Date(),
+            hasQuestion: true,
             isQuestionResolved: true,
             version: sql`${papers.version} + 1`,
             updatedAt: new Date(),
           })
-          .where(and(eq(papers.id, paperId), eq(papers.userId, userId)))
+          .where(
+            and(
+              eq(papers.id, paperId),
+              eq(papers.userId, userId),
+              eq(papers.questionStatus, 'thinking'),
+              isNull(papers.deletedAt),
+            ),
+          )
       }
 
       await tx
