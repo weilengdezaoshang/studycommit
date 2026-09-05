@@ -70,6 +70,10 @@ const SEED_PAPERS: Paper[] = [
     deletedAt: null,
     hasQuestion: false,
     isQuestionResolved: false,
+    questionStatus: 'none',
+    questionText: null,
+    understandingText: null,
+    questionResolvedAt: null,
   },
   {
     id: '22222222-2222-4222-8222-222222222222',
@@ -82,6 +86,10 @@ const SEED_PAPERS: Paper[] = [
     deletedAt: null,
     hasQuestion: true,
     isQuestionResolved: false,
+    questionStatus: 'thinking',
+    questionText: '为什么 React 的状态更新不是立即生效？批处理和调度分别解决了什么问题？',
+    understandingText: null,
+    questionResolvedAt: null,
   },
   {
     id: '44444444-4444-4444-8444-444444444444',
@@ -94,6 +102,10 @@ const SEED_PAPERS: Paper[] = [
     deletedAt: null,
     hasQuestion: false,
     isQuestionResolved: false,
+    questionStatus: 'none',
+    questionText: null,
+    understandingText: null,
+    questionResolvedAt: null,
   },
   {
     id: '55555555-5555-4555-8555-555555555555',
@@ -106,6 +118,10 @@ const SEED_PAPERS: Paper[] = [
     deletedAt: null,
     hasQuestion: true,
     isQuestionResolved: false,
+    questionStatus: 'thinking',
+    questionText: 'Optimistic update 失败时，怎样回滚才能不覆盖用户随后产生的新状态？',
+    understandingText: null,
+    questionResolvedAt: null,
   },
 ]
 

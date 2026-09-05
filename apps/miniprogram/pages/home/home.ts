@@ -3,12 +3,7 @@ import { ROUTES } from '../../constants/routes'
 import { ensureFreshSession, getAccessToken } from '../../services/auth-session'
 import { waitForMiniprogramAuth } from '../../services/auth-bootstrap'
 import { monitor } from '../../services/monitor-adapter'
-import {
-  getMockPapersApi,
-  MOCK_TOPIC_ID,
-  type MockPaperMetadata,
-  type MockTopic,
-} from '../../services/mock-papers'
+import { getPapersApi, TOPIC_NAME_LIMIT, type TopicSummary } from '../../services/papers-api'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
 import {
   formatDisplayCount,
@@ -42,7 +37,7 @@ type PaperViewModel = Paper & {
   templateClass: 'template-dot' | 'template-rule' | 'template-grid' | 'template-plain'
 }
 
-type TopicViewModel = MockTopic & {
+type TopicViewModel = TopicSummary & {
   paperCount: number
   paperCountLabel: string
   isSelected: boolean
@@ -93,23 +88,12 @@ const AGENT_SWIPE_RATIO = 0.22
 const AGENT_FLICK_VELOCITY = 0.5
 const AGENT_FLICK_MIN_OFFSET = 24
 let loadSequence = 0
-const PAPER_PRESENTATION = {
-  '11111111-1111-4111-8111-111111111111': {
-    topicLabel: '系统设计',
-    templateClass: 'template-rule',
-  },
-  '22222222-2222-4222-8222-222222222222': {
-    topicLabel: '待整理',
-    templateClass: 'template-dot',
-  },
-  '44444444-4444-4444-8444-444444444444': {
-    topicLabel: '移动端设计',
-    templateClass: 'template-grid',
-  },
-  '55555555-5555-4555-8555-555555555555': {
-    topicLabel: '待整理',
-    templateClass: 'template-plain',
-  },
+/* 演示数据种子纸页的纸纹视觉;真实数据的纸纹待模板能力接入后按 templateId 下发。 */
+const SEED_PAPER_TEMPLATE_CLASS = {
+  '11111111-1111-4111-8111-111111111111': 'template-rule',
+  '22222222-2222-4222-8222-222222222222': 'template-dot',
+  '44444444-4444-4444-8444-444444444444': 'template-grid',
+  '55555555-5555-4555-8555-555555555555': 'template-plain',
 } as const
 
 Page({
@@ -226,18 +210,14 @@ Page({
     const currentLoad = ++loadSequence
     this.setData({ isLoading: true, isLoadError: false, loadErrorMessage: '' })
     try {
-      const api = getMockPapersApi()
-      const [paperPage, topics, metadata] = await Promise.all([
-        api.list(),
-        api.listTopics(),
-        api.listPaperMetadata(),
-      ])
+      const api = getPapersApi()
+      const [paperPage, topics] = await Promise.all([api.list({ limit: 100 }), api.listTopics()])
       if (currentLoad !== loadSequence) {
         return
       }
-      const metadataByPaperId = new Map(metadata.map((item) => [item.paperId, item]))
+      const topicNameById = new Map(topics.map((topic) => [topic.id, topic.name]))
       this.setData({
-        papers: paperPage.items.map((paper) => toPaperViewModel(paper, metadataByPaperId)),
+        papers: paperPage.items.map((paper) => toPaperViewModel(paper, topicNameById)),
       })
       this.applyDerivedData(topics)
     } catch (error) {
@@ -564,7 +544,10 @@ Page({
       return
     }
     try {
-      await getMockPapersApi().resolveQuestion(selectedPaper.id)
+      await getPapersApi().resolveQuestion({
+        id: selectedPaper.id,
+        version: selectedPaper.version,
+      })
       this.closeDetailManage()
       await this.loadHome()
       const refreshedPaper = this.data.papers.find((paper) => paper.id === selectedPaper.id)
@@ -588,7 +571,7 @@ Page({
     this.setData({ isCreatingTopic: true })
     monitor.track(MONITOR_EVENTS.HOME_TOPIC_CREATE, { source: 'quick', name })
     try {
-      const api = getMockPapersApi()
+      const api = getPapersApi()
       await api.createTopic({ name })
       const topics = await api.listTopics()
       this.setData({ newTopicName: '', isTopicFormOpen: false })
@@ -615,13 +598,17 @@ Page({
       wx.showToast({ title: '给主题起个名字', icon: 'none' })
       return
     }
+    if (name.length > TOPIC_NAME_LIMIT) {
+      wx.showToast({ title: `名称最多 ${TOPIC_NAME_LIMIT} 个字`, icon: 'none' })
+      return
+    }
     if (this.data.isCreatingTopic) {
       return
     }
     this.setData({ isCreatingTopic: true })
     monitor.track(MONITOR_EVENTS.HOME_TOPIC_CREATE)
     try {
-      const api = getMockPapersApi()
+      const api = getPapersApi()
       await api.createTopic({ name })
       const topics = await api.listTopics()
       this.setData({ newTopicName: '', isTopicFormOpen: false })
@@ -637,7 +624,10 @@ Page({
 
   async organizePaper(event: PageEvent) {
     const { id, version, topicId } = event.currentTarget.dataset
-    const destinationTopicId = String(topicId ?? MOCK_TOPIC_ID)
+    const destinationTopicId = String(topicId ?? '')
+    if (!destinationTopicId) {
+      return
+    }
     const destinationTopicName =
       this.data.topics.find((topic) => topic.id === destinationTopicId)?.name ?? '所选箱子'
     if (this.data.organizingId) {
@@ -646,7 +636,7 @@ Page({
     this.setData({ organizingId: String(id) })
     monitor.track(MONITOR_EVENTS.HOME_ORGANIZE_CLICK)
     try {
-      await getMockPapersApi().organize({
+      await getPapersApi().organize({
         id: String(id),
         version: Number(version),
         topicId: destinationTopicId,
@@ -662,7 +652,7 @@ Page({
     }
   },
 
-  applyDerivedData(topics: MockTopic[]) {
+  applyDerivedData(topics: TopicSummary[]) {
     const papers = this.data.papers
     const selectedDate = this.data.selectedDate || DEFAULT_DATE
     const selectedTopicId = this.data.selectedTopicId
@@ -737,22 +727,22 @@ Page({
 
 function toPaperViewModel(
   paper: Paper,
-  metadataByPaperId: ReadonlyMap<string, MockPaperMetadata>,
+  topicNameById: ReadonlyMap<string, string>,
 ): PaperViewModel {
   const date = new Date(paper.createdAt)
-  const presentation = PAPER_PRESENTATION[paper.id as keyof typeof PAPER_PRESENTATION]
-  const metadata = metadataByPaperId.get(paper.id)
   return {
     ...paper,
     dateKey: toDateKeyFromDate(date),
     dateLabel: `${date.getMonth() + 1}月${date.getDate()}日`,
     timeLabel: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-    topicLabel: presentation?.topicLabel ?? (paper.topicId ? '已归入主题' : '待整理'),
+    topicLabel:
+      (paper.topicId ? topicNameById.get(paper.topicId) : undefined) ??
+      (paper.topicId ? '已归入主题' : '待整理'),
     isInbox: paper.status === 'inbox',
-    hasQuestion: metadata?.hasQuestion ?? false,
-    isQuestionResolved: metadata?.isQuestionResolved ?? false,
-    photoPath: metadata?.photoPath ?? '',
-    templateClass: presentation?.templateClass ?? 'template-plain',
+    photoPath: '',
+    templateClass:
+      SEED_PAPER_TEMPLATE_CLASS[paper.id as keyof typeof SEED_PAPER_TEMPLATE_CLASS] ??
+      'template-plain',
   }
 }
 

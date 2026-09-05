@@ -1,11 +1,14 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { monitor } from '../../services/monitor-adapter'
-import { getMockPapersApi } from '../../services/mock-papers'
+import { getPapersApi } from '../../services/papers-api'
+import { createIdempotencyKey } from '../../utils/uuid'
 import { formatEditorDate, parseNoteDraft, type NoteDraft } from './note-editor-utils'
 import { getCustomNavigationMetrics } from '../../utils/navigation'
 
 const NOTE_DRAFT_STORAGE_KEY = 'studycommit.note-editor.draft'
 let navigateBackTimer: ReturnType<typeof setTimeout> | undefined
+/* 保存失败重试时复用同一幂等键,避免后端重复建页 */
+let saveIdempotencyKey: string | undefined
 
 Page({
   data: {
@@ -105,12 +108,17 @@ Page({
 
     this.setData({ isSaving: true })
 
+    saveIdempotencyKey ??= createIdempotencyKey()
     try {
-      await getMockPapersApi().create({
-        content,
-        hasQuestion: this.data.isQuestionActive,
-        photoPath: this.data.photoPath,
-      })
+      await getPapersApi().create(
+        {
+          content,
+          hasQuestion: this.data.isQuestionActive,
+          photoPath: this.data.photoPath,
+        },
+        { idempotencyKey: saveIdempotencyKey },
+      )
+      saveIdempotencyKey = undefined
       wx.removeStorageSync(NOTE_DRAFT_STORAGE_KEY)
       monitor.track(MONITOR_EVENTS.NOTE_SAVE_SUCCESS)
       wx.showToast({ title: '已记下', icon: 'success' })

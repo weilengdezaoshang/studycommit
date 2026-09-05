@@ -87,7 +87,7 @@
     <view class="drawer-section drawer-topics-section">
       <view class="drawer-section-heading"><text>我的箱子</text><button class="add-topic-button" aria-label="快速新建未命名箱子" disabled="{{isCreatingTopic}}" bindtap="createDefaultTopic"><image src="/assets/icons/plus.svg" mode="aspectFit" /></button></view>
       <view wx:if="{{isTopicFormOpen}}" class="topic-form">
-        <input class="topic-input" maxlength="80" value="{{newTopicName}}" placeholder="主题名称" bindinput="onTopicNameInput" confirm-type="done" bindconfirm="createTopic" />
+        <input class="topic-input" maxlength="18" value="{{newTopicName}}" placeholder="主题名称" bindinput="onTopicNameInput" confirm-type="done" bindconfirm="createTopic" />
         <button class="topic-submit" loading="{{isCreatingTopic}}" bindtap="createTopic">创建</button>
       </view>
       <view wx:if="{{!topics.length}}" class="topic-empty">
