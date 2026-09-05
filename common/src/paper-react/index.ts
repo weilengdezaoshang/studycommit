@@ -17,3 +17,4 @@ export type {
   AssetUploadItem,
   UseAssetUploadOptions,
 } from './use-asset-upload'
+export type { PaperDraft, PaperDraftAction } from '../paper-runtime'

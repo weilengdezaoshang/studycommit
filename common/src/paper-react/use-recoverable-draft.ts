@@ -37,6 +37,8 @@ export interface RecoverableDraftController {
   draft: PaperDraft | null
   /** 挂载时从本地恢复的草稿;首次加载完成前为 null */
   loading: boolean
+  /** 本次编辑器内容来自上次未保存的本地草稿;保存成功或丢弃后复位 */
+  recovered: boolean
   saving: boolean
   saveError: string | null
   /** 最近一次成功保存到本地的本地时间戳(毫秒) */
@@ -59,6 +61,7 @@ export function useRecoverableDraft({
 }: UseRecoverableDraftOptions): RecoverableDraftController {
   const [draft, dispatch] = useReducer(createPaperDraftReducer, null)
   const [loading, setLoading] = useState(true)
+  const [recovered, setRecovered] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<number | null>(null)
@@ -79,6 +82,7 @@ export function useRecoverableDraft({
         }
         if (stored) {
           dispatch({ type: 'restore', draft: stored })
+          setRecovered(true)
         } else {
           dispatch({ type: 'start', paperId: createDraftId(), now: now() })
         }
@@ -158,6 +162,7 @@ export function useRecoverableDraft({
       // 幂等键 = 草稿锚点:失败重试与崩溃恢复后重发都复用同一键
       await papers.create(paperCreateInputOf(current), { idempotencyKey: current.paperId })
       dispatch({ type: 'saveSucceeded' })
+      setRecovered(false)
       setSaveError(null)
       return true
     } catch {
@@ -172,8 +177,9 @@ export function useRecoverableDraft({
 
   const discard = useCallback(async (): Promise<void> => {
     dispatch({ type: 'discard' })
+    setRecovered(false)
     await draftStorage.save(null).catch(() => undefined)
   }, [draftStorage])
 
-  return { draft, loading, saving, saveError, savedAt, dispatch, save, discard }
+  return { draft, loading, recovered, saving, saveError, savedAt, dispatch, save, discard }
 }
