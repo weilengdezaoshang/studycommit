@@ -23,7 +23,8 @@ export interface PaperDraftStorage {
 
 export interface UseRecoverableDraftOptions {
   draftStorage: PaperDraftStorage
-  papers: PaperApi
+  /** 只需创建能力;移动端注入 papers-store 委托适配器,桌面端注入主进程网关 */
+  papers: Pick<PaperApi, 'create'>
   /** 生成新草稿锚点(客户端 UUID),仅当本地无草稿时调用 */
   createDraftId: () => string
   /** 平台前后台订阅:切到后台立即落盘,不等 debounce;可不提供 */
