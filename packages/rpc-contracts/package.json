@@ -36,6 +36,10 @@
       "types": "./src/papers.ts",
       "default": "./dist/papers.js"
     },
+    "./paper-question": {
+      "types": "./src/paper-question.ts",
+      "default": "./dist/paper-question.js"
+    },
     "./study-sessions": {
       "types": "./src/study-sessions.ts",
       "default": "./dist/study-sessions.js"
@@ -47,6 +51,10 @@
     "./topics": {
       "types": "./src/topics.ts",
       "default": "./dist/topics.js"
+    },
+    "./uploads": {
+      "types": "./src/uploads.ts",
+      "default": "./dist/uploads.js"
     }
   },
   "scripts": {
