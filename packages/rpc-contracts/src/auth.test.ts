@@ -96,4 +96,28 @@ describe('phone auth contract', () => {
       }).success,
     ).toBe(false)
   })
+
+  it('注册昵称可选但需为 2 到 30 字', () => {
+    expect(
+      accountRegisterInputSchema.parse({
+        account: 'demo_user',
+        password: 'secret123',
+        nickname: ' 学习者小明 ',
+      }),
+    ).toMatchObject({ nickname: '学习者小明' })
+    expect(
+      accountRegisterInputSchema.safeParse({
+        account: 'demo_user',
+        password: 'secret123',
+        nickname: '小',
+      }).success,
+    ).toBe(false)
+    expect(
+      accountRegisterInputSchema.safeParse({
+        account: 'demo_user',
+        password: 'secret123',
+        nickname: '字'.repeat(31),
+      }).success,
+    ).toBe(false)
+  })
 })

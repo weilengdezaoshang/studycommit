@@ -105,7 +105,7 @@ export class AuthService {
     const created = await this.repository.createAccountUser(
       subject,
       await hashPassword(input.password),
-      input.account.slice(0, 50),
+      input.nickname ?? input.account.slice(0, 50),
     )
     if (!created) {
       throw new ConflictException(AUTH_ERROR.accountExists)

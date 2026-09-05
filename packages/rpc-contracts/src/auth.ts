@@ -82,7 +82,10 @@ const accountCredentialSchema = z.object({
   password: z.string().min(8).max(128),
 })
 
-export const accountRegisterInputSchema = accountCredentialSchema
+export const accountRegisterInputSchema = accountCredentialSchema.extend({
+  /** 可选昵称:缺省时服务端以账号派生 */
+  nickname: z.string().trim().min(2).max(30).optional(),
+})
 
 export const accountRegisterOutputSchema = z.object({
   account: z.string().min(2).max(32),

@@ -53,6 +53,31 @@ describe('AuthService', () => {
     ).rejects.toMatchObject({ response: { code: AUTH_ERROR.accountExists.code } })
   })
 
+  it('注册时携带昵称则以昵称创建用户', async () => {
+    const repository = {
+      findIdentity: vi.fn().mockResolvedValue(null),
+      createAccountUser: vi
+        .fn()
+        .mockResolvedValue({ id: crypto.randomUUID(), nickname: '学习者小明' }),
+    }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: vi.fn() } as never,
+      {} as never,
+    )
+    await service.registerAccount({
+      account: 'demo',
+      password: 'secret123',
+      nickname: '学习者小明',
+    })
+    expect(repository.createAccountUser).toHaveBeenCalledWith(
+      'demo',
+      expect.any(String),
+      '学习者小明',
+    )
+  })
+
   it('账号密码错误时返回固定错误码', async () => {
     const repository = {
       findIdentity: vi.fn().mockResolvedValue({
