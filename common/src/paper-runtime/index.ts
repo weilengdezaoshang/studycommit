@@ -17,3 +17,16 @@ export {
   questionFieldsForCreate,
 } from './paper-question-apply'
 export type { PaperQuestionExtras } from './paper-question-apply'
+export {
+  createPaperDraftReducer,
+  normalizePaperDraft,
+  paperCreateInputOf,
+  paperDraftValidationError,
+  PAPER_CONTENT_MAX_LENGTH,
+  PAPER_DRAFT_ERROR,
+  PAPER_DRAFT_MAX_ASSETS,
+  PAPER_QUESTION_MAX_LENGTH,
+} from './draft'
+export type { PaperDraft, PaperDraftAction } from './draft'
+export { findReusableUploadSession, isUploadSessionExpired } from './upload-session'
+export type { UploadFileFingerprint, UploadSessionRef, UploadSessionStatus } from './upload-session'
