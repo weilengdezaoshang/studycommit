@@ -55,6 +55,10 @@
     "./uploads": {
       "types": "./src/uploads.ts",
       "default": "./dist/uploads.js"
+    },
+    "./reviews": {
+      "types": "./src/reviews.ts",
+      "default": "./dist/reviews.js"
     }
   },
   "scripts": {

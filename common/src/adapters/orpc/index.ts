@@ -1,6 +1,7 @@
 import type { ApiOrpcClient } from './client'
 import { createOrpcTopicService } from './topic-service'
 import { createOrpcUploadsService } from './uploads-service'
+import { createOrpcReviewsService } from './reviews-service'
 import { callOrpc as call } from './errors'
 import type { ApplicationServices, TopicMutationApi } from '../../ports'
 
@@ -8,6 +9,7 @@ export { createApiOrpcClient } from './client'
 export type { ApiOrpcClient, CreateApiOrpcClientOptions, OrpcClientContext } from './client'
 export { createOrpcTopicService } from './topic-service'
 export { createOrpcUploadsService } from './uploads-service'
+export { createOrpcReviewsService } from './reviews-service'
 export { callOrpc, orpcToHttpError } from './errors'
 
 export interface CreateOrpcServicesOptions {
@@ -79,5 +81,6 @@ export function createOrpcServices(
         call(() => client.ai.confirmPaperExplain(input, { context: {} })),
     },
     uploads: createOrpcUploadsService(client),
+    reviews: createOrpcReviewsService(client),
   }
 }

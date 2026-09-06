@@ -14,6 +14,7 @@ import type {
 } from '../contracts/study-session'
 import type { AiApi } from './ai'
 import type { UploadsApi } from './uploads'
+import type { ReviewApi } from './review'
 import type { CreateTopicInput, ListActiveTopicsInput, Topic, TopicPage } from '../contracts/topic'
 import type {
   CreatePaperInput,
@@ -99,4 +100,6 @@ export interface ApplicationServices {
   ai: AiApi
   /** 图片直传会话(BE-308);桌面端由主进程持令牌调用 */
   uploads: UploadsApi
+  /** 月度装订统计(BE-311) */
+  reviews: ReviewApi
 }

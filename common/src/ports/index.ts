@@ -16,6 +16,7 @@ export type {
   UpdateTopicInput,
 } from './application-services'
 export type { AiApi } from './ai'
+export type { ReviewApi } from './review'
 export type {
   AssetAccessOutput,
   AssetKind,

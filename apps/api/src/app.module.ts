@@ -23,6 +23,7 @@ import { TemplatesModule } from './templates/templates.module'
 import { AuthModule } from './auth/auth.module'
 import { AiModule } from './ai/ai.module'
 import { UploadsModule } from './uploads/uploads.module'
+import { ReviewsModule } from './reviews/reviews.module'
 import { ScheduleModule } from '@nestjs/schedule'
 
 @Module({
@@ -52,6 +53,7 @@ import { ScheduleModule } from '@nestjs/schedule'
     AuthModule,
     AiModule,
     UploadsModule,
+    ReviewsModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],
