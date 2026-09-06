@@ -17,6 +17,7 @@ describe('cross-platform design tokens', () => {
     expect(Object.values(radii).every((value) => Number.isFinite(value) && value >= 0)).toBe(true)
     expect(Object.values(sizes).every((value) => Number.isFinite(value) && value > 0)).toBe(true)
     expect(motion.durationFast).toBeLessThanOrEqual(motion.durationNormal)
+    expect(motion.durationNormal).toBeLessThanOrEqual(motion.durationSlow)
 
     for (const style of Object.values(typography)) {
       expect(style.fontSize).toBeGreaterThan(0)
