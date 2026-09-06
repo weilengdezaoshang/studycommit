@@ -6,6 +6,7 @@ import type {
   LearningLogApi,
   PaperApi,
   ReviewApi,
+  SearchApi,
   StudySessionApi,
   TopicMutationApi,
   UploadsApi,
@@ -27,6 +28,7 @@ export interface MobileServices {
   ai: AiApi
   uploads: UploadsApi
   reviews: ReviewApi
+  search: SearchApi
 }
 
 export function createMobileServices(options?: {
@@ -116,6 +118,9 @@ function createUnavailableServices(error: HttpError): MobileServices {
     },
     reviews: {
       monthly: reject,
+    },
+    search: {
+      query: reject,
     },
   }
 }
