@@ -1,5 +1,6 @@
 import { useLocation } from 'react-router'
 import { usePapersState } from '../features/papers/papers-store'
+import { SyncPill } from './sync/SyncPill'
 
 function getPageTitle(
   pathname: string,
@@ -81,10 +82,13 @@ export function AppHeader({
           </div>
         )}
       </div>
-      <span className={isToday ? 'home-question-status' : 'local-status'}>
-        <i aria-hidden="true" />
-        {isToday ? `${problemCount} 个问题在等你` : '本地工作'}
-      </span>
+      {isToday && (
+        <span className="home-question-status">
+          <i aria-hidden="true" />
+          {problemCount} 个问题在等你
+        </span>
+      )}
+      <SyncPill />
     </header>
   )
 }

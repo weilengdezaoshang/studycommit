@@ -486,7 +486,11 @@ export function RecordsListPage({
             )}
           </div>
         )}
-        <p className="collection-demo">当前为本地示例工作区，整理与问题状态仅在本次运行中保存。</p>
+        {state.source === 'seed' && (
+          <p className="collection-demo">
+            当前为本地示例工作区，整理与问题状态仅在本次运行中保存。
+          </p>
+        )}
       </section>
       {detailId && (
         <section className="collection-detail" style={style} aria-label="记录详情">

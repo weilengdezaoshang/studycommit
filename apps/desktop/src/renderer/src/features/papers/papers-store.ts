@@ -36,6 +36,10 @@ export type PapersState = {
   /** seed = 本地演示数据;server = 已从服务端加载。 */
   source: 'seed' | 'server'
   syncing: boolean
+  /** 最近一次成功同步的时刻;null 表示从未同步成功。 */
+  lastSyncedAt: string | null
+  /** 最近一次 loadRemote 失败后为 true,直到下次成功。 */
+  syncFailed: boolean
 }
 
 const listeners = new Set<() => void>()
@@ -47,6 +51,8 @@ let state: PapersState = {
   selectedDateKey: todayKey(),
   source: 'seed',
   syncing: false,
+  lastSyncedAt: null,
+  syncFailed: false,
 }
 
 function setState(next: Partial<PapersState>) {
@@ -180,9 +186,14 @@ const papersActions = {
           color: topic.color,
           version: topic.version,
         })) ?? []
-      setState(mergeServerState(state, items, nextTopics))
+      setState({
+        ...mergeServerState(state, items, nextTopics),
+        lastSyncedAt: new Date().toISOString(),
+        syncFailed: false,
+      })
     } catch {
-      // 保持当前状态:演示数据或上次成功的数据仍可用
+      // 同步失败时保留当前数据(演示或上次成功结果),并把失败暴露给状态胶囊
+      setState({ syncFailed: true })
     } finally {
       setState({ syncing: false })
     }
