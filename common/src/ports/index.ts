@@ -17,6 +17,7 @@ export type {
 } from './application-services'
 export type { AiApi } from './ai'
 export type { ReviewApi } from './review'
+export type { SearchApi } from './search'
 export type {
   AssetAccessOutput,
   AssetKind,

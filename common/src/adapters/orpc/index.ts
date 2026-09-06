@@ -2,6 +2,7 @@ import type { ApiOrpcClient } from './client'
 import { createOrpcTopicService } from './topic-service'
 import { createOrpcUploadsService } from './uploads-service'
 import { createOrpcReviewsService } from './reviews-service'
+import { createOrpcSearchService } from './search-service'
 import { callOrpc as call } from './errors'
 import type { ApplicationServices, TopicMutationApi } from '../../ports'
 
@@ -10,6 +11,7 @@ export type { ApiOrpcClient, CreateApiOrpcClientOptions, OrpcClientContext } fro
 export { createOrpcTopicService } from './topic-service'
 export { createOrpcUploadsService } from './uploads-service'
 export { createOrpcReviewsService } from './reviews-service'
+export { createOrpcSearchService } from './search-service'
 export { callOrpc, orpcToHttpError } from './errors'
 
 export interface CreateOrpcServicesOptions {
@@ -82,5 +84,6 @@ export function createOrpcServices(
     },
     uploads: createOrpcUploadsService(client),
     reviews: createOrpcReviewsService(client),
+    search: createOrpcSearchService(client),
   }
 }

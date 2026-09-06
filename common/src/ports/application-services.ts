@@ -15,6 +15,7 @@ import type {
 import type { AiApi } from './ai'
 import type { UploadsApi } from './uploads'
 import type { ReviewApi } from './review'
+import type { SearchApi } from './search'
 import type { CreateTopicInput, ListActiveTopicsInput, Topic, TopicPage } from '../contracts/topic'
 import type {
   CreatePaperInput,
@@ -102,4 +103,6 @@ export interface ApplicationServices {
   uploads: UploadsApi
   /** 月度装订统计(BE-311) */
   reviews: ReviewApi
+  /** 统一搜索(BE-310) */
+  search: SearchApi
 }
