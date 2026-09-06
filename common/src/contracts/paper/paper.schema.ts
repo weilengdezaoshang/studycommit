@@ -24,6 +24,10 @@ export const paperSchema = z.object({
   questionText: z.string().max(2_000).nullable().default(null),
   understandingText: z.string().max(20_000).nullable().default(null),
   questionResolvedAt: z.iso.datetime({ offset: true }).nullable().default(null),
+  /** 纸页来源:移动端直记 / 桌面截图 / 桌面收尾创建;旧读取方可缺省。 */
+  source: z.enum(['mobile_direct', 'desktop_capture', 'desktop_session']).optional(),
+  /** 来源学习会话;桌面收尾创建的"下一个问题"回链会话。 */
+  sourceSessionId: z.uuid().nullable().optional(),
 })
 
 export const createPaperInputSchema = z.object({

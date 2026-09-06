@@ -3,11 +3,26 @@ import { learningLogSchema } from '../learning-log/learning-log.schema'
 
 export const studySessionStatusSchema = z.enum(['running', 'paused', 'completed'])
 export const studySessionCompletionSourceSchema = z.enum(['online', 'offline_sync'])
+export const studySessionSourceSchema = z.enum([
+  'manual_topic',
+  'desktop_capture',
+  'desktop_existing_question',
+])
+
+/** 截图学习起步:服务端事务内创建草稿纸页(source=desktop_capture)。 */
+export const draftPaperInputSchema = z.object({
+  paperId: z.uuid(),
+  questionText: z.string().trim().min(1).max(2_000),
+  screenshotUploadId: z.uuid().optional(),
+  ocrText: z.string().max(20_000).optional(),
+})
 
 export const studySessionSchema = z.object({
   id: z.uuid(),
   userId: z.uuid(),
-  topicId: z.uuid(),
+  topicId: z.uuid().nullable(),
+  paperId: z.uuid().nullable(),
+  source: studySessionSourceSchema,
   goal: z.string().nullable(),
   status: studySessionStatusSchema,
   startedAt: z.iso.datetime({ offset: true }),
@@ -21,14 +36,22 @@ export const studySessionSchema = z.object({
   updatedAt: z.iso.datetime({ offset: true }),
 })
 
+export const activeSessionPaperSchema = z.object({
+  id: z.uuid(),
+  questionText: z.string().nullable(),
+  understandingText: z.string().nullable(),
+  fragmentCount: z.number().int().nonnegative(),
+})
+
 export const activeStudySessionResponseSchema = z.object({
   session: studySessionSchema.nullable(),
   serverNow: z.iso.datetime({ offset: true }),
+  paper: activeSessionPaperSchema.nullable(),
 })
 
 export const createStudySessionInputSchema = z
   .object({
-    topicId: z.uuid(),
+    topicId: z.uuid().optional(),
     goal: z
       .string()
       .trim()
@@ -36,9 +59,20 @@ export const createStudySessionInputSchema = z
       .transform((value) => value || null)
       .nullable()
       .optional(),
+    paperId: z.uuid().optional(),
+    draftPaper: draftPaperInputSchema.optional(),
     idempotencyKey: z.string().trim().min(1).max(200),
   })
   .strict()
+  .refine(
+    (value) =>
+      [
+        value.topicId !== undefined,
+        value.paperId !== undefined,
+        value.draftPaper !== undefined,
+      ].filter(Boolean).length === 1,
+    { message: '学习会话必须且只能从主题、已有问题或截图草稿之一开始' },
+  )
 
 export const sessionIdSchema = z.uuid()
 
@@ -98,6 +132,9 @@ export const completeStudySessionResultSchema = z.object({
 })
 
 export type StudySession = z.infer<typeof studySessionSchema>
+export type StudySessionSource = z.infer<typeof studySessionSourceSchema>
+export type DraftPaperInput = z.infer<typeof draftPaperInputSchema>
+export type ActiveSessionPaper = z.infer<typeof activeSessionPaperSchema>
 export type ActiveStudySessionResponse = z.infer<typeof activeStudySessionResponseSchema>
 export type CreateStudySessionInput = z.infer<typeof createStudySessionInputSchema>
 export type SessionCommandInput = z.infer<typeof sessionCommandInputSchema>

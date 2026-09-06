@@ -162,6 +162,11 @@ export function useStudySessionController({
       return
     }
     const topicId = session.topicId
+    // 桌面截图链路的会话没有主题,标题使用纸页学习语义
+    if (!topicId) {
+      setTopicName('纸页学习')
+      return
+    }
     let cancelled = false
     void topics.listActive().then(
       (page) => {

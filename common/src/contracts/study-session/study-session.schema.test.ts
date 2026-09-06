@@ -37,6 +37,7 @@ describe('study session contracts', () => {
       activeStudySessionResponseSchema.parse({
         session: null,
         serverNow: '2026-08-17T08:00:00.000Z',
+        paper: null,
       }).session,
     ).toBeNull()
   })
@@ -44,7 +45,7 @@ describe('study session contracts', () => {
   it('normalizes a blank goal to null', () => {
     expect(
       createStudySessionInputSchema.parse({
-        topicId: runningStudySessionFixture.topicId,
+        topicId: runningStudySessionFixture.topicId!,
         goal: '  ',
         idempotencyKey: 'create-session-1',
       }).goal,

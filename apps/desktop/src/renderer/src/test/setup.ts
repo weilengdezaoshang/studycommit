@@ -5,7 +5,7 @@ import { beforeEach } from 'vitest'
 
 const emptyActive = {
   ok: true as const,
-  data: { session: null, serverNow: '2026-08-17T08:00:00.000Z' },
+  data: { session: null, serverNow: '2026-08-17T08:00:00.000Z', paper: null },
 }
 
 function createDefaultStudyCommit() {

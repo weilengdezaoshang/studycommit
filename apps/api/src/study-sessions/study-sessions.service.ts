@@ -14,9 +14,12 @@ import {
   SESSION_ONE_ACTIVE_CONSTRAINT,
 } from './study-session.constants'
 import type {
+  CompletePaperInput,
   CompleteStudySessionInput,
+  CreateSessionFragmentInput,
   CreateStudySessionInput,
   SessionCommandInput,
+  UpdateSessionFragmentInput,
 } from './study-session.schemas'
 import {
   StudySessionsRepository,
@@ -49,6 +52,82 @@ export class StudySessionsService {
 
   getActive(userId: string) {
     return this.repository.findActiveSnapshot(userId)
+  }
+
+  async createFragment(userId: string, id: string, input: CreateSessionFragmentInput, key: string) {
+    const hash = requestHash('createFragment', id, input)
+    const result = await this.repository.createFragment(userId, id, input, { key, hash })
+    if (result.kind === SESSION_KIND.ok) {
+      return result
+    }
+    if (result.kind === SESSION_KIND.missing) {
+      throw new NotFoundException(SESSION_ERROR.notFound)
+    }
+    if (result.kind === SESSION_KIND.idempotencyConflict) {
+      throw idempotencyConflict()
+    }
+    if (result.kind === SESSION_KIND.sessionCompleted) {
+      throw new ConflictException(SESSION_ERROR.sessionCompleted)
+    }
+    if (result.kind === SESSION_KIND.sessionPaperMissing) {
+      throw new BadRequestException(SESSION_ERROR.sessionPaperMissing)
+    }
+    throw new Error(`Unexpected fragment result: ${(result as { kind: string }).kind}`)
+  }
+
+  async updateFragment(
+    userId: string,
+    id: string,
+    fragmentId: string,
+    input: UpdateSessionFragmentInput,
+  ) {
+    const result = await this.repository.updateFragment(userId, id, fragmentId, input)
+    if (result.kind === SESSION_KIND.ok) {
+      return result
+    }
+    if (result.kind === SESSION_KIND.fragmentMissing) {
+      throw new NotFoundException(SESSION_ERROR.fragmentMissing)
+    }
+    if (result.kind === SESSION_KIND.fragmentVersionConflict) {
+      throw new ConflictException({
+        ...SESSION_ERROR.fragmentVersionConflict,
+        details: { fragment: result.fragment },
+      })
+    }
+    throw new Error(`Unexpected fragment result: ${(result as { kind: string }).kind}`)
+  }
+
+  async completePaper(userId: string, id: string, input: CompletePaperInput, key: string) {
+    const hash = requestHash('completePaper', id, input)
+    const result = await this.repository.completePaper(userId, id, input, { key, hash })
+    if (result.kind === SESSION_KIND.ok) {
+      return result
+    }
+    if (result.kind === SESSION_KIND.missing) {
+      throw new NotFoundException(SESSION_ERROR.notFound)
+    }
+    if (result.kind === SESSION_KIND.idempotencyConflict) {
+      throw idempotencyConflict()
+    }
+    if (result.kind === SESSION_KIND.versionConflict) {
+      throw new ConflictException({
+        ...SESSION_ERROR.versionConflict,
+        details: { session: result.session },
+      })
+    }
+    if (result.kind === SESSION_KIND.sessionPaperMissing) {
+      throw new BadRequestException(SESSION_ERROR.sessionPaperMissing)
+    }
+    if (result.kind === SESSION_KIND.sessionCompleted) {
+      throw new ConflictException(SESSION_ERROR.sessionCompleted)
+    }
+    if (result.kind === SESSION_KIND.paperMissing) {
+      throw new NotFoundException(SESSION_ERROR.paperMissing)
+    }
+    if (result.kind === SESSION_KIND.paperAlreadyExists) {
+      throw new ConflictException(SESSION_ERROR.paperAlreadyExists)
+    }
+    throw new Error(`Unexpected completePaper result: ${(result as { kind: string }).kind}`)
   }
 
   async get(userId: string, id: string) {
@@ -158,6 +237,15 @@ export class StudySessionsService {
     }
     if (result.kind === SESSION_KIND.topicMissing) {
       throw new NotFoundException(SESSION_ERROR.topicMissing)
+    }
+    if (result.kind === SESSION_KIND.paperMissing) {
+      throw new NotFoundException(SESSION_ERROR.paperMissing)
+    }
+    if (result.kind === SESSION_KIND.paperAlreadyExists) {
+      throw new ConflictException(SESSION_ERROR.paperAlreadyExists)
+    }
+    if (result.kind === SESSION_KIND.uploadInvalid) {
+      throw new BadRequestException(SESSION_ERROR.uploadInvalid)
     }
     if (result.kind === SESSION_KIND.activeExists) {
       throw new ConflictException({

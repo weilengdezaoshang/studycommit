@@ -52,7 +52,10 @@ export const learningRecordListItemSchema = z.object({
   session: z.object({
     id: z.uuid(),
     userId: z.uuid(),
-    topicId: z.uuid(),
+    /** 桌面截图链路的学习会话可以没有主题;有学习记录的旧路径必有主题。 */
+    topicId: z.uuid().nullable(),
+    paperId: z.uuid().nullable(),
+    source: z.enum(['manual_topic', 'desktop_capture', 'desktop_existing_question']),
     goal: z.string().nullable(),
     status: z.enum(['running', 'paused', 'completed']),
     startedAt: z.iso.datetime({ offset: true }),

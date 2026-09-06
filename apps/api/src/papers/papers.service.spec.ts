@@ -57,6 +57,8 @@ describe('PapersService', () => {
         questionText: null,
         understandingText: null,
         questionResolvedAt: null,
+        source: 'mobile_direct',
+        sourceSessionId: undefined,
       },
       replayed: false,
     })

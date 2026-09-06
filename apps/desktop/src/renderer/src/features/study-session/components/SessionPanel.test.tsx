@@ -20,6 +20,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
       }),
     })
@@ -40,6 +41,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         pause,
       }),
@@ -59,6 +61,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         complete,
       }),
@@ -87,6 +90,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         complete,
       }),
@@ -114,6 +118,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         complete,
         getById,
@@ -147,6 +152,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         complete,
       }),
@@ -178,6 +184,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         complete,
       }),
@@ -209,6 +216,7 @@ describe('SessionPanel on today', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
         }),
         pause,
       }),

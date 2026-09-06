@@ -411,4 +411,183 @@ describe('StudySessions API', () => {
     ).json()
     expect(latestTopic.totalDurationSeconds).toBe(created.session.durationSeconds)
   })
+  it('从截图草稿开始学习:创建纸页、记片段、收尾回写理解并生成下一个问题', async () => {
+    const paperId = crypto.randomUUID()
+    const started = await app.inject({
+      method: 'POST',
+      url: '/api/study-sessions',
+      headers: headers('start-capture'),
+      payload: {
+        draftPaper: { paperId, questionText: 'React 调度器为什么用优先级队列' },
+      },
+    })
+    expect(started.statusCode).toBe(200)
+    const session = started.json()
+    expect(session).toMatchObject({
+      source: 'desktop_capture',
+      paperId,
+      topicId: null,
+      status: 'running',
+    })
+
+    const active = (
+      await app.inject({
+        method: 'GET',
+        url: '/api/study-sessions/active',
+        headers: { 'x-user-id': user },
+      })
+    ).json()
+    expect(active.paper).toMatchObject({
+      id: paperId,
+      questionText: 'React 调度器为什么用优先级队列',
+      understandingText: null,
+      fragmentCount: 0,
+    })
+
+    const fragmentId = crypto.randomUUID()
+    const fragment = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/fragments`,
+      headers: headers('fragment-1'),
+      payload: { fragmentId, content: '小顶堆按过期时间取任务' },
+    })
+    expect(fragment.statusCode).toBe(201)
+    expect(fragment.json()).toMatchObject({ id: fragmentId, position: 0, version: 1 })
+
+    // 同一 fragmentId 重试(不同幂等键):返回同一片段,不产生重复
+    const fragmentRetry = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/fragments`,
+      headers: headers('fragment-1-retry'),
+      payload: { fragmentId, content: '小顶堆按过期时间取任务' },
+    })
+    expect(fragmentRetry.statusCode).toBe(201)
+    expect(fragmentRetry.json().id).toBe(fragmentId)
+    expect(fragmentRetry.headers['idempotency-replayed']).toBe('true')
+
+    const secondFragmentId = crypto.randomUUID()
+    const secondFragment = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/fragments`,
+      headers: headers('fragment-2'),
+      payload: { fragmentId: secondFragmentId, content: 'lane 模型决定更新顺序' },
+    })
+    expect(secondFragment.json().position).toBe(1)
+
+    const nextPaperId = crypto.randomUUID()
+    const completed = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/complete-paper`,
+      headers: headers('complete-paper'),
+      payload: {
+        version: 1,
+        understandingText: '调度器用小顶堆管理任务过期时间,lane 决定优先级',
+        nextQuestionText: '并发渲染中断后如何恢复',
+        nextPaperId,
+      },
+    })
+    expect(completed.statusCode).toBe(200)
+    const completedBody = completed.json()
+    expect(completedBody.session).toMatchObject({
+      status: 'completed',
+      completionSource: 'online',
+      version: 2,
+    })
+    expect(completedBody.paper).toMatchObject({
+      id: paperId,
+      understandingText: '调度器用小顶堆管理任务过期时间,lane 决定优先级',
+      questionStatus: 'thinking',
+    })
+    expect(completedBody.nextPaper).toMatchObject({
+      id: nextPaperId,
+      content: '并发渲染中断后如何恢复',
+      questionStatus: 'thinking',
+      source: 'desktop_session',
+      sourceSessionId: session.id,
+    })
+
+    // 会话完成后不再接受片段
+    const rejectedFragment = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/fragments`,
+      headers: headers('fragment-3'),
+      payload: { fragmentId: crypto.randomUUID(), content: '迟到的片段' },
+    })
+    expect(rejectedFragment.statusCode).toBe(409)
+    expect(rejectedFragment.json().code).toBe('SESSION_ALREADY_COMPLETED')
+  })
+
+  it('主题路径的会话没有纸页时收尾接口报错且旧收尾不受影响', async () => {
+    const topic = await createTopic()
+    const started = await app.inject({
+      method: 'POST',
+      url: '/api/study-sessions',
+      headers: headers('start-topic'),
+      payload: { topicId: topic.id },
+    })
+    expect(started.statusCode).toBe(200)
+    const session = started.json()
+
+    const rejected = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/complete-paper`,
+      headers: headers('complete-paper-no-paper'),
+      payload: { version: 1, understandingText: '没有纸页可回写' },
+    })
+    expect(rejected.statusCode).toBe(400)
+    expect(rejected.json().code).toBe('SESSION_PAPER_REQUIRED')
+
+    const completed = await app.inject({
+      method: 'POST',
+      url: `/api/study-sessions/${session.id}/complete`,
+      headers: headers('complete-legacy'),
+      payload: { version: 1 },
+    })
+    expect(completed.statusCode).toBe(200)
+    expect(completed.json().learningLog.topicId).toBe(topic.id)
+  })
+
+  it('起步方式必须三选一且既有问题路径要求纸页存在', async () => {
+    const topic = await createTopic()
+    const both = await app.inject({
+      method: 'POST',
+      url: '/api/study-sessions',
+      headers: headers('start-both'),
+      payload: {
+        topicId: topic.id,
+        draftPaper: { paperId: crypto.randomUUID(), questionText: '重复来源' },
+      },
+    })
+    expect(both.statusCode).toBe(400)
+
+    const missingPaper = await app.inject({
+      method: 'POST',
+      url: '/api/study-sessions',
+      headers: headers('start-missing-paper'),
+      payload: { paperId: crypto.randomUUID() },
+    })
+    expect(missingPaper.statusCode).toBe(404)
+    expect(missingPaper.json().code).toBe('SESSION_PAPER_NOT_FOUND')
+
+    const createdPaper = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/papers',
+        headers: headers('create-paper'),
+        payload: { content: '既有问题纸页', questionText: '什么是事件循环' },
+      })
+    ).json()
+    const started = await app.inject({
+      method: 'POST',
+      url: '/api/study-sessions',
+      headers: headers('start-existing-question'),
+      payload: { paperId: createdPaper.id },
+    })
+    expect(started.statusCode).toBe(200)
+    expect(started.json()).toMatchObject({
+      source: 'desktop_existing_question',
+      paperId: createdPaper.id,
+      topicId: null,
+    })
+  })
 })

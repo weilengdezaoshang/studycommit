@@ -170,6 +170,10 @@ export const papers = pgTable(
     understandingText: text('understanding_text'),
     /** 标记解决的服务端时间;resolved 必非空,thinking 必为空。 */
     questionResolvedAt: timestamp('question_resolved_at', { withTimezone: true }),
+    /** 纸页来源:移动端直记 / 桌面截图 / 桌面收尾创建。 */
+    source: varchar('source', { length: 20 }).notNull().default('mobile_direct'),
+    /** 来源学习会话;桌面收尾创建的“下一个问题”回链会话。 */
+    sourceSessionId: uuid('source_session_id'),
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -190,6 +194,10 @@ export const papers = pgTable(
     check(
       'papers_understanding_text_length',
       sql`${table.understandingText} IS NULL OR length(${table.understandingText}) <= 20000`,
+    ),
+    check(
+      'papers_source_domain',
+      sql`${table.source} IN ('mobile_direct', 'desktop_capture', 'desktop_session')`,
     ),
     index('papers_user_created_idx').on(table.userId, table.createdAt, table.id),
     index('papers_user_topic_created_idx').on(
@@ -275,6 +283,42 @@ export const paperAssets = pgTable(
   ],
 )
 
+/**
+ * 学习过程片段(M-3 / BE-309):会话期间"记下一点"的连续写入。
+ * id 由客户端生成,兼作幂等锚点;列表按 (paper_id, position) 排序。
+ */
+export const paperFragments = pgTable(
+  'paper_fragments',
+  {
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id').notNull(),
+    paperId: uuid('paper_id')
+      .notNull()
+      .references(() => papers.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id')
+      .notNull()
+      .references(() => studySessions.id, { onDelete: 'cascade' }),
+    content: text('content').notNull(),
+    position: integer('position').notNull().default(0),
+    version: integer('version').notNull().default(1),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'paper_fragments_state',
+      sql`
+    ${table.version} >= 1
+    AND ${table.position} >= 0
+    AND length(trim(${table.content})) > 0
+    AND length(${table.content}) <= 2000
+  `,
+    ),
+    index('paper_fragments_paper_position_idx').on(table.paperId, table.position, table.id),
+    index('paper_fragments_session_position_idx').on(table.sessionId, table.position, table.id),
+  ],
+)
+
 export const idempotencyRecords = pgTable(
   'idempotency_records',
   {
@@ -294,9 +338,12 @@ export const studySessions = pgTable(
   {
     id: uuid('id').defaultRandom().primaryKey(),
     userId: uuid('user_id').notNull(),
-    topicId: uuid('topic_id')
-      .notNull()
-      .references(() => topics.id, { onDelete: 'restrict' }),
+    /** 主题路径可选;桌面截图链路从纸页问题起步。 */
+    topicId: uuid('topic_id').references(() => topics.id, { onDelete: 'restrict' }),
+    /** 关联纸页:source 为桌面来源时必填。 */
+    paperId: uuid('paper_id'),
+    /** 会话来源:主题手动 / 截图新问题 / 既有问题继续。 */
+    source: varchar('source', { length: 30 }).notNull().default('manual_topic'),
     goal: varchar('goal', { length: 500 }),
     status: studySessionStatus('status').notNull().default('running'),
     startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
@@ -330,6 +377,13 @@ export const studySessions = pgTable(
     (${table.status} = 'running' AND ${table.pausedAt} IS NULL AND ${table.completedAt} IS NULL AND ${table.durationSeconds} IS NULL AND ${table.completionSource} IS NULL)
     OR (${table.status} = 'paused' AND ${table.pausedAt} IS NOT NULL AND ${table.completedAt} IS NULL AND ${table.durationSeconds} IS NULL AND ${table.completionSource} IS NULL)
     OR (${table.status} = 'completed' AND ${table.pausedAt} IS NULL AND ${table.completedAt} IS NOT NULL AND ${table.durationSeconds} IS NOT NULL AND ${table.completionSource} IN ('online', 'offline_sync'))
+  `,
+    ),
+    check(
+      'study_sessions_paper_source',
+      sql`
+    (${table.source} IN ('desktop_capture', 'desktop_existing_question') AND ${table.paperId} IS NOT NULL AND ${table.topicId} IS NULL)
+    OR ${table.source} = 'manual_topic'
   `,
     ),
     uniqueIndex('study_sessions_one_active_per_user_idx')

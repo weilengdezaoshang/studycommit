@@ -5,7 +5,7 @@ export const emptyLearningLogFixture: LearningLog = {
   id: '55555555-5555-4555-8555-555555555555',
   userId: completedStudySessionFixture.userId,
   sessionId: completedStudySessionFixture.id,
-  topicId: completedStudySessionFixture.topicId,
+  topicId: '33333333-3333-4333-8333-333333333333',
   gains: null,
   problems: null,
   nextStep: null,

@@ -4,6 +4,8 @@ export const runningStudySessionFixture: StudySession = {
   id: '11111111-1111-4111-8111-111111111111',
   userId: '22222222-2222-4222-8222-222222222222',
   topicId: '33333333-3333-4333-8333-333333333333',
+  paperId: null,
+  source: 'manual_topic',
   goal: '理解 Electron 跨进程请求流程',
   status: 'running',
   startedAt: '2026-08-17T08:00:00.000Z',

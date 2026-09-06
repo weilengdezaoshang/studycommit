@@ -18,7 +18,11 @@ export function createStudySessionGateway(
   overrides: Partial<StudySessionGateway> = {},
 ): StudySessionGateway {
   return {
-    getActive: async () => ({ session: null, serverNow: '2026-08-17T08:00:00.000Z' }),
+    getActive: async () => ({
+      session: null,
+      serverNow: '2026-08-17T08:00:00.000Z',
+      paper: null,
+    }),
     getById: async () => {
       throw new Error('getById not stubbed')
     },

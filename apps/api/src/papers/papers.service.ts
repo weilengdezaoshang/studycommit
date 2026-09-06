@@ -58,6 +58,8 @@ type PaperRow = {
   questionText: string | null
   understandingText: string | null
   questionResolvedAt: Date | null
+  source: string
+  sourceSessionId: string | null
 }
 
 @Injectable()
@@ -204,6 +206,11 @@ export class PapersService {
       questionText: row.questionText,
       understandingText: row.understandingText,
       questionResolvedAt: row.questionResolvedAt?.toISOString() ?? null,
+      source:
+        row.source === 'desktop_capture' || row.source === 'desktop_session'
+          ? row.source
+          : ('mobile_direct' as const),
+      sourceSessionId: row.sourceSessionId,
     }
   }
 }

@@ -22,18 +22,29 @@ function toLearningLogOutput<T extends { createdAt: Date; updatedAt: Date }>(log
   return { ...log, createdAt: log.createdAt.toISOString(), updatedAt: log.updatedAt.toISOString() }
 }
 
+function toSessionSource(
+  value: string,
+): 'manual_topic' | 'desktop_capture' | 'desktop_existing_question' {
+  return value === 'desktop_capture' || value === 'desktop_existing_question'
+    ? value
+    : 'manual_topic'
+}
+
 function toSessionOutput<
   T extends {
     startedAt: Date
     pausedAt: Date | null
     completedAt: Date | null
     completionSource: string | null
+    source: string
     createdAt: Date
     updatedAt: Date
   },
 >(session: T) {
+  const { source, ...rest } = session
   return {
-    ...session,
+    ...rest,
+    source: toSessionSource(source),
     startedAt: session.startedAt.toISOString(),
     pausedAt: toIso(session.pausedAt),
     completedAt: toIso(session.completedAt),

@@ -23,6 +23,7 @@ describe('TodayPage', () => {
         getActive: async () => ({
           session: runningStudySessionFixture,
           serverNow: '2026-08-17T08:10:00.000Z',
+          paper: null,
         }),
       }),
     })
@@ -42,6 +43,7 @@ describe('TodayPage', () => {
           return {
             session: runningStudySessionFixture,
             serverNow: '2026-08-17T08:10:00.000Z',
+            paper: null,
           }
         },
       }),
@@ -62,6 +64,7 @@ describe('TodayPage', () => {
         getActive: async () => ({
           session: pausedStudySessionFixture,
           serverNow: '2026-08-17T08:20:00.000Z',
+          paper: null,
         }),
       }),
     })
@@ -84,7 +87,7 @@ describe('TodayPage', () => {
               details: null,
             })
           }
-          return { session: null, serverNow: '2026-08-17T08:00:00.000Z' }
+          return { session: null, serverNow: '2026-08-17T08:00:00.000Z', paper: null }
         },
       }),
     })
