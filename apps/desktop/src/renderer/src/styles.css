@@ -5953,6 +5953,187 @@ button:focus-visible {
   font-size: 13px;
 }
 
+/* ── D1 单击直读:左时间线 + 右阅读器 ── */
+.papers-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.papers-main {
+  flex: 1.1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.papers-timeline .papers-card.is-selected {
+  background: var(--selected-surface, #edf3e9);
+  border-color: var(--line-strong, #b9c8bc);
+}
+
+.papers-card__day {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  font-size: 11px;
+  color: var(--muted-faint, #aaa99f);
+  border-radius: 6px;
+  padding: 1px 6px;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.papers-card:hover .papers-card__day,
+.papers-card__day:focus-visible {
+  background: var(--surface-warm, #f1f5ef);
+  color: var(--action, #53635a);
+}
+
+.papers-reader {
+  flex: 1;
+  min-width: 0;
+  border-left: 1px solid var(--line, #ccd6cc);
+  background: var(--surface-soft, #fbfcf7);
+  padding: 18px 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.papers-reader__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1.5px dashed var(--line, #ccd6cc);
+  border-radius: 8px;
+  color: var(--muted-faint, #aaa99f);
+  font-size: 13.5px;
+  text-align: center;
+  min-height: 200px;
+}
+
+.papers-reader__empty p {
+  margin: 0;
+}
+
+.papers-reader__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--muted, #7b867e);
+}
+
+.papers-reader__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.papers-reader__time {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.papers-reader__state {
+  align-self: flex-start;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 2px 10px;
+  background: var(--success-surface, #ddf3e8);
+  color: var(--success, #16794d);
+}
+
+.papers-reader__state.is-open {
+  background: var(--warning-surface, #fff0cf);
+  color: var(--warning, #8a4b08);
+}
+
+.papers-reader__body {
+  margin: 0;
+  color: var(--ink, #34423b);
+  font-size: 14px;
+  line-height: 1.9;
+  max-width: 34em;
+}
+
+.papers-reader__actions {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line, #ccd6cc);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.papers-reader__organize {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted, #7b867e);
+}
+
+.papers-reader__organize-row {
+  display: flex;
+  gap: 8px;
+}
+
+.papers-reader__organize-row select {
+  flex: 1;
+}
+
+.papers-reader__primary,
+.papers-reader__secondary {
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.papers-reader__primary {
+  border: 1px solid var(--action, #53635a);
+  background: var(--action, #53635a);
+  color: var(--paper, #fffef9);
+}
+
+.papers-reader__primary:hover {
+  background: #48584f;
+}
+
+.papers-reader__primary:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+
+.papers-reader__secondary {
+  border: 1px solid var(--line-strong, #b9c8bc);
+  background: var(--paper, #fffef9);
+  color: var(--ink, #34423b);
+}
+
+.papers-reader__secondary:hover {
+  background: var(--surface-warm, #f1f5ef);
+}
+
+.papers-reader__feedback {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: 12.5px;
+  color: var(--muted, #7b867e);
+}
+
 .problems-page {
   height: 100%;
   overflow-y: auto;

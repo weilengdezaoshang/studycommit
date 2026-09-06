@@ -88,6 +88,10 @@ function seedAuthSession() {
 if (typeof window !== 'undefined') {
   window.studyCommit = createDefaultStudyCommit()
   seedAuthSession()
+  // jsdom 未实现 scrollIntoView;键盘导航等交互依赖它,补一个空实现即可
+  if (typeof Element.prototype.scrollIntoView !== 'function') {
+    Element.prototype.scrollIntoView = () => {}
+  }
 }
 
 beforeEach(() => {

@@ -61,15 +61,46 @@ describe('drawer wiring', () => {
     expect(document.querySelector('.collection--questions')).not.toBeNull()
   })
 
-  it('点击时间线卡片进入当日记录', async () => {
+  it('单击时间线卡片在右侧阅读器直接打开全文', async () => {
     const user = userEvent.setup()
     renderAt('/timeline')
     // 时间线展示选中日期(默认今天)的纸页;种子数据今天只有 React 那张
     const card = await screen.findByRole('button', { name: /React 的状态更新/ })
+    expect(screen.getByRole('complementary', { name: '纸页阅读器' })).toHaveTextContent(
+      '点左侧任意一张纸页',
+    )
     await user.click(card)
+
+    const reader = screen.getByRole('complementary', { name: '纸页阅读器' })
+    expect(reader).toHaveTextContent(/React 的状态更新/)
+    expect(reader).toHaveTextContent('归入箱子')
+    // 地址未发生变化,仍在时间线页
+    expect(document.querySelector('.collection')).toBeNull()
+  })
+
+  it('时间线卡片的查看当天入口进入当日记录页', async () => {
+    const user = userEvent.setup()
+    renderAt('/timeline')
+    const card = await screen.findByRole('button', { name: /React 的状态更新/ })
+    await user.click(within(card).getByText('查看当天'))
 
     expect(document.querySelector('.collection--date')).not.toBeNull()
     expect(screen.getAllByText(/React 的状态更新/).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('时间线键盘向下移动选中并直读,再次回车进入沉浸详情', async () => {
+    const user = userEvent.setup()
+    renderAt('/timeline')
+    const card = await screen.findByRole('button', { name: /React 的状态更新/ })
+    card.focus()
+    await user.keyboard('{ArrowDown}')
+
+    expect(screen.getByRole('complementary', { name: '纸页阅读器' }).textContent).toContain(
+      'React 的状态更新',
+    )
+
+    await user.keyboard('{Enter}')
+    expect(document.querySelector('.collection-detail')).not.toBeNull()
   })
 
   it('滚轮滚动后预览跟随滚动位置', async () => {
