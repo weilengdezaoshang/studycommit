@@ -9,6 +9,7 @@ export interface LoggingConfig extends Params {
 
 const REDACTED_PATHS = [
   'req.headers.authorization',
+  'req.query.q',
   'req.headers.cookie',
   'req.body.password',
   'req.body.token',

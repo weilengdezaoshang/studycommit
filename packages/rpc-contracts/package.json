@@ -59,6 +59,10 @@
     "./reviews": {
       "types": "./src/reviews.ts",
       "default": "./dist/reviews.js"
+    },
+    "./search": {
+      "types": "./src/search.ts",
+      "default": "./dist/search.js"
     }
   },
   "scripts": {

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, asc, eq, gt, isNull, or, sql } from 'drizzle-orm'
 import { isConstraint } from '../common/idempotency'
+import { escapeLikePattern } from '../common/escape-like'
 import { DatabaseService } from '../database/database.service'
 import { idempotencyRecords, papers, studySessions, templates, topics } from '../database/schema'
 import { SESSION_STATUS } from '../study-sessions/study-session.constants'
@@ -312,5 +313,28 @@ export class TopicsRepository {
           }
         : { kind: TOPIC_REMOVE_KIND.versionConflict }
     })
+  }
+
+  /** 箱子名搜索(BE-310):仅活跃未删箱子,按名称排序取前 N 个。 */
+  async searchActiveByName(
+    userId: string,
+    query: string,
+    limit: number,
+  ): Promise<TopicWithTemplate[]> {
+    const rows = await this.database.db
+      .select(topicQueryColumns)
+      .from(topics)
+      .innerJoin(templates, eq(templates.id, topics.templateId))
+      .where(
+        and(
+          eq(topics.userId, userId),
+          isNull(topics.deletedAt),
+          sql`${topics.status} = 'active'`,
+          sql`${topics.name} ILIKE ${'%' + escapeLikePattern(query) + '%'}`,
+        ),
+      )
+      .orderBy(asc(topics.name))
+      .limit(limit)
+    return rows.map(toTopicWithTemplate)
   }
 }
