@@ -171,6 +171,14 @@ export const studySessionContract = {
     })
     .input(createSessionFragmentInputSchema)
     .output(paperFragmentSchema),
+  listFragments: oc
+    .route({
+      method: 'GET',
+      path: '/study-sessions/{id}/fragments',
+      summary: '查看会话的学习片段',
+    })
+    .input(sessionIdInputSchema)
+    .output(z.object({ items: z.array(paperFragmentSchema) })),
   updateFragment: oc
     .route({
       method: 'PATCH',
