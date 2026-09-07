@@ -5,6 +5,7 @@ import { activeTopicPageFixture, runningStudySessionFixture } from '@studycommit
 const handlers = new Map<string, (event: unknown, ...args: unknown[]) => unknown>()
 
 vi.mock('electron', () => ({
+  globalShortcut: { register: vi.fn(), unregister: vi.fn() },
   ipcMain: {
     handle: vi.fn((channel: string, listener: (event: unknown, ...args: unknown[]) => unknown) => {
       handlers.set(channel, listener)

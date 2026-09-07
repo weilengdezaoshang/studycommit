@@ -16,6 +16,18 @@ export class IpcHost {
     this.channels.add(channel)
   }
 
+  /** 需要 sender 身份的通道(如覆盖窗消息只接受覆盖窗 webContents)。 */
+  handleWithEvent<T>(
+    channel: string,
+    run: (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<T>,
+  ): void {
+    if (this.channels.has(channel)) {
+      ipcMain.removeHandler(channel)
+    }
+    ipcMain.handle(channel, (event, ...args) => this.invoke(event, () => run(event, ...args)))
+    this.channels.add(channel)
+  }
+
   dispose(): void {
     for (const channel of this.channels) {
       ipcMain.removeHandler(channel)

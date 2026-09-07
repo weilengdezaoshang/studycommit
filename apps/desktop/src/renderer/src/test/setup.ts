@@ -54,6 +54,18 @@ function createDefaultStudyCommit() {
       registerAccount: async () => ({ ok: false as const, error: configurationError() }),
       loginAccount: async () => ({ ok: false as const, error: configurationError() }),
     },
+    capture: {
+      permissionCheck: async () => ({ ok: true as const, data: 'not-needed' as const }),
+      openPermissionSettings: async () => ({ ok: true as const, data: { ok: true as const } }),
+      request: async () => ({ ok: false as const, error: configurationError() }),
+      confirm: async () => ({ ok: true as const, data: null }),
+      cancel: async () => ({ ok: true as const, data: true }),
+      onRequestResult: () => () => undefined,
+      overlayReady: async () => ({ ok: true as const, data: { ok: true as const } }),
+      overlaySelection: async () => ({ ok: true as const, data: { ok: true as const } }),
+      overlayCancel: async () => ({ ok: true as const, data: { ok: true as const } }),
+      onOverlayState: () => () => undefined,
+    },
   }
 }
 

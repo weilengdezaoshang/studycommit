@@ -5,6 +5,7 @@ import { learningLogIpcChannels } from '../shared/learning-log-channels'
 import { studySessionIpcChannels } from '../shared/study-session-channels'
 import { paperIpcChannels } from '../shared/paper-channels'
 import { topicIpcChannels } from '../shared/topic-channels'
+import { captureIpcChannels } from '../shared/capture-channels'
 
 export const studySessionPreloadApi = {
   create: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.create, input),
@@ -51,6 +52,34 @@ export const authPreloadApi = {
   loginAccount: (input: unknown) => ipcRenderer.invoke(authIpcChannels.loginAccount, input),
 }
 
+export const capturePreloadApi = {
+  permissionCheck: () => ipcRenderer.invoke(captureIpcChannels.permissionCheck),
+  openPermissionSettings: () => ipcRenderer.invoke(captureIpcChannels.openPermissionSettings),
+  request: () => ipcRenderer.invoke(captureIpcChannels.request),
+  confirm: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.confirm, input),
+  cancel: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.cancel, input),
+  /** 快捷键截图完成推送(主窗口无 invoke 挂起时接收) */
+  onRequestResult: (listener: (result: unknown) => void) => {
+    const wrapped = (_event: unknown, result: unknown) => listener(result)
+    ipcRenderer.on(captureIpcChannels.requestResult, wrapped)
+    return () => {
+      ipcRenderer.removeListener(captureIpcChannels.requestResult, wrapped)
+    }
+  },
+  // 以下三个仅供覆盖窗路由使用;sender 由主进程校验
+  overlayReady: () => ipcRenderer.invoke(captureIpcChannels.overlayReady),
+  overlaySelection: (input: unknown) =>
+    ipcRenderer.invoke(captureIpcChannels.overlaySelection, input),
+  overlayCancel: () => ipcRenderer.invoke(captureIpcChannels.overlayCancel),
+  onOverlayState: (listener: (state: unknown) => void) => {
+    const wrapped = (_event: unknown, state: unknown) => listener(state)
+    ipcRenderer.on(captureIpcChannels.overlayState, wrapped)
+    return () => {
+      ipcRenderer.removeListener(captureIpcChannels.overlayState, wrapped)
+    }
+  },
+}
+
 export const studyCommitPreloadApi = {
   platform: process.platform,
   studySessions: studySessionPreloadApi,
@@ -59,4 +88,5 @@ export const studyCommitPreloadApi = {
   papers: paperPreloadApi,
   ai: aiPreloadApi,
   auth: authPreloadApi,
+  capture: capturePreloadApi,
 }

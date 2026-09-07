@@ -13,6 +13,7 @@ import { PapersHomePage } from '../features/papers/PapersHomePage'
 import { ProblemsPage } from '../features/papers/ProblemsPage'
 import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
+import { CaptureOverlay } from '../features/capture/CaptureOverlay'
 import { setAuthSession, useAuthSession } from '../features/auth/session'
 
 const DeskDemoPage = lazy(() =>
@@ -136,6 +137,8 @@ export function AppRoutes({
     <DesktopServicesProvider>
       <ToastProvider renderToast={(toast) => <Toast {...toast} />}>
         <Routes>
+          {/* 区域截图覆盖窗:独立窗口,不套登录门控与应用壳 */}
+          <Route path="capture-overlay" element={<CaptureOverlay />} />
           <Route
             path="auth"
             element={

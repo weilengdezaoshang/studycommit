@@ -18,6 +18,7 @@ describe('study session preload api', () => {
       'papers',
       'ai',
       'auth',
+      'capture',
     ])
     expect(Object.keys(studySessionPreloadApi)).toEqual([
       'create',
@@ -52,5 +53,25 @@ describe('study session preload api', () => {
       'learning-logs:get-by-session',
       '11111111-1111-4111-8111-111111111111',
     )
+    expect(Object.keys(studyCommitPreloadApi.capture)).toEqual([
+      'permissionCheck',
+      'openPermissionSettings',
+      'request',
+      'confirm',
+      'cancel',
+      'onRequestResult',
+      'overlayReady',
+      'overlaySelection',
+      'overlayCancel',
+      'onOverlayState',
+    ])
+    await studyCommitPreloadApi.capture.permissionCheck()
+    expect(invoke).toHaveBeenCalledWith('capture:permission-check')
+    await studyCommitPreloadApi.capture.confirm({
+      captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
+    })
+    expect(invoke).toHaveBeenCalledWith('capture:confirm', {
+      captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
+    })
   })
 })

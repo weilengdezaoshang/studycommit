@@ -109,6 +109,43 @@ export type AuthVerifyPhoneOutput = {
   tokens: { accessToken: string; refreshToken: string; expiresAt: string }
 }
 
+export type CapturePermission = 'granted' | 'denied' | 'not-needed' | 'unavailable'
+
+export type CaptureRequestResult =
+  | { status: 'completed'; captureId: string; width: number; height: number }
+  | { status: 'cancelled' }
+  | { status: 'permission-denied' }
+  | { status: 'failed'; message: string }
+
+export type CaptureConfirmResult = {
+  captureId: string
+  filePath: string
+  width: number
+  height: number
+}
+
+export type CaptureOverlayState = {
+  imageDataUrl: string
+  width: number
+  height: number
+  scaleFactor: number
+}
+
+export interface StudyCommitCaptureApi {
+  permissionCheck: () => Promise<IpcResult<CapturePermission>>
+  openPermissionSettings: () => Promise<IpcResult<{ ok: true }>>
+  request: () => Promise<IpcResult<CaptureRequestResult>>
+  confirm: (input: { captureId: string }) => Promise<IpcResult<CaptureConfirmResult | null>>
+  cancel: (input: { captureId: string }) => Promise<IpcResult<boolean>>
+  onRequestResult: (listener: (result: CaptureRequestResult) => void) => () => void
+  overlayReady: () => Promise<IpcResult<{ ok: true }>>
+  overlaySelection: (input: {
+    selection: { x: number; y: number; width: number; height: number }
+  }) => Promise<IpcResult<{ ok: true }>>
+  overlayCancel: () => Promise<IpcResult<{ ok: true }>>
+  onOverlayState: (listener: (state: CaptureOverlayState) => void) => () => void
+}
+
 export interface StudyCommitApi {
   platform: NodeJS.Platform
   studySessions: StudyCommitStudySessionsApi
@@ -117,6 +154,7 @@ export interface StudyCommitApi {
   papers: StudyCommitPapersApi
   ai: StudyCommitAiApi
   auth: StudyCommitAuthApi
+  capture: StudyCommitCaptureApi
 }
 
 declare global {
