@@ -11,7 +11,7 @@ export function Toast({
 }: {
   message: string | null
   onClose: () => void
-  type?: 'default' | 'error'
+  type?: 'default' | 'error' | 'success' | 'info'
 }) {
   const theme = useAppTheme()
   const insets = useSafeAreaInsets()

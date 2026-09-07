@@ -84,6 +84,10 @@ function createUnavailableServices(error: HttpError): MobileServices {
       pause: reject,
       resume: reject,
       complete: reject,
+      completePaper: reject,
+      createFragment: reject,
+      updateFragment: reject,
+      listFragments: reject,
     },
     topics: {
       listActive: reject,
