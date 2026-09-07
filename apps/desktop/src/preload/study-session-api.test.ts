@@ -19,6 +19,9 @@ describe('study session preload api', () => {
       'ai',
       'auth',
       'capture',
+      'reviews',
+      'search',
+      'mini',
     ])
     expect(Object.keys(studySessionPreloadApi)).toEqual([
       'create',
@@ -27,6 +30,10 @@ describe('study session preload api', () => {
       'pause',
       'resume',
       'complete',
+      'completePaper',
+      'createFragment',
+      'updateFragment',
+      'listFragments',
     ])
     await studySessionPreloadApi.getActive()
     expect(invoke).toHaveBeenCalledWith('study-sessions:get-active')
@@ -60,6 +67,7 @@ describe('study session preload api', () => {
       'confirm',
       'cancel',
       'preview',
+      'upload',
       'ocr',
       'onRequestResult',
       'overlayReady',

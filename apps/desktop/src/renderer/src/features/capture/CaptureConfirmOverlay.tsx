@@ -112,11 +112,22 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
     setBusy(true)
     setError(null)
     try {
+      // 先直传截图(BE-308):失败不阻塞开始学习,仅降级为无截图绑定
+      let screenshotUploadId: string | undefined
+      try {
+        const upload = await window.studyCommit.capture.upload({ captureId })
+        if (upload.ok) {
+          screenshotUploadId = upload.data.uploadId
+        }
+      } catch {
+        screenshotUploadId = undefined
+      }
       await studySessions.create({
         draftPaper: {
           paperId: crypto.randomUUID(),
           questionText: question.trim(),
-          ...(hasText ? { ocrText: ocrText.trim() } : {}),
+          ocrText: hasText ? ocrText.trim() : undefined,
+          screenshotUploadId,
         },
         idempotencyKey: crypto.randomUUID(),
       })

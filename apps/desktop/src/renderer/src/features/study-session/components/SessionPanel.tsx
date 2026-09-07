@@ -5,6 +5,7 @@ import { LongSessionBanner } from './LongSessionBanner'
 import { SessionStatusBadge } from './SessionStatusBadge'
 import { SessionTimer } from './SessionTimer'
 import { StudyCompanionScene } from '../../companion/StudyCompanionScene'
+import { FragmentComposer } from './FragmentComposer'
 import {
   COMPLETION_NOTE_FIELDS,
   formatLocalDateTimeValue,
@@ -27,6 +28,8 @@ export function SessionPanel({
   onPause,
   onResume,
   onComplete,
+  onCompletePaper,
+  onOpenMiniWindow,
   onBackToStart,
 }: {
   session: StudySession
@@ -37,6 +40,12 @@ export function SessionPanel({
   onPause: StudySessionController['pause']
   onResume: StudySessionController['resume']
   onComplete: StudySessionController['complete']
+  /** 会话从纸页问题起步时,收尾走 complete-paper 回写理解(BE-309) */
+  onCompletePaper?: (input: {
+    understandingText: string
+    nextQuestionText?: string
+  }) => Promise<void>
+  onOpenMiniWindow?: () => void
   onBackToStart?: () => void
 }): React.JSX.Element {
   const dialog = useDialog()
@@ -112,7 +121,18 @@ export function SessionPanel({
               {toggleLabel}
             </button>
             <CompleteStudyButton disabled={completing} onClick={() => showCompleteDialog()} />
+            {onOpenMiniWindow ? (
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={onOpenMiniWindow}
+                aria-label="在学习小窗中继续"
+              >
+                小窗
+              </button>
+            ) : null}
           </div>
+          <FragmentComposer sessionId={session.id} />
         </article>
       </div>
       {dialog.dialog}
@@ -120,6 +140,10 @@ export function SessionPanel({
   )
 
   function showCompleteDialog() {
+    if (session.paperId && onCompletePaper) {
+      showCompletePaperDialog()
+      return
+    }
     dialog.show({
       title: '完成本次学习',
       description: `计时将停止并保存学习记录。预计有效时长 ${elapsed}。以下内容均可选填。`,
@@ -133,6 +157,40 @@ export function SessionPanel({
           problems: trimToNull(notes.problems),
           nextStep: trimToNull(notes.nextStep),
         }),
+    })
+  }
+
+  function showCompletePaperDialog() {
+    dialog.show({
+      title: '完成学习 · 回写理解',
+      description: '写下这次弄懂了什么；也可留下下一个问题，生成新的纸页继续。',
+      cancelLabel: '继续学习',
+      confirmLabel: '完成并回写',
+      confirmBusyLabel: '正在回写',
+      notes: [
+        {
+          key: 'understanding',
+          label: '这次弄懂了什么（必填）',
+          placeholder: '用一两句话写下这次的理解',
+          maxLength: 20_000,
+        },
+        {
+          key: 'nextQuestion',
+          label: '下一个问题（可选，将生成新纸页继续）',
+          placeholder: '把还没弄懂的部分写成新问题',
+          maxLength: 2_000,
+        },
+      ],
+      onConfirm: async ({ notes }) => {
+        const understandingText = notes.understanding?.trim() ?? ''
+        if (!understandingText) {
+          throw new Error('请先写下这次弄懂了什么')
+        }
+        await onCompletePaper?.({
+          understandingText,
+          nextQuestionText: notes.nextQuestion?.trim() || undefined,
+        })
+      },
     })
   }
 

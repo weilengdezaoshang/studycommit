@@ -6,6 +6,22 @@ import { studySessionIpcChannels } from '../shared/study-session-channels'
 import { paperIpcChannels } from '../shared/paper-channels'
 import { topicIpcChannels } from '../shared/topic-channels'
 import { captureIpcChannels } from '../shared/capture-channels'
+import { reviewIpcChannels } from '../shared/review-channels'
+import { searchIpcChannels } from '../shared/search-channels'
+import { miniIpcChannels } from '../shared/mini-channels'
+
+export const miniPreloadApi = {
+  open: () => ipcRenderer.invoke(miniIpcChannels.open),
+  close: () => ipcRenderer.invoke(miniIpcChannels.close),
+}
+
+export const reviewPreloadApi = {
+  monthly: (input: unknown) => ipcRenderer.invoke(reviewIpcChannels.monthly, input),
+}
+
+export const searchPreloadApi = {
+  query: (input: unknown) => ipcRenderer.invoke(searchIpcChannels.query, input),
+}
 
 export const studySessionPreloadApi = {
   create: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.create, input),
@@ -14,6 +30,10 @@ export const studySessionPreloadApi = {
   pause: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.pause, input),
   resume: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.resume, input),
   complete: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.complete, input),
+  completePaper: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.completePaper, input),
+  createFragment: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.createFragment, input),
+  updateFragment: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.updateFragment, input),
+  listFragments: (sessionId: string) => ipcRenderer.invoke(studySessionIpcChannels.listFragments, sessionId),
 }
 
 export const topicPreloadApi = {
@@ -59,6 +79,7 @@ export const capturePreloadApi = {
   confirm: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.confirm, input),
   cancel: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.cancel, input),
   preview: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.preview, input),
+  upload: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.upload, input),
   ocr: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.ocr, input),
   /** 快捷键截图完成推送(主窗口无 invoke 挂起时接收) */
   onRequestResult: (listener: (result: unknown) => void) => {
@@ -91,4 +112,7 @@ export const studyCommitPreloadApi = {
   ai: aiPreloadApi,
   auth: authPreloadApi,
   capture: capturePreloadApi,
+  reviews: reviewPreloadApi,
+  search: searchPreloadApi,
+  mini: miniPreloadApi,
 }

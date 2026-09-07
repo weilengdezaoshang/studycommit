@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { learningLogSchema } from '../learning-log/learning-log.schema'
+import { paperSchema } from '../paper/paper.schema'
 
 export const studySessionStatusSchema = z.enum(['running', 'paused', 'completed'])
 export const studySessionCompletionSourceSchema = z.enum(['online', 'offline_sync'])
@@ -140,3 +141,73 @@ export type CreateStudySessionInput = z.infer<typeof createStudySessionInputSche
 export type SessionCommandInput = z.infer<typeof sessionCommandInputSchema>
 export type CompleteStudySessionInput = z.input<typeof completeStudySessionInputSchema>
 export type CompleteStudySessionResult = z.infer<typeof completeStudySessionResultSchema>
+
+/** 学习片段(DE-313):会话期间"记下一点";fragmentId 客户端生成,兼作幂等锚点。 */
+export const paperFragmentSchema = z.object({
+  id: z.uuid(),
+  userId: z.uuid(),
+  paperId: z.uuid(),
+  sessionId: z.uuid(),
+  content: z.string().min(1),
+  position: z.number().int().nonnegative(),
+  version: z.number().int().min(1),
+  createdAt: z.iso.datetime({ offset: true }),
+  updatedAt: z.iso.datetime({ offset: true }),
+})
+
+export const createSessionFragmentInputSchema = z
+  .object({
+    sessionId: z.uuid(),
+    fragmentId: z.uuid(),
+    content: z.string().trim().min(1).max(2_000),
+    position: z.number().int().min(0).optional(),
+    idempotencyKey: z.string().trim().min(1).max(200),
+  })
+  .strict()
+
+export const updateSessionFragmentInputSchema = z
+  .object({
+    sessionId: z.uuid(),
+    fragmentId: z.uuid(),
+    version: z.number().int().min(1),
+    content: z.string().trim().min(1).max(2_000).optional(),
+    position: z.number().int().min(0).optional(),
+    idempotencyKey: z.string().trim().min(1).max(200),
+  })
+  .strict()
+  .refine((value) => value.content !== undefined || value.position !== undefined, {
+    message: '至少提供内容或位置之一',
+  })
+
+/** 纸页收尾(BE-309):回写理解文本,可选创建"下一个问题"纸页。 */
+export const completePaperInputSchema = z
+  .object({
+    sessionId: z.uuid(),
+    version: z.number().int().min(1),
+    understandingText: z.string().trim().min(1).max(20_000),
+    nextQuestionText: z.string().trim().min(1).max(2_000).optional(),
+    nextPaperId: z.uuid().optional(),
+    idempotencyKey: z.string().trim().min(1).max(200),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.nextQuestionText && !value.nextPaperId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['nextPaperId'],
+        message: '创建下一个问题纸页需要提供客户端生成的纸页 UUID',
+      })
+    }
+  })
+
+export const completePaperResultSchema = z.object({
+  session: studySessionSchema,
+  paper: paperSchema,
+  nextPaper: paperSchema.nullable(),
+})
+
+export type PaperFragment = z.infer<typeof paperFragmentSchema>
+export type CreateSessionFragmentInput = z.input<typeof createSessionFragmentInputSchema>
+export type UpdateSessionFragmentInput = z.input<typeof updateSessionFragmentInputSchema>
+export type CompletePaperInput = z.input<typeof completePaperInputSchema>
+export type CompletePaperResult = z.infer<typeof completePaperResultSchema>

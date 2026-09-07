@@ -1,5 +1,10 @@
 import { captureIpcChannels, isCaptureId, isCaptureSelection } from '../../shared/capture-channels'
 import type { CaptureConfirmResult } from '../../shared/capture-channels'
+import { createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { createHttpError } from '@studycommit/common/http'
+import type { UploadsApi } from '@studycommit/common/ports'
 import type { IpcHost } from '../ipc/ipc-host'
 import type { CaptureRegistry } from './capture-registry'
 import type { CaptureService } from './capture-service'
@@ -9,6 +14,7 @@ export interface CaptureIpcDeps {
   service: CaptureService
   registry: CaptureRegistry
   ocr: OcrService
+  uploads: UploadsApi
 }
 
 /** 拒绝非覆盖窗发来的消息;返回 null 表示忽略。 */
@@ -72,6 +78,41 @@ export function registerCaptureIpc(host: IpcHost, deps: CaptureIpcDeps): void {
       return null
     }
     return deps.service.getPreview(captureId)
+  })
+
+  // 截图直传(BE-308):主进程持令牌读临时 PNG,走三步直传,返回 uploadId 供 draftPaper 绑定
+  host.handle(captureIpcChannels.upload, async (input) => {
+    const captureId = (input as { captureId?: unknown } | undefined)?.captureId
+    if (!isCaptureId(captureId)) {
+      throw createHttpError({ code: 'INVALID_RESPONSE', message: 'captureId 无效' })
+    }
+    const entry = deps.registry.get(captureId)
+    if (!entry) {
+      throw createHttpError({ code: 'NOT_FOUND', message: '截图不存在或已丢弃' })
+    }
+    const bytes = await readFile(entry.filePath)
+    const sha256 = createHash('sha256').update(bytes).digest('hex')
+    const uploadId = randomUUID()
+    const created = await deps.uploads.create({
+      uploadId,
+      kind: 'source_screenshot',
+      mimeType: 'image/png',
+      sizeBytes: bytes.length,
+      sha256,
+    })
+    const response = await fetch(created.uploadUrl, {
+      method: 'PUT',
+      headers: created.headers,
+      body: bytes,
+    })
+    if (!response.ok) {
+      throw createHttpError({
+        code: 'SERVER_ERROR',
+        message: `截图直传失败(HTTP ${response.status})`,
+      })
+    }
+    await deps.uploads.complete(uploadId)
+    return { uploadId }
   })
 
   // 覆盖窗通道:sender 必须是覆盖窗本身,载荷手工守卫(桌面 shared 层不引入 zod)

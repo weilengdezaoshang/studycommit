@@ -239,6 +239,12 @@ export class StudySessionsRpcController {
           return toFragmentOutput(result.fragment)
         }),
       ),
+      listFragments: implement(studySessionContract.listFragments).handler(({ input }) =>
+        handleOrpc(async () => {
+          const items = await this.sessions.listFragments(request.userId, input.id)
+          return { items: items.map(toFragmentOutput) }
+        }),
+      ),
       updateFragment: implement(studySessionContract.updateFragment).handler(({ input }) =>
         handleOrpc(async () => {
           const { id, fragmentId, ...body } = input

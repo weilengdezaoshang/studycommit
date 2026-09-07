@@ -6,6 +6,9 @@ import type {
   PaperApi,
   StudySessionApi,
   TopicMutationApi,
+  UploadsApi,
+  ReviewApi,
+  SearchApi,
 } from '@studycommit/common/ports'
 import { net } from 'electron'
 import { DesktopAuthApi, type DesktopAuthApiPort } from '../auth/auth-client'
@@ -18,6 +21,9 @@ export interface DesktopServices {
   papers: PaperApi
   ai: AiApi
   auth: DesktopAuthApiPort
+  reviews: ReviewApi
+  search: SearchApi
+  uploads: UploadsApi
 }
 
 export function createDesktopServices(
@@ -80,6 +86,10 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       pause: reject,
       resume: reject,
       complete: reject,
+      completePaper: reject,
+      createFragment: reject,
+      updateFragment: reject,
+      listFragments: reject,
     },
     topics: {
       listActive: reject,
@@ -105,6 +115,18 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       list: reject,
       getBySession: reject,
       update: reject,
+    },
+    uploads: {
+      create: reject,
+      complete: reject,
+      remove: reject,
+      access: reject,
+    },
+    reviews: {
+      monthly: reject,
+    },
+    search: {
+      query: reject,
     },
     auth: {
       registerAccount: reject,

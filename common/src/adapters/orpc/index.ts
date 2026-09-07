@@ -51,6 +51,31 @@ export function createOrpcServices(
             { context: { idempotencyKey } },
           ),
         ),
+      completePaper: ({ sessionId, idempotencyKey, ...body }) =>
+        call(() =>
+          client.studySessions.completePaper(
+            { id: sessionId, ...body },
+            { context: { idempotencyKey } },
+          ),
+        ),
+      createFragment: ({ sessionId, idempotencyKey, ...body }) =>
+        call(() =>
+          client.studySessions.createFragment(
+            { id: sessionId, ...body },
+            { context: { idempotencyKey } },
+          ),
+        ),
+      listFragments: (sessionId) =>
+        call(() => client.studySessions.listFragments({ id: sessionId }, { context: {} })).then(
+          (page) => page.items,
+        ),
+      updateFragment: ({ sessionId, fragmentId, idempotencyKey, ...body }) =>
+        call(() =>
+          client.studySessions.updateFragment(
+            { id: sessionId, fragmentId, ...body },
+            { context: { idempotencyKey } },
+          ),
+        ),
     },
     topics,
     learningLogs: {

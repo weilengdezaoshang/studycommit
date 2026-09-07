@@ -33,6 +33,10 @@ describe('registerStudySessionIpc', () => {
     pause: vi.fn(),
     resume: vi.fn(),
     complete: vi.fn(),
+    completePaper: vi.fn(),
+    createFragment: vi.fn(),
+    updateFragment: vi.fn(),
+    listFragments: vi.fn(),
   }
 
   beforeEach(() => {

@@ -20,6 +20,10 @@ function createDefaultStudyCommit() {
       pause: async () => ({ ok: false as const, error: configurationError() }),
       resume: async () => ({ ok: false as const, error: configurationError() }),
       complete: async () => ({ ok: false as const, error: configurationError() }),
+      completePaper: async () => ({ ok: false as const, error: configurationError() }),
+      createFragment: async () => ({ ok: false as const, error: configurationError() }),
+      updateFragment: async () => ({ ok: false as const, error: configurationError() }),
+      listFragments: async () => ({ ok: true as const, data: { items: [] } }),
     },
     topics: {
       listActive: async () => ({
@@ -61,12 +65,23 @@ function createDefaultStudyCommit() {
       confirm: async () => ({ ok: true as const, data: null }),
       cancel: async () => ({ ok: true as const, data: true }),
       preview: async () => ({ ok: true as const, data: null }),
+      upload: async () => ({ ok: false as const, error: configurationError() }),
       ocr: async () => ({ ok: true as const, data: { text: '', confidence: null } }),
       onRequestResult: () => () => undefined,
       overlayReady: async () => ({ ok: true as const, data: { ok: true as const } }),
       overlaySelection: async () => ({ ok: true as const, data: { ok: true as const } }),
       overlayCancel: async () => ({ ok: true as const, data: { ok: true as const } }),
       onOverlayState: () => () => undefined,
+    },
+    reviews: {
+      monthly: async () => ({ ok: false as const, error: configurationError() }),
+    },
+    search: {
+      query: async () => ({ ok: false as const, error: configurationError() }),
+    },
+    mini: {
+      open: async () => ({ ok: true as const }),
+      close: async () => ({ ok: true as const }),
     },
   }
 }

@@ -737,6 +737,28 @@ export class StudySessionsRepository {
     })
   }
 
+  /** 会话片段列表:按 position 升序。 */
+  async listFragments(userId: string, sessionId: string): Promise<PaperFragment[]> {
+    const [session] = await this.database.db
+      .select({ id: studySessions.id })
+      .from(studySessions)
+      .where(and(eq(studySessions.userId, userId), eq(studySessions.id, sessionId)))
+      .limit(1)
+    if (!session) {
+      return []
+    }
+    return this.database.db
+      .select()
+      .from(paperFragments)
+      .where(
+        and(
+          eq(paperFragments.userId, userId),
+          eq(paperFragments.sessionId, sessionId),
+        ),
+      )
+      .orderBy(paperFragments.position, paperFragments.id)
+  }
+
   private async nextFragmentPosition(tx: Transaction, userId: string, paperId: string) {
     const [{ next }] = await tx
       .select({ next: sql<number>`coalesce(max(${paperFragments.position}), -1) + 1` })

@@ -18,6 +18,8 @@ vi.mock('electron', () => ({
 
 import { learningLogIpcChannels } from '../../shared/learning-log-channels'
 import { aiIpcChannels } from '../../shared/ai-channels'
+import { reviewIpcChannels } from '../../shared/review-channels'
+import { searchIpcChannels } from '../../shared/search-channels'
 import { paperIpcChannels } from '../../shared/paper-channels'
 import { authIpcChannels } from './auth-ipc'
 import { registerDesktopIpc } from './register-desktop-ipc'
@@ -40,6 +42,22 @@ describe('registerDesktopIpc', () => {
       pause: vi.fn(),
       resume: vi.fn(),
       complete: vi.fn(),
+      completePaper: vi.fn(),
+      createFragment: vi.fn(),
+      updateFragment: vi.fn(),
+      listFragments: vi.fn(),
+    },
+    uploads: {
+      create: vi.fn(),
+      complete: vi.fn(),
+      remove: vi.fn(),
+      access: vi.fn(),
+    },
+    reviews: {
+      monthly: vi.fn(),
+    },
+    search: {
+      query: vi.fn(),
     },
     topics: {
       listActive: vi.fn(),
@@ -97,6 +115,8 @@ describe('registerDesktopIpc', () => {
         ...Object.values(learningLogIpcChannels),
         ...Object.values(paperIpcChannels),
         ...Object.values(aiIpcChannels),
+        ...Object.values(reviewIpcChannels),
+        ...Object.values(searchIpcChannels),
       ].sort(),
     )
 

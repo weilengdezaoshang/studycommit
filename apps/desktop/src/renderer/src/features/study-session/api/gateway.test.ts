@@ -46,6 +46,10 @@ describe('desktop study session gateway', () => {
       pause: vi.fn(),
       resume: vi.fn(),
       complete: vi.fn(),
+      completePaper: vi.fn(),
+      createFragment: vi.fn(),
+      updateFragment: vi.fn(),
+      listFragments: vi.fn(),
     }
     const topics = {
       listActive: vi.fn().mockResolvedValue({ ok: true, data: activeTopicPageFixture }),

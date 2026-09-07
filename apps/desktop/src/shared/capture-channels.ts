@@ -13,6 +13,7 @@ export const captureIpcChannels = {
   requestResult: 'capture:request-result',
   ocr: 'capture:ocr',
   preview: 'capture:preview',
+  upload: 'capture:upload',
 } as const
 
 export type CapturePermission = 'granted' | 'denied' | 'not-needed' | 'unavailable'

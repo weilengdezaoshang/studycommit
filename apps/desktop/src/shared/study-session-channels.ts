@@ -5,4 +5,8 @@ export const studySessionIpcChannels = {
   pause: 'study-sessions:pause',
   resume: 'study-sessions:resume',
   complete: 'study-sessions:complete',
+  completePaper: 'study-sessions:complete-paper',
+  createFragment: 'study-sessions:create-fragment',
+  listFragments: 'study-sessions:list-fragments',
+  updateFragment: 'study-sessions:update-fragment',
 } as const

@@ -50,6 +50,10 @@ export class StudySessionsService {
     }
   }
 
+  async listFragments(userId: string, sessionId: string) {
+    return this.repository.listFragments(userId, sessionId)
+  }
+
   getActive(userId: string) {
     return this.repository.findActiveSnapshot(userId)
   }

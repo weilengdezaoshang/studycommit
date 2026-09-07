@@ -1,18 +1,23 @@
 import type {
   ActiveStudySessionResponse,
+  CompletePaperInput,
+  CompletePaperResult,
   CompleteStudySessionInput,
   CompleteStudySessionResult,
+  CreateSessionFragmentInput,
   CreateStudySessionInput,
   CreateTopicInput,
   LearningLog,
   LearningLogPage,
   ListLearningLogsInput,
   ListActiveTopicsInput,
+  PaperFragment,
   SessionCommandInput,
   StudySession,
   Topic,
   TopicPage,
   UpdateLearningLogInput,
+  UpdateSessionFragmentInput,
 } from '@studycommit/common/contracts'
 import type {
   RemoveTopicInput,
@@ -35,6 +40,10 @@ export interface StudySessionGateway {
   pause(input: SessionCommandInput): Promise<StudySession>
   resume(input: SessionCommandInput): Promise<StudySession>
   complete(input: CompleteStudySessionInput): Promise<CompleteStudySessionResult>
+  completePaper(input: CompletePaperInput): Promise<CompletePaperResult>
+  createFragment(input: CreateSessionFragmentInput): Promise<PaperFragment>
+  updateFragment(input: UpdateSessionFragmentInput): Promise<PaperFragment>
+  listFragments(sessionId: string): Promise<PaperFragment[]>
 }
 
 export interface TopicGateway {
@@ -83,6 +92,10 @@ export function createDesktopStudySessionGateway(
     pause: (input) => invokeIpc(() => api.pause(input)),
     resume: (input) => invokeIpc(() => api.resume(input)),
     complete: (input) => invokeIpc(() => api.complete(input)),
+    completePaper: (input) => invokeIpc(() => api.completePaper(input)),
+    createFragment: (input) => invokeIpc(() => api.createFragment(input)),
+    updateFragment: (input) => invokeIpc(() => api.updateFragment(input)),
+    listFragments: (sessionId) => invokeIpc(() => api.listFragments(sessionId)).then((page) => page.items),
   }
 }
 

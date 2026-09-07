@@ -6,11 +6,16 @@ import type {
 } from '../contracts/learning-log'
 import type {
   ActiveStudySessionResponse,
+  CompletePaperInput,
+  CompletePaperResult,
   CompleteStudySessionInput,
   CompleteStudySessionResult,
+  CreateSessionFragmentInput,
   CreateStudySessionInput,
+  PaperFragment,
   SessionCommandInput,
   StudySession,
+  UpdateSessionFragmentInput,
 } from '../contracts/study-session'
 import type { AiApi } from './ai'
 import type { UploadsApi } from './uploads'
@@ -36,6 +41,12 @@ export interface StudySessionApi {
   pause(input: SessionCommandInput): Promise<StudySession>
   resume(input: SessionCommandInput): Promise<StudySession>
   complete(input: CompleteStudySessionInput): Promise<CompleteStudySessionResult>
+  /** 纸页收尾(BE-309):回写理解文本并可选创建下一个问题 */
+  completePaper(input: CompletePaperInput): Promise<CompletePaperResult>
+  /** 记下一条学习片段(fragmentId 幂等) */
+  createFragment(input: CreateSessionFragmentInput): Promise<PaperFragment>
+  updateFragment(input: UpdateSessionFragmentInput): Promise<PaperFragment>
+  listFragments(sessionId: string): Promise<PaperFragment[]>
 }
 
 export interface TopicApi {

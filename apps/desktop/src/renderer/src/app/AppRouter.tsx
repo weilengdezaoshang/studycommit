@@ -14,6 +14,7 @@ import { ProblemsPage } from '../features/papers/ProblemsPage'
 import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { CaptureOverlay } from '../features/capture/CaptureOverlay'
+import { MiniSessionPage } from '../features/mini-session/MiniSessionPage'
 import { CaptureConfirmOverlay } from '../features/capture/CaptureConfirmOverlay'
 import { openCaptureConfirm, useCaptureConfirmId } from '../features/capture/confirm-store'
 import { setAuthSession, useAuthSession } from '../features/auth/session'
@@ -151,6 +152,7 @@ export function AppRoutes({
         <Routes>
           {/* 区域截图覆盖窗:独立窗口,不套登录门控与应用壳 */}
           <Route path="capture-overlay" element={<CaptureOverlay />} />
+          <Route path="mini-session" element={<MiniSessionPage />} />
           <Route
             path="auth"
             element={

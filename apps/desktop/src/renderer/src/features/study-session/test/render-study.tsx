@@ -29,6 +29,16 @@ export function createStudySessionGateway(
     create: async () => {
       throw new Error('create not stubbed')
     },
+    completePaper: async () => {
+      throw new Error('completePaper not stubbed')
+    },
+    createFragment: async () => {
+      throw new Error('createFragment not stubbed')
+    },
+    updateFragment: async () => {
+      throw new Error('updateFragment not stubbed')
+    },
+    listFragments: async () => [],
     pause: async () => {
       throw new Error('pause not stubbed')
     },

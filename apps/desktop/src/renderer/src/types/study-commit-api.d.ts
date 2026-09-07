@@ -22,6 +22,7 @@ import type {
   UpdateLearningLogInput,
   UpdatePaperInput,
   UpdatePaperQuestionInput,
+  PaperFragment,
 } from '@studycommit/common/contracts'
 import type {
   RemoveTopicInput,
@@ -37,6 +38,36 @@ export interface StudyCommitStudySessionsApi {
   pause: (input: SessionCommandInput) => Promise<IpcResult<StudySession>>
   resume: (input: SessionCommandInput) => Promise<IpcResult<StudySession>>
   complete: (input: CompleteStudySessionInput) => Promise<IpcResult<CompleteStudySessionResult>>
+  completePaper: (input: {
+    sessionId: string
+    version: number
+    understandingText: string
+    nextQuestionText?: string
+    nextPaperId?: string
+    idempotencyKey?: string
+  }) => Promise<
+    IpcResult<{
+      session: StudySession
+      paper: Paper
+      nextPaper: Paper | null
+    }>
+  >
+  createFragment: (input: {
+    sessionId: string
+    fragmentId: string
+    content: string
+    position?: number
+    idempotencyKey?: string
+  }) => Promise<IpcResult<PaperFragment>>
+  updateFragment: (input: {
+    sessionId: string
+    fragmentId: string
+    version: number
+    content?: string
+    position?: number
+    idempotencyKey?: string
+  }) => Promise<IpcResult<PaperFragment>>
+  listFragments: (sessionId: string) => Promise<IpcResult<{ items: PaperFragment[] }>>
 }
 
 export interface StudyCommitTopicsApi {
@@ -138,6 +169,7 @@ export interface StudyCommitCaptureApi {
   confirm: (input: { captureId: string }) => Promise<IpcResult<CaptureConfirmResult | null>>
   cancel: (input: { captureId: string }) => Promise<IpcResult<boolean>>
   preview: (input: { captureId: string }) => Promise<IpcResult<string | null>>
+  upload: (input: { captureId: string }) => Promise<IpcResult<{ uploadId: string }>>
   ocr: (input: {
     captureId: string
   }) => Promise<IpcResult<{ text: string; confidence: number | null }>>
@@ -150,6 +182,20 @@ export interface StudyCommitCaptureApi {
   onOverlayState: (listener: (state: CaptureOverlayState) => void) => () => void
 }
 
+export type ReviewMonthlyResult = {
+  month: string
+  timezone: string
+  paperCount: number
+  topicCount: number
+  resolvedCount: number
+  days: { date: string; count: number }[]
+}
+
+export type SearchQueryResult = {
+  papers: { items: Paper[]; pageInfo: { hasNextPage: boolean; nextCursor: string | null } }
+  topics: Array<Pick<Topic, 'id' | 'name'> & { paperCount: number }>
+}
+
 export interface StudyCommitApi {
   platform: NodeJS.Platform
   studySessions: StudyCommitStudySessionsApi
@@ -159,6 +205,9 @@ export interface StudyCommitApi {
   ai: StudyCommitAiApi
   auth: StudyCommitAuthApi
   capture: StudyCommitCaptureApi
+  reviews: { monthly: (input: { month: string; timezone: string }) => Promise<IpcResult<ReviewMonthlyResult>> }
+  search: { query: (input: { q: string; limit?: number; cursor?: string }) => Promise<IpcResult<SearchQueryResult>> }
+  mini: { open: () => Promise<{ ok: true }>; close: () => Promise<{ ok: true }> }
 }
 
 declare global {
