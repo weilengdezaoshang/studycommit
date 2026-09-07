@@ -1,5 +1,5 @@
 interface AppIconProps {
-  name: 'today' | 'settings' | 'box' | 'inbox-tray' | 'history'
+  name: 'today' | 'settings' | 'box' | 'inbox-tray' | 'history' | 'search' | 'calendar'
 }
 
 const paths: Record<AppIconProps['name'], React.ReactNode> = {
@@ -17,6 +17,18 @@ const paths: Record<AppIconProps['name'], React.ReactNode> = {
   'inbox-tray': (
     <>
       <path d="M4 4h16v16H4zM4 13h4l2 3h4l2-3h4" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
+  calendar: (
+    <>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4M16 3v4M4 10h16M8 14h2M14 14h2M8 17h2" />
     </>
   ),
   history: (

@@ -414,6 +414,33 @@ export function Sidebar({
         <BoxSection
           onSelectBox={(topicId) => navigateAndClose(`/boxes/${encodeURIComponent(topicId)}`)}
         />
+        <section className="drawer-section" aria-label="查找与回顾">
+          <div className="drawer-section__heading">
+            <h2>查找与回顾</h2>
+          </div>
+          <button
+            type="button"
+            className="drawer-link"
+            onClick={() => {
+              onClose()
+              navigate('/search')
+            }}
+          >
+            <AppIcon name="search" />
+            搜索纸页与箱子
+          </button>
+          <button
+            type="button"
+            className="drawer-link"
+            onClick={() => {
+              onClose()
+              navigate('/review')
+            }}
+          >
+            <AppIcon name="calendar" />
+            月度装订
+          </button>
+        </section>
         <section className="drawer-section" aria-label="需要留意">
           <div className="drawer-section__heading">
             <h2>需要留意</h2>

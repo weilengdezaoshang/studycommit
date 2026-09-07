@@ -15,6 +15,8 @@ import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { CaptureOverlay } from '../features/capture/CaptureOverlay'
 import { MiniSessionPage } from '../features/mini-session/MiniSessionPage'
+import { SearchPage } from '../features/search/SearchPage'
+import { ReviewPage } from '../features/review/ReviewPage'
 import { CaptureConfirmOverlay } from '../features/capture/CaptureConfirmOverlay'
 import { openCaptureConfirm, useCaptureConfirmId } from '../features/capture/confirm-store'
 import { setAuthSession, useAuthSession } from '../features/auth/session'
@@ -185,6 +187,8 @@ export function AppRoutes({
             />
             <Route path="timeline" element={<PapersHomePage />} />
             <Route path="problems" element={<ProblemsPage />} />
+            <Route path="search" element={<SearchPage />} />
+            <Route path="review" element={<ReviewPage />} />
             <Route path="records/:dateKey" element={<DateRecordsBridge />} />
             <Route
               path="inbox"
