@@ -59,6 +59,8 @@ describe('study session preload api', () => {
       'request',
       'confirm',
       'cancel',
+      'preview',
+      'ocr',
       'onRequestResult',
       'overlayReady',
       'overlaySelection',
@@ -71,6 +73,12 @@ describe('study session preload api', () => {
       captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
     })
     expect(invoke).toHaveBeenCalledWith('capture:confirm', {
+      captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
+    })
+    await studyCommitPreloadApi.capture.ocr({
+      captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
+    })
+    expect(invoke).toHaveBeenCalledWith('capture:ocr', {
       captureId: '2f0c9d92-58a2-4c6e-9f7a-1d1c2b3a4e5f',
     })
   })

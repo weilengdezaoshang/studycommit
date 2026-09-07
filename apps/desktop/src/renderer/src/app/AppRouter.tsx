@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
 import { usePapersState, todayKey } from '../features/papers/papers-store'
 import { parseDateKey } from '@studycommit/common/study-session-runtime'
@@ -14,6 +14,8 @@ import { ProblemsPage } from '../features/papers/ProblemsPage'
 import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { CaptureOverlay } from '../features/capture/CaptureOverlay'
+import { CaptureConfirmOverlay } from '../features/capture/CaptureConfirmOverlay'
+import { openCaptureConfirm, useCaptureConfirmId } from '../features/capture/confirm-store'
 import { setAuthSession, useAuthSession } from '../features/auth/session'
 
 const DeskDemoPage = lazy(() =>
@@ -132,6 +134,16 @@ export function AppRoutes({
 }): React.JSX.Element {
   // PRD:未登录只允许停留在登录页;登录后进入工作区。
   const session = useAuthSession()
+  const confirmCaptureId = useCaptureConfirmId()
+
+  useEffect(() => {
+    // 快捷键截图完成后打开确认页(主窗口按钮路径由 invoke 返回直接打开)
+    return window.studyCommit.capture.onRequestResult((result) => {
+      if (result.status === 'completed') {
+        openCaptureConfirm(result.captureId)
+      }
+    })
+  }, [])
 
   return (
     <DesktopServicesProvider>
@@ -201,6 +213,9 @@ export function AppRoutes({
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
+        {session && confirmCaptureId ? (
+          <CaptureConfirmOverlay captureId={confirmCaptureId} />
+        ) : null}
       </ToastProvider>
     </DesktopServicesProvider>
   )

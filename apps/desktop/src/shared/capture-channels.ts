@@ -11,9 +11,16 @@ export const captureIpcChannels = {
   overlaySelection: 'capture:overlay-selection',
   overlayCancel: 'capture:overlay-cancel',
   requestResult: 'capture:request-result',
+  ocr: 'capture:ocr',
+  preview: 'capture:preview',
 } as const
 
 export type CapturePermission = 'granted' | 'denied' | 'not-needed' | 'unavailable'
+
+export interface CaptureOcrResult {
+  text: string
+  confidence: number | null
+}
 
 export interface CaptureSelection {
   /** 逻辑像素(与截图帧显示尺寸同坐标系) */

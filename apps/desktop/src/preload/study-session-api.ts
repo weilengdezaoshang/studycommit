@@ -58,6 +58,8 @@ export const capturePreloadApi = {
   request: () => ipcRenderer.invoke(captureIpcChannels.request),
   confirm: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.confirm, input),
   cancel: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.cancel, input),
+  preview: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.preview, input),
+  ocr: (input: unknown) => ipcRenderer.invoke(captureIpcChannels.ocr, input),
   /** 快捷键截图完成推送(主窗口无 invoke 挂起时接收) */
   onRequestResult: (listener: (result: unknown) => void) => {
     const wrapped = (_event: unknown, result: unknown) => listener(result)

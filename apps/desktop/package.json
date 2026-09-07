@@ -24,6 +24,7 @@
     "react-router": "^7.18.2",
     "roughjs": "^4.6.6",
     "svg2roughjs": "^3.2.3",
+    "tesseract.js": "^7.0.0",
     "three": "^0.185.1"
   },
   "devDependencies": {

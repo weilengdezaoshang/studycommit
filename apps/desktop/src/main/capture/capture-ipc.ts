@@ -1,10 +1,14 @@
 import { captureIpcChannels, isCaptureId, isCaptureSelection } from '../../shared/capture-channels'
 import type { CaptureConfirmResult } from '../../shared/capture-channels'
 import type { IpcHost } from '../ipc/ipc-host'
+import type { CaptureRegistry } from './capture-registry'
 import type { CaptureService } from './capture-service'
+import type { OcrService } from './ocr-service'
 
 export interface CaptureIpcDeps {
   service: CaptureService
+  registry: CaptureRegistry
+  ocr: OcrService
 }
 
 /** 拒绝非覆盖窗发来的消息;返回 null 表示忽略。 */
@@ -44,7 +48,30 @@ export function registerCaptureIpc(host: IpcHost, deps: CaptureIpcDeps): void {
     if (!isCaptureId(captureId)) {
       return false
     }
+    deps.ocr.forget(captureId)
     return deps.service.cancel(captureId)
+  })
+
+  // 本地 OCR(DE-311):同一 captureId 结果缓存,原始截图不出本机
+  host.handle(captureIpcChannels.ocr, async (input) => {
+    const captureId = (input as { captureId?: unknown } | undefined)?.captureId
+    if (!isCaptureId(captureId)) {
+      return { text: '', confidence: null }
+    }
+    const entry = deps.registry.get(captureId)
+    if (!entry) {
+      return { text: '', confidence: null }
+    }
+    return deps.ocr.recognize(captureId, entry.filePath)
+  })
+
+  // 确认页截图预览:仅本地内存 dataUrl
+  host.handle(captureIpcChannels.preview, async (input) => {
+    const captureId = (input as { captureId?: unknown } | undefined)?.captureId
+    if (!isCaptureId(captureId)) {
+      return null
+    }
+    return deps.service.getPreview(captureId)
   })
 
   // 覆盖窗通道:sender 必须是覆盖窗本身,载荷手工守卫(桌面 shared 层不引入 zod)

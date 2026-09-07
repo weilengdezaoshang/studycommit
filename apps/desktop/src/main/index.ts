@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 import { CaptureRegistry } from './capture/capture-registry'
 import { CaptureService } from './capture/capture-service'
+import { OcrService, resolveOcrModelsDir } from './capture/ocr-service'
 import { resolveDesktopServices } from './composition/create-services'
 import { loadDesktopEnvFile } from './env/load-desktop-env'
 import { registerDesktopIpc } from './ipc/register-desktop-ipc'
@@ -62,6 +63,7 @@ app.whenReady().then(() => {
 
   // 区域截图(DE-310):临时文件放系统 temp/studycommit-captures,退出清空
   const captureRegistry = new CaptureRegistry(join(app.getPath('temp'), 'studycommit-captures'))
+  const ocrService = new OcrService(resolveOcrModelsDir(app))
   const captureService = new CaptureService(captureRegistry, preloadPath, (overlay) => {
     if (is.dev && process.env.ELECTRON_RENDERER_URL) {
       return overlay.loadURL(`${process.env.ELECTRON_RENDERER_URL}#/capture-overlay`)
@@ -73,7 +75,7 @@ app.whenReady().then(() => {
     isDev: is.dev,
     rendererDevOrigin: process.env.ELECTRON_RENDERER_URL,
     capture: {
-      deps: { service: captureService },
+      deps: { service: captureService, registry: captureRegistry, ocr: ocrService },
       service: captureService,
       getMainWindow: () => mainWindow,
     },
@@ -82,6 +84,7 @@ app.whenReady().then(() => {
   app.on('before-quit', () => {
     disposeIpc()
     void captureService.dispose()
+    void ocrService.dispose()
   })
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

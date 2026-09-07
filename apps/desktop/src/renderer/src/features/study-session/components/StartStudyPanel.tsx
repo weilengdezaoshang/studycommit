@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
 import { Select } from '../../../components/select/Select'
+import { openCaptureConfirm } from '../../capture/confirm-store'
 import { useDesktopServices } from '../api/DesktopServicesProvider'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
 import {
@@ -37,7 +38,8 @@ function useCaptureEntry() {
         return
       }
       if (result.data.status === 'completed') {
-        setNotice(`截图已保存（${result.data.width}×${result.data.height}）`)
+        // 截图完成:打开问题确认页(DE-311)
+        openCaptureConfirm(result.data.captureId)
       } else if (result.data.status === 'permission-denied') {
         setPermissionDenied(true)
       } else if (result.data.status === 'failed') {

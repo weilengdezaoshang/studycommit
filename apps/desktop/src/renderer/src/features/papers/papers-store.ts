@@ -157,6 +157,25 @@ function createTopicStoreHost(
 const REMOTE_PAPER_PAGES = 3
 
 const papersActions = {
+  /** 截图确认页"仅保存文字"等入口:创建纸页并合入本地列表(DE-314 能力前置)。 */
+  async createPaper(input: { content: string; questionText?: string }): Promise<Paper> {
+    const api = papersApi()
+    if (!api) {
+      throw new Error('登录后才能保存纸页')
+    }
+    const saved = await unwrap(
+      api.create({
+        content: input.content,
+        ...(input.questionText ? { questionText: input.questionText } : {}),
+      }),
+    )
+    setState({
+      papers: [saved, ...state.papers],
+      extras: withQuestionExtras(state.extras, saved),
+      source: 'server',
+    })
+    return saved
+  },
   /** 登录后拉取云端纸页与箱子;失败时保留当前数据(演示或上一次成功结果)。 */
   async loadRemote(): Promise<void> {
     const api = papersApi()

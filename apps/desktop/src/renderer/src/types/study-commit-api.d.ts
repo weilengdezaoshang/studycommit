@@ -137,6 +137,10 @@ export interface StudyCommitCaptureApi {
   request: () => Promise<IpcResult<CaptureRequestResult>>
   confirm: (input: { captureId: string }) => Promise<IpcResult<CaptureConfirmResult | null>>
   cancel: (input: { captureId: string }) => Promise<IpcResult<boolean>>
+  preview: (input: { captureId: string }) => Promise<IpcResult<string | null>>
+  ocr: (input: {
+    captureId: string
+  }) => Promise<IpcResult<{ text: string; confidence: number | null }>>
   onRequestResult: (listener: (result: CaptureRequestResult) => void) => () => void
   overlayReady: () => Promise<IpcResult<{ ok: true }>>
   overlaySelection: (input: {

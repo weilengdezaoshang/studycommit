@@ -60,6 +60,8 @@ function createDefaultStudyCommit() {
       request: async () => ({ ok: false as const, error: configurationError() }),
       confirm: async () => ({ ok: true as const, data: null }),
       cancel: async () => ({ ok: true as const, data: true }),
+      preview: async () => ({ ok: true as const, data: null }),
+      ocr: async () => ({ ok: true as const, data: { text: '', confidence: null } }),
       onRequestResult: () => () => undefined,
       overlayReady: async () => ({ ok: true as const, data: { ok: true as const } }),
       overlaySelection: async () => ({ ok: true as const, data: { ok: true as const } }),

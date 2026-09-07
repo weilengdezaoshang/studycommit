@@ -39,6 +39,8 @@ interface PendingCapture {
 export class CaptureService {
   private overlayWindow: BrowserWindow | null = null
   private pending: PendingCapture | null = null
+  /** 确认页预览:captureId → dataUrl(仅本地内存,不落盘不上传) */
+  private readonly previews = new Map<string, string>()
 
   constructor(
     private readonly registry: CaptureRegistry,
@@ -129,6 +131,7 @@ export class CaptureService {
     })
     const size = cropped.getSize()
     const saved = await this.registry.save(cropped.toPNG(), size.width, size.height)
+    this.previews.set(saved.captureId, cropped.toDataURL())
     this.finish({
       status: 'completed',
       captureId: saved.captureId,
@@ -150,13 +153,20 @@ export class CaptureService {
     return this.registry.confirm(captureId)
   }
 
-  /** 丢弃截图:删除临时文件。 */
+  /** 确认页截图预览(本地内存中的 dataUrl)。 */
+  getPreview(captureId: string): string | null {
+    return this.previews.get(captureId) ?? null
+  }
+
+  /** 丢弃截图:删除临时文件与预览。 */
   async cancel(captureId: string): Promise<boolean> {
+    this.previews.delete(captureId)
     return this.registry.cancel(captureId)
   }
 
   /** 应用退出:清空全部临时截图。 */
   async dispose(): Promise<void> {
+    this.previews.clear()
     await this.registry.disposeAll()
   }
 

@@ -36,6 +36,12 @@ export class CaptureRegistry {
     return { captureId, filePath, width, height }
   }
 
+  /** 读取登记(OCR 需要临时文件路径)。 */
+  get(captureId: string): { filePath: string; width: number; height: number } | null {
+    const entry = this.entries.get(captureId)
+    return entry ? { filePath: entry.filePath, width: entry.width, height: entry.height } : null
+  }
+
   /** 用户确认:文件保留,交给保存流程消费。 */
   confirm(captureId: string): CapturedScreenshot | null {
     const entry = this.entries.get(captureId)
