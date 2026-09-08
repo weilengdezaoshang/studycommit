@@ -1048,26 +1048,6 @@ button:focus-visible {
   font-size: 26px;
   letter-spacing: -0.025em;
 }
-.auth-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 3px;
-  border-radius: 9px;
-  background: var(--color-surface-muted);
-}
-.auth-tabs button {
-  border: 0;
-  border-radius: 7px;
-  padding: 7px 10px;
-  color: var(--color-text-muted);
-  background: transparent;
-  cursor: pointer;
-  font-size: 12px;
-}
-.auth-tabs button.is-active {
-  color: var(--color-text);
-  background: var(--color-surface);
-}
 .auth-field {
   display: grid;
   gap: 8px;
@@ -5427,17 +5407,6 @@ button:focus-visible {
   padding: 0 10px;
   border-radius: 999px;
   color: var(--color-on-primary-surface);
-}
-
-.auth-tabs {
-  gap: 8px;
-}
-
-.auth-tabs button {
-  white-space: nowrap;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
 }
 
 /* 手机号表单:统一 44px 控件高度与留白 */
