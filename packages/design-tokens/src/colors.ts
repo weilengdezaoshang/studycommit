@@ -66,3 +66,51 @@ export const studyCommitColors = {
 } as const
 
 export type SemanticColors = typeof lightColors | typeof darkColors
+
+/** 雾蓝手绘主题：跨端原型统一使用，既有主题保持兼容。 */
+export const studyCommitMistBlueColors = {
+  ink: '#303D50',
+  muted: '#59677B',
+  paper: '#FFFEFC',
+  canvas: '#E9EDF3',
+  line: '#D5DDE8',
+  accent: '#D2E0F4',
+  action: '#4A6388',
+  actionSurface: '#DCE6F5',
+  actionSurfaceStrong: '#CFDDF0',
+  selectedSurface: '#EDF2FA',
+  surfaceSoft: '#F7F8FB',
+  surfaceWarm: '#F1F3F8',
+  lineStrong: '#A6B8D2',
+  timeline: '#AAB9CD',
+  mutedSoft: '#7C8797',
+  mutedFaint: '#929BAB',
+  scrim: '#303D5099',
+} as const
+
+/**
+ * 雾蓝语义浅色板：品牌与中性色取自雾蓝纸面色板，状态色沿用 lightColors 语义。
+ * 深色模式本期沿用 darkColors，雾蓝深色板待设计确认后另行补充。
+ */
+export const mistLightColors: { readonly [Key in keyof typeof lightColors]: string } = {
+  background: '#E9EDF3',
+  surface: '#FFFEFC',
+  surfaceMuted: '#F7F8FB',
+  text: '#303D50',
+  textMuted: '#59677B',
+  textDisabled: '#929BAB',
+  primary: '#4A6388',
+  onPrimary: '#FFFFFF',
+  primarySurface: '#DCE6F5',
+  onPrimarySurface: '#4A6388',
+  border: '#D5DDE8',
+  borderStrong: '#A6B8D2',
+  danger: '#B42318',
+  onDanger: '#FFFFFF',
+  dangerSurface: '#FEE4E2',
+  success: '#16794D',
+  successSurface: '#DDF3E8',
+  warning: '#8A4B08',
+  warningSurface: '#FFF0CF',
+  scrim: '#303D5099',
+}

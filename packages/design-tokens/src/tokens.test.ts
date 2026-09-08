@@ -1,13 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { darkColors, lightColors, motion, radii, sizes, spacing, typography } from './index'
+import {
+  darkColors,
+  lightColors,
+  mistLightColors,
+  motion,
+  radii,
+  sizes,
+  spacing,
+  studyCommitColors,
+  studyCommitMistBlueColors,
+  typography,
+} from './index'
 
 describe('cross-platform design tokens', () => {
   it('keeps the same semantic color contract in light and dark themes', () => {
     expect(Object.keys(darkColors).sort()).toEqual(Object.keys(lightColors).sort())
   })
 
+  it('保持雾蓝语义浅色板与既有语义色板同键同状态色', () => {
+    expect(Object.keys(mistLightColors).sort()).toEqual(Object.keys(lightColors).sort())
+    // 品牌与中性色切换雾蓝，状态语义色保持不变。
+    expect(mistLightColors.primary).toBe(studyCommitMistBlueColors.action)
+    expect(mistLightColors.text).toBe(studyCommitMistBlueColors.ink)
+    expect(mistLightColors.danger).toBe(lightColors.danger)
+    expect(mistLightColors.success).toBe(lightColors.success)
+    expect(mistLightColors.warning).toBe(lightColors.warning)
+  })
+
+  it('保持雾蓝纸面色板与鼠尾草纸面色板同键', () => {
+    expect(Object.keys(studyCommitMistBlueColors).sort()).toEqual(
+      Object.keys(studyCommitColors).sort(),
+    )
+  })
+
   it('uses portable hexadecimal color values', () => {
-    for (const value of [...Object.values(lightColors), ...Object.values(darkColors)]) {
+    for (const value of [
+      ...Object.values(lightColors),
+      ...Object.values(darkColors),
+      ...Object.values(mistLightColors),
+      ...Object.values(studyCommitColors),
+      ...Object.values(studyCommitMistBlueColors),
+    ]) {
       expect(value).toMatch(/^#[0-9A-F]{6}(?:[0-9A-F]{2})?$/i)
     }
   })
@@ -31,5 +64,6 @@ describe('cross-platform design tokens', () => {
     expect(sizes.iconMd).toBe(20)
     expect(lightColors.primary).toBe('#0F766E')
     expect(darkColors.primary).toBe('#72CEC5')
+    expect(mistLightColors.primary).toBe('#4A6388')
   })
 })
