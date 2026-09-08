@@ -9,7 +9,7 @@ import { ReviewScreen } from '../screens/review/ReviewScreen'
 import { SearchScreen } from '../screens/search/SearchScreen'
 import { TopicsScreen } from '../screens/topics/TopicsScreen'
 import { CollectionScreen } from '../screens/collection/CollectionScreen'
-import { studyCommitColors } from '@studycommit/design-tokens'
+import { studyCommitMistBlueColors } from '@studycommit/design-tokens'
 import type { RootStackParamList } from './navigation.types'
 
 const Stack = createNativeStackNavigator<RootStackParamList>()
@@ -57,12 +57,12 @@ function createNavigationTheme() {
   return {
     dark: false,
     colors: {
-      primary: studyCommitColors.action,
-      background: studyCommitColors.paper,
-      card: studyCommitColors.paper,
-      text: studyCommitColors.ink,
-      border: studyCommitColors.line,
-      notification: studyCommitColors.accent,
+      primary: studyCommitMistBlueColors.action,
+      background: studyCommitMistBlueColors.paper,
+      card: studyCommitMistBlueColors.paper,
+      text: studyCommitMistBlueColors.ink,
+      border: studyCommitMistBlueColors.line,
+      notification: studyCommitMistBlueColors.accent,
     },
     fonts: {
       regular: { fontFamily: 'System', fontWeight: '400' },

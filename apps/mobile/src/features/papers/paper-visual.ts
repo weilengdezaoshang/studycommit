@@ -1,9 +1,9 @@
 import { StyleSheet } from 'react-native'
 import type { TemplateSummary } from '@studycommit/rpc-contracts/templates'
-import { studyCommitColors } from '@studycommit/design-tokens'
+import { studyCommitMistBlueColors } from '@studycommit/design-tokens'
 
-/** 纸张/鼠尾草主题色(与小程序 tokens 对齐)。 */
-export const paperColors = studyCommitColors
+/** 纸张/雾蓝主题色(与小程序 tokens 对齐)。 */
+export const paperColors = studyCommitMistBlueColors
 
 /** 四种纸页模板的卡片视觉:布局优先阶段以底色与角标区分,后续再画点阵/横线纹理。 */
 export type PaperBackground = TemplateSummary['paperBackground']
