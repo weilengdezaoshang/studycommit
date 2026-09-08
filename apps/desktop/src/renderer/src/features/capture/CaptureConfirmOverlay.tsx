@@ -76,6 +76,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
   )
   const hasQuestion = question.trim().length > 0
   const hasText = ocrText.trim().length > 0
+  const nearTextLimit = ocrText.length >= UNDERSTANDING_MAX - 2_000
 
   const close = () => {
     closeCaptureConfirm()
@@ -204,6 +205,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
           <label htmlFor="capture-ocr-text">识别原文（可编辑，仅保存在本机与纸页正文）</label>
           <textarea
             id="capture-ocr-text"
+            className="capture-textarea"
             value={ocrText}
             rows={5}
             maxLength={UNDERSTANDING_MAX}
@@ -211,6 +213,11 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
             onChange={(event) => setOcrText(event.target.value)}
             placeholder="识别不到文字时，可以直接写下想记的内容"
           />
+          {nearTextLimit && (
+            <span className="capture-counter" role="status">
+              {`${ocrText.length.toLocaleString()} / ${UNDERSTANDING_MAX.toLocaleString()}`}
+            </span>
+          )}
         </div>
 
         <div className="field">

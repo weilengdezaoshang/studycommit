@@ -6782,3 +6782,19 @@ button:focus-visible {
 .search-empty p {
   margin: 0;
 }
+
+/* V7 写记录（R68）：识别原文编辑区限高内部滚动，近上限字数反馈放在正文下方。 */
+.capture-textarea {
+  max-height: 280px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+.capture-counter {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
