@@ -163,7 +163,7 @@ export function SearchPage(): React.JSX.Element {
           )}
         </ul>
       ) : null}
-      {keyword && rows.length > 0 ? (
+      {keyword && rows.length > 0 && showServer ? (
         <p className="search-note">搜索范围为记录正文、疑问和主题名称，按更新时间排列。</p>
       ) : null}
       {keyword && rows.length === 0 ? (
