@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAssetUpload, useRecoverableDraft } from '@studycommit/common/paper-react'
 import type { PaperDraftStorage } from '@studycommit/common/paper-react'
+import { PAPER_CONTENT_MAX_LENGTH } from '@studycommit/common/paper-runtime'
 import { paperColors } from '../../features/papers/paper-visual'
 import { createMobileDraftStorage } from '../../features/papers/draft-storage'
 import { papersActions, uuid } from '../../features/papers/papers-store'
@@ -58,6 +59,9 @@ export function NoteEditorScreen() {
   const hasRecoveredContent = controller.recovered && !recoveryDismissed
   const photoUri = draft?.localPhotoUri ?? null
   const photoUploadId = draft?.assetUploadIds[0] ?? null
+  const contentLength = draft?.content.length ?? 0
+  const nearContentLimit = contentLength >= PAPER_CONTENT_MAX_LENGTH - 2_000
+  const overContentLimit = contentLength > PAPER_CONTENT_MAX_LENGTH
 
   // 保存时创建网关需要当前图片引用:在 effect 中同步,渲染期不读 ref
   useEffect(() => {
@@ -123,18 +127,19 @@ export function NoteEditorScreen() {
     })
   }
 
-  const statusHint =
-    pickError ??
-    assetUpload.uploadError ??
-    (controller.loading
-      ? ''
-      : controller.saving
-        ? '正在保存…'
-        : controller.saveError
-          ? controller.saveError
-          : controller.savedAt
-            ? `草稿已保存 ${formatTime(controller.savedAt)}`
-            : '自动保存中')
+  const statusHint = overContentLimit
+    ? `正文最多 ${PAPER_CONTENT_MAX_LENGTH} 字，草稿已保留`
+    : (pickError ??
+      assetUpload.uploadError ??
+      (controller.loading
+        ? ''
+        : controller.saving
+          ? '正在保存…'
+          : controller.saveError
+            ? controller.saveError
+            : controller.savedAt
+              ? `草稿已保存 ${formatTime(controller.savedAt)}`
+              : '自动保存中'))
 
   return (
     <KeyboardAvoidingView
@@ -154,10 +159,17 @@ export function NoteEditorScreen() {
           accessibilityRole="button"
           accessibilityLabel="记下"
           onPress={save}
-          disabled={controller.saving}
+          disabled={controller.saving || overContentLimit}
           style={styles.topButton}
         >
-          <Text style={[styles.saveText, controller.saving && styles.saveTextDisabled]}>记下</Text>
+          <Text
+            style={[
+              styles.saveText,
+              (controller.saving || overContentLimit) && styles.saveTextDisabled,
+            ]}
+          >
+            记下
+          </Text>
         </Pressable>
       </View>
 
@@ -193,6 +205,14 @@ export function NoteEditorScreen() {
           }
           textAlignVertical="top"
         />
+        {nearContentLimit && (
+          <Text
+            style={[styles.counter, overContentLimit && styles.counterOver]}
+            accessibilityLiveRegion="polite"
+          >
+            {`${contentLength.toLocaleString()} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString()}`}
+          </Text>
+        )}
         {photoUri ? (
           <View style={styles.photoRow}>
             <Image source={{ uri: photoUri }} style={styles.photoPreview} />
@@ -333,6 +353,13 @@ const styles = StyleSheet.create({
   },
   dateText: { color: paperColors.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1 },
   input: { flex: 1, color: paperColors.ink, fontSize: 15, lineHeight: 24, padding: 0 },
+  counter: {
+    alignSelf: 'flex-end',
+    color: paperColors.muted,
+    fontSize: 11,
+    fontVariant: ['tabular-nums'],
+  },
+  counterOver: { color: paperColors.action, fontWeight: '600' },
   photoRow: {
     marginTop: 10,
     flexDirection: 'row',
