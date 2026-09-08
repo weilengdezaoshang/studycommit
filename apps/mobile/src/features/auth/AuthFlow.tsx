@@ -29,8 +29,12 @@ export function AuthFlow() {
   const [submitting, setSubmitting] = useState(false)
 
   const accountValid = account.trim().length >= 2
+  // 昵称与后端契约对齐为可选:留空跳过,填写时仍需 2-30 字
+  const trimmedNickname = nickname.trim()
   const nicknameValid =
-    mode === 'login' || (nickname.trim().length >= 2 && nickname.trim().length <= 30)
+    mode === 'login' ||
+    trimmedNickname.length === 0 ||
+    (trimmedNickname.length >= 2 && trimmedNickname.length <= 30)
   const passwordValid = password.length >= 8
   const confirmValid = mode === 'login' || password === confirmPassword
   const agreementValid = mode === 'login' || agreed
@@ -133,7 +137,7 @@ export function AuthFlow() {
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={30}
-              placeholder="昵称（2-30 字，可选）"
+              placeholder="昵称（选填，2-30 字）"
               placeholderTextColor={paperColors.mutedFaint}
               value={nickname}
               onChangeText={setNickname}
