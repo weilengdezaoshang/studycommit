@@ -1,5 +1,6 @@
 import { oc } from '@orpc/contract'
 import { z } from 'zod'
+import { assetKindSchema, assetMimeTypeSchema } from './uploads.js'
 
 export const paperStatusSchema = z.enum(['inbox', 'organized'])
 
@@ -25,6 +26,18 @@ export const paperSchema = z.object({
   source: z.enum(['mobile_direct', 'desktop_capture', 'desktop_session']).optional(),
   /** 来源学习会话;桌面收尾创建的"下一个问题"回链会话。 */
   sourceSessionId: z.uuid().nullable().optional(),
+  /** 已绑定的图片资产摘要;渲染时经 uploads.access 换短时地址。 */
+  assets: z
+    .array(
+      z.object({
+        id: z.uuid(),
+        kind: assetKindSchema,
+        mimeType: assetMimeTypeSchema,
+        width: z.number().int().positive(),
+        height: z.number().int().positive(),
+      }),
+    )
+    .optional(),
 })
 
 export const createPaperInputSchema = z.object({

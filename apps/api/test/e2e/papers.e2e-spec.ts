@@ -782,4 +782,41 @@ describe('Papers API', () => {
     expect(foreign.statusCode).toBe(404)
     expect(foreign.json().code).toBe('PAPER_NOT_FOUND')
   })
+  it('纸页输出携带已绑定的图片资产摘要', async () => {
+    const created = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/papers',
+        headers: { 'x-user-id': userA, 'idempotency-key': crypto.randomUUID() },
+        payload: { content: '带截图的纸页' },
+      })
+    ).json()
+
+    await pool.query(
+      `INSERT INTO paper_assets (user_id, paper_id, upload_id, kind, status, storage_key, mime_type, size_bytes, width, height, sha256, expires_at)
+       VALUES ($1, $2, $3, 'source_screenshot', 'attached', 'u/x/1.png', 'image/png', 1024, 800, 600, repeat('a', 64), now() + interval '24 hours')`,
+      [userA, created.id, crypto.randomUUID()],
+    )
+
+    const fetched = (
+      await app.inject({
+        method: 'GET',
+        url: `/api/papers/${created.id}`,
+        headers: { 'x-user-id': userA },
+      })
+    ).json()
+    expect(fetched.assets).toEqual([
+      { id: expect.any(String), kind: 'source_screenshot', mimeType: 'image/png', width: 800, height: 600 },
+    ])
+
+    const list = (
+      await app.inject({
+        method: 'GET',
+        url: '/api/papers?limit=50',
+        headers: { 'x-user-id': userA },
+      })
+    ).json()
+    const hit = list.items.find((item: { id: string }) => item.id === created.id)
+    expect(hit.assets).toHaveLength(1)
+  })
 })

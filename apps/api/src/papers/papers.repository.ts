@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common'
-import { and, desc, eq, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import { and, asc, inArray, desc, eq, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import type {
   CreatePaperInput,
   ListPapersInput,
@@ -10,7 +10,7 @@ import type {
 } from '@studycommit/rpc-contracts/papers'
 import { z } from 'zod'
 import { DatabaseService } from '../database/database.service'
-import { idempotencyRecords, papers, topics } from '../database/schema'
+import { idempotencyRecords, paperAssets, papers, topics } from '../database/schema'
 import { TOPIC_STATUS } from '../topics/topic.constants'
 import {
   PAPER_COMMAND_KIND,
@@ -71,6 +71,64 @@ export class PapersRepository {
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(UploadsRepository) private readonly uploads: UploadsRepository,
   ) {}
+
+  /** 批量读取已绑定图片资产摘要(跨设备渲染用),按 paperId 分组。 */
+  async findAttachedAssetsByPaperIds(
+    userId: string,
+    paperIds: string[],
+  ): Promise<
+    Map<
+      string,
+      { id: string; kind: 'image' | 'source_screenshot'; mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; width: number; height: number }[]
+    >
+  > {
+    const grouped = new Map<
+      string,
+      { id: string; kind: 'image' | 'source_screenshot'; mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; width: number; height: number }[]
+    >()
+    if (paperIds.length === 0) {
+      return grouped
+    }
+    const rows = await this.database.db
+      .select({
+        paperId: paperAssets.paperId,
+        id: paperAssets.id,
+        kind: paperAssets.kind,
+        mimeType: paperAssets.mimeType,
+        width: paperAssets.width,
+        height: paperAssets.height,
+      })
+      .from(paperAssets)
+      .where(
+        and(
+          eq(paperAssets.userId, userId),
+          inArray(paperAssets.paperId, paperIds),
+          eq(paperAssets.status, 'attached'),
+          isNull(paperAssets.deletedAt),
+        ),
+      )
+      .orderBy(asc(paperAssets.id))
+    for (const row of rows) {
+      if (row.paperId === null || row.width === null || row.height === null) {
+        continue
+      }
+      const list = grouped.get(row.paperId) ?? []
+      // mime 列为 text:仅透传契约允许的三种,异常值兜底为 jpeg
+      const mimeType =
+        row.mimeType === 'image/png' || row.mimeType === 'image/webp'
+          ? row.mimeType
+          : ('image/jpeg' as const)
+      list.push({
+        id: row.id,
+        kind: row.kind,
+        mimeType,
+        width: row.width,
+        height: row.height,
+      })
+      grouped.set(row.paperId, list)
+    }
+    return grouped
+  }
 
   async findById(userId: string, id: string) {
     const [paper] = await this.database.db

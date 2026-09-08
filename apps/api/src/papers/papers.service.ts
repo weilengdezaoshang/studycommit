@@ -70,11 +70,13 @@ export class PapersService {
     const requestHash = hash(input)
     try {
       return this.mapCreateResult(
+        userId,
         await this.repository.create(userId, input, { key, hash: requestHash }),
       )
     } catch (error) {
       if (isConstraint(error, IDEMPOTENCY_RECORDS_PKEY)) {
         return this.mapCreateResult(
+          userId,
           await this.repository.create(userId, input, { key, hash: requestHash }),
         )
       }
@@ -87,36 +89,36 @@ export class PapersService {
     if (!paper) {
       throw new NotFoundException(PAPER_ERROR.notFound)
     }
-    return this.toPaper(paper)
+    return this.decorateOne(userId, paper)
   }
 
   async organize(userId: string, input: OrganizePaperInput) {
     const result = await this.repository.organize(userId, input)
     if (result.kind === PAPER_ORGANIZE_KIND.ok) {
-      return this.toPaper(result.paper)
+      return this.decorateOne(userId, result.paper)
     }
     if (result.kind === PAPER_ORGANIZE_KIND.versionConflict) {
       throw new ConflictException({
         ...PAPER_ERROR.versionConflict,
-        details: { paper: this.toPaper(result.paper) },
+        details: { paper: await this.decorateOne(userId, result.paper) },
       })
     }
     throw organizeErrors[result.kind]()
   }
 
   async update(userId: string, input: UpdatePaperInput) {
-    return this.mapWrite(await this.repository.update(userId, input))
+    return this.mapWrite(userId, await this.repository.update(userId, input))
   }
 
   async updateQuestion(userId: string, input: UpdatePaperQuestionInput) {
     const result = await this.repository.updateQuestion(userId, input)
     if (result.kind === PAPER_QUESTION_KIND.ok) {
-      return this.toPaper(result.paper)
+      return this.decorateOne(userId, result.paper)
     }
     if (result.kind === PAPER_QUESTION_KIND.versionConflict) {
       throw new ConflictException({
         ...PAPER_ERROR.versionConflict,
-        details: { paper: this.toPaper(result.paper) },
+        details: { paper: await this.decorateOne(userId, result.paper) },
       })
     }
     if (result.kind === PAPER_QUESTION_KIND.invalidTransition) {
@@ -130,11 +132,11 @@ export class PapersService {
   }
 
   async restore(userId: string, input: PaperCommandInput) {
-    return this.mapWrite(await this.repository.restore(userId, input))
+    return this.mapWrite(userId, await this.repository.restore(userId, input))
   }
 
   async moveToInbox(userId: string, input: PaperCommandInput) {
-    return this.mapWrite(await this.repository.moveToInbox(userId, input))
+    return this.mapWrite(userId, await this.repository.moveToInbox(userId, input))
   }
 
   async remove(userId: string, input: PaperCommandInput) {
@@ -152,7 +154,7 @@ export class PapersService {
     if (result.kind === PAPER_COMMAND_KIND.versionConflict) {
       throw new ConflictException({
         ...PAPER_ERROR.versionConflict,
-        details: { paper: this.toPaper(result.paper) },
+        details: { paper: await this.decorateOne(userId, result.paper) },
       })
     }
     throw new NotFoundException(PAPER_ERROR.notFound)
@@ -161,7 +163,7 @@ export class PapersService {
   async list(userId: string, input: ListPapersInput) {
     try {
       const page = await this.repository.list(userId, input)
-      return { ...page, items: page.items.map((paper) => this.toPaper(paper)) }
+      return { ...page, items: await this.decorate(userId, page.items) }
     } catch (error) {
       if (error instanceof Error && error.message === 'INVALID_CURSOR') {
         throw new BadRequestException({ code: 'INVALID_CURSOR', message: '分页游标无效' })
@@ -170,27 +172,46 @@ export class PapersService {
     }
   }
 
-  private mapCreateResult(result: Awaited<ReturnType<PapersRepository['create']>>) {
+  private async mapCreateResult(
+    userId: string,
+    result: Awaited<ReturnType<PapersRepository['create']>>,
+  ) {
     if (result.kind === PAPER_CREATE_KIND.ok) {
-      return { paper: this.toPaper(result.paper), replayed: result.replayed }
+      return {
+        paper: await this.decorateOne(userId, result.paper),
+        replayed: result.replayed,
+      }
     }
     throw new ConflictException(IDEMPOTENCY_ERROR.keyReused)
   }
 
-  private mapWrite(result: PaperCommandResult): Paper {
+  private async mapWrite(userId: string, result: PaperCommandResult): Promise<Paper> {
     if (result.kind === PAPER_COMMAND_KIND.ok) {
-      return this.toPaper(result.paper)
+      return this.decorateOne(userId, result.paper)
     }
     if (result.kind === PAPER_COMMAND_KIND.versionConflict) {
       throw new ConflictException({
         ...PAPER_ERROR.versionConflict,
-        details: { paper: this.toPaper(result.paper) },
+        details: { paper: await this.decorateOne(userId, result.paper) },
       })
     }
     throw new NotFoundException(PAPER_ERROR.notFound)
   }
 
-  private toPaper(row: PaperRow): Paper {
+  /** 批量装配已绑定资产摘要:两次查询,避免 N+1。 */
+  private async decorate(userId: string, rows: PaperRow[]): Promise<Paper[]> {
+    const assetsMap = await this.repository.findAttachedAssetsByPaperIds(
+      userId,
+      rows.map((row) => row.id),
+    )
+    return rows.map((row) => this.mapPaper(row, assetsMap.get(row.id) ?? []))
+  }
+
+  private async decorateOne(userId: string, row: PaperRow): Promise<Paper> {
+    return (await this.decorate(userId, [row]))[0]
+  }
+
+  private mapPaper(row: PaperRow, assets: Paper['assets']): Paper {
     return {
       id: row.id,
       content: row.content,
@@ -211,6 +232,7 @@ export class PapersService {
           ? row.source
           : ('mobile_direct' as const),
       sourceSessionId: row.sourceSessionId,
+      assets,
     }
   }
 }
