@@ -69,6 +69,9 @@ export const studyCommitMistBlueColors = {
 
 /**
  * 雾蓝语义浅色板：品牌与中性色取自雾蓝纸面色板，状态色沿用 lightColors 语义。
+ * onPrimarySurface 为 action 的深一级变体，用于 primarySurface 底上的文字；
+ * scrim 与 lightColors.scrim 同为 40% 不透明度，仅色相换为雾蓝墨色，
+ * 桌面 color-mix 消费者的视觉权重才能与切换前对齐。
  * 深色模式本期沿用 darkColors，雾蓝深色板待设计确认后另行补充。
  */
 export const mistLightColors: { readonly [Key in keyof typeof lightColors]: string } = {
@@ -81,7 +84,7 @@ export const mistLightColors: { readonly [Key in keyof typeof lightColors]: stri
   primary: '#4A6388',
   onPrimary: '#FFFFFF',
   primarySurface: '#DCE6F5',
-  onPrimarySurface: '#4A6388',
+  onPrimarySurface: '#3B4F6D',
   border: '#D5DDE8',
   borderStrong: '#A6B8D2',
   danger: '#B42318',
@@ -91,5 +94,5 @@ export const mistLightColors: { readonly [Key in keyof typeof lightColors]: stri
   successSurface: '#DDF3E8',
   warning: '#8A4B08',
   warningSurface: '#FFF0CF',
-  scrim: '#303D5099',
+  scrim: '#303D5066',
 }

@@ -24,6 +24,10 @@ describe('cross-platform design tokens', () => {
     expect(mistLightColors.danger).toBe(lightColors.danger)
     expect(mistLightColors.success).toBe(lightColors.success)
     expect(mistLightColors.warning).toBe(lightColors.warning)
+    // scrim 与 lightColors 同为 40% 不透明度，桌面遮罩权重不因换色变深。
+    expect(mistLightColors.scrim).toBe('#303D5066')
+    // onPrimarySurface 比 primary 深一级，用于 primarySurface 底上的文字。
+    expect(mistLightColors.onPrimarySurface).toBe('#3B4F6D')
   })
 
   it('雾蓝纸面色板导出完整键位', () => {
