@@ -119,6 +119,18 @@ export function PaperDetailScreen() {
           </View>
         )}
         <Text style={styles.content}>{paper.content}</Text>
+        {paper.questionText ? (
+          <View style={styles.questionBlock}>
+            <Text style={styles.blockLabel}>当时留下的疑问</Text>
+            <Text style={styles.blockText}>{paper.questionText}</Text>
+          </View>
+        ) : null}
+        {paper.understandingText ? (
+          <View style={styles.understandingBlock}>
+            <Text style={styles.blockLabel}>我的理解</Text>
+            <Text style={styles.blockText}>{paper.understandingText}</Text>
+          </View>
+        ) : null}
         {extra?.photoPath ? (
           <Image source={{ uri: extra.photoPath }} style={styles.photoPreview} />
         ) : remoteImageUrl ? (
@@ -294,6 +306,24 @@ const styles = StyleSheet.create({
   },
   topicChipText: { color: paperColors.action, fontSize: 11 },
   content: { color: paperColors.ink, fontSize: 16, lineHeight: 28 },
+  questionBlock: {
+    marginTop: 16,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: paperColors.action,
+    backgroundColor: paperColors.surfaceSoft,
+    padding: 12,
+    gap: 6,
+  },
+  understandingBlock: {
+    marginTop: 12,
+    borderRadius: 12,
+    backgroundColor: paperColors.actionSurface,
+    padding: 12,
+    gap: 6,
+  },
+  blockLabel: { color: paperColors.muted, fontSize: 11 },
+  blockText: { color: paperColors.ink, fontSize: 14, lineHeight: 24 },
   photoPreview: {
     width: '100%',
     height: 200,

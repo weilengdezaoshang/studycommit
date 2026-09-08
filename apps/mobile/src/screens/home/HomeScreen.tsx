@@ -486,7 +486,7 @@ function DrawerProfile({ onSearch, onClose }: { onSearch: () => void; onClose: (
       <View style={styles.drawerActions}>
         <IconButton
           name="search"
-          label="搜索纸页与主题"
+          label="搜索记录、疑问或主题"
           onPress={onSearch}
           iconSize={16}
           buttonSize={32}

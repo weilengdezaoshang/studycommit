@@ -35,7 +35,7 @@ describe('SearchScreen offline fallback', () => {
     const view = await render(<SearchScreen />)
 
     // 输入与防抖在 act 外发生(与成功用例一致);仅失败分支包回 act,保证状态更新落地
-    fireEvent.changeText(view.getByPlaceholderText('搜索纸页与主题'), '调度')
+    fireEvent.changeText(view.getByPlaceholderText('搜索记录、疑问或主题'), '调度')
     for (let i = 0; i < 40 && mockQuery.mock.calls.length === 0; i += 1) {
       await new Promise((resolve) => setTimeout(resolve, 50))
     }

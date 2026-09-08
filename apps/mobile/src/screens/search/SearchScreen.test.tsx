@@ -66,7 +66,7 @@ describe('SearchScreen server search', () => {
     })
 
     const view = await renderSearch()
-    fireEvent.changeText(view.getByPlaceholderText('搜索纸页与主题'), '小顶堆')
+    fireEvent.changeText(view.getByPlaceholderText('搜索记录、疑问或主题'), '小顶堆')
 
     await view.findByText('云端纸页:调度器小顶堆')
     expect(await view.findByText('云端箱子')).toBeTruthy()
@@ -88,7 +88,7 @@ describe('SearchScreen server search', () => {
     })
 
     const view = await renderSearch()
-    fireEvent.changeText(view.getByPlaceholderText('搜索纸页与主题'), '箱子')
+    fireEvent.changeText(view.getByPlaceholderText('搜索记录、疑问或主题'), '箱子')
 
     fireEvent.press(await view.findByText('要筛选的箱子'))
     await waitFor(() => {

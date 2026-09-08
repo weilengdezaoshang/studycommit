@@ -127,7 +127,7 @@ export function SearchScreen() {
         <TextInput
           style={styles.input}
           autoFocus
-          placeholder="搜索纸页与主题"
+          placeholder="搜索记录、疑问或主题"
           placeholderTextColor={paperColors.mutedFaint ?? paperColors.muted}
           value={query}
           onChangeText={setQuery}
@@ -145,7 +145,7 @@ export function SearchScreen() {
       </View>
 
       {keyword.length === 0 ? (
-        <Text style={styles.hint}>输入关键词，找回过去的记录</Text>
+        <Text style={styles.hint}>输入关键词，找回过去的记录（搜索范围为记录、疑问和主题）</Text>
       ) : results.length > 0 ? (
         <ScrollView contentContainerStyle={styles.results}>
           {keyword.length > 0 && serverFailed ? (
@@ -164,8 +164,9 @@ export function SearchScreen() {
               }}
               style={styles.result}
             >
+              <View style={styles.resultCorner} pointerEvents="none" />
               <Text style={styles.resultTitle}>{result.title}</Text>
-              <Text style={styles.resultDetail} numberOfLines={2}>
+              <Text style={styles.resultDetail} numberOfLines={3}>
                 {result.detail}
               </Text>
             </Pressable>
@@ -174,7 +175,7 @@ export function SearchScreen() {
       ) : (
         <View style={styles.empty}>
           <PaperEmptyIllustration />
-          <Text style={styles.emptyText}>没有找到相关内容</Text>
+          <Text style={styles.emptyText}>没有找到与「{keyword}」相关的内容</Text>
         </View>
       )}
     </View>
@@ -182,13 +183,14 @@ export function SearchScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: paperColors.paper },
+  page: { flex: 1, backgroundColor: paperColors.canvas },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
     height: 52,
+    backgroundColor: paperColors.canvas,
   },
   backButton: { minWidth: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
   title: { color: paperColors.muted, fontSize: 14, fontWeight: '500' },
@@ -205,28 +207,49 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: paperColors.line,
-    backgroundColor: paperColors.surfaceSoft,
+    backgroundColor: paperColors.paper,
     paddingHorizontal: 12,
     color: paperColors.ink,
     fontSize: 14,
   },
   clearButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   clearText: { color: paperColors.muted, fontSize: 13 },
-  hint: { margin: 20, color: paperColors.muted, fontSize: 13 },
+  hint: { margin: 20, color: paperColors.muted, fontSize: 13, lineHeight: 20 },
   offlineNote: {
     color: paperColors.mutedFaint ?? paperColors.muted,
     fontSize: 11,
     paddingVertical: 6,
   },
-  results: { padding: 16, gap: 4 },
+  results: { padding: 16, gap: 12 },
   result: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: paperColors.line,
-    paddingVertical: 12,
-    gap: 4,
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: paperColors.paper,
+    borderRadius: 14,
+    borderTopRightRadius: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: paperColors.line,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 6,
+    shadowColor: paperColors.ink,
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
-  resultTitle: { color: paperColors.action, fontSize: 12 },
-  resultDetail: { color: paperColors.ink, fontSize: 14 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  resultCorner: {
+    position: 'absolute',
+    top: 3,
+    right: 10,
+    width: 24,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: paperColors.accent,
+    transform: [{ rotate: '6deg' }],
+  },
+  resultTitle: { color: paperColors.muted, fontSize: 12, fontVariant: ['tabular-nums'] },
+  resultDetail: { color: paperColors.ink, fontSize: 15, lineHeight: 24 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   emptyText: { color: paperColors.muted, fontSize: 14 },
 })
