@@ -128,7 +128,7 @@ export function SearchScreen() {
           style={styles.input}
           autoFocus
           placeholder="搜索记录、疑问或主题"
-          placeholderTextColor={paperColors.mutedFaint ?? paperColors.muted}
+          placeholderTextColor={paperColors.mutedFaint}
           value={query}
           onChangeText={setQuery}
         />
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   clearText: { color: paperColors.muted, fontSize: 13 },
   hint: { margin: 20, color: paperColors.muted, fontSize: 13, lineHeight: 20 },
   offlineNote: {
-    color: paperColors.mutedFaint ?? paperColors.muted,
+    color: paperColors.mutedFaint,
     fontSize: 11,
     paddingVertical: 6,
   },

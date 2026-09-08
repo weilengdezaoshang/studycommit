@@ -1,6 +1,6 @@
 import {
   darkColors,
-  lightColors,
+  mistLightColors,
   motion,
   radii,
   sizes,
@@ -33,14 +33,14 @@ describe('design tokens', () => {
       'scrim',
     ]
 
-    expect(Object.keys(lightColors).sort()).toEqual(requiredColors.sort())
+    expect(Object.keys(mistLightColors).sort()).toEqual(requiredColors.sort())
     expect(Object.keys(darkColors).sort()).toEqual(requiredColors.sort())
   })
 
   it('uses valid hex colors without business-specific names', () => {
     const businessWords = /topic|note|review/i
 
-    for (const colors of [lightColors, darkColors]) {
+    for (const colors of [mistLightColors, darkColors]) {
       for (const [name, value] of Object.entries(colors)) {
         expect(name).not.toMatch(businessWords)
         expect(value).toMatch(/^#[\dA-F]{6}([\dA-F]{2})?$/i)

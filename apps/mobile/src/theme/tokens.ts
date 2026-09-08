@@ -2,7 +2,6 @@ import { sizes as sharedSizes } from '@studycommit/design-tokens'
 
 export {
   darkColors,
-  lightColors,
   mistLightColors,
   motion,
   radii,
