@@ -2,9 +2,9 @@
   "pages": ["pages/home/home", "pages/login/login", "pages/note-editor/note-editor"],
   "window": {
     "navigationBarTitleText": "StudyCommit",
-    "navigationBarBackgroundColor": "#fffef9",
+    "navigationBarBackgroundColor": "#fffefc",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#fffef9",
+    "backgroundColor": "#fffefc",
     "backgroundTextStyle": "light"
   },
   "sitemapLocation": "sitemap.json"

@@ -28,7 +28,7 @@
   padding: 0 var(--drawer-gutter, 32rpx);
   gap: 12rpx;
   box-sizing: border-box;
-  color: var(--sc-ink, #34423b);
+  color: var(--sc-ink, #303d50);
   font-size: 26rpx;
   text-align: left;
 }

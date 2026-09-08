@@ -5,10 +5,10 @@
   box-sizing: border-box;
   padding: 0 var(--sc-page-gutter, 32rpx) calc(24rpx + env(safe-area-inset-bottom));
   overflow: hidden;
-  background-color: #e8eee8;
-  background-color: var(--sc-canvas, #e8eee8);
-  color: #34423b;
-  color: var(--sc-ink, #34423b);
+  background-color: #e9edf3;
+  background-color: var(--sc-canvas, #e9edf3);
+  color: #303d50;
+  color: var(--sc-ink, #303d50);
 }
 
 .editor-bar {
@@ -76,8 +76,8 @@
   padding: 32rpx 32rpx 28rpx;
   overflow: hidden;
   border-radius: 20rpx;
-  background-color: #fffef9;
-  background-color: var(--sc-paper, #fffef9);
+  background-color: #fffefc;
+  background-color: var(--sc-paper, #fffefc);
   background-image: radial-gradient(rgba(158, 175, 162, 0.24) 1rpx, transparent 1rpx);
   background-size: 32rpx 32rpx;
   box-shadow: 0 16rpx 42rpx rgba(54, 68, 59, 0.08);

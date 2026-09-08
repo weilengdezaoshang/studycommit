@@ -1,45 +1,46 @@
-/* 与 packages/design-tokens/src/colors.ts 中 studyCommitColors 对齐。
-   WXSS 不支持 :root 选择器，CSS 变量必须挂在 page 上才能生效。 */
+/* 与 packages/design-tokens/src/colors.ts 中 studyCommitMistBlueColors 对齐（V7 雾蓝主题）。
+   WXSS 不支持 :root 选择器，CSS 变量必须挂在 page 上才能生效。
+   深色块按既有深色明度将色相从鼠尾草绿平移到雾蓝，深色板待设计确认后以共享 Token 为准。 */
 page {
-  --sc-ink: #34423b;
-  --sc-muted: #7b867e;
-  --sc-muted-soft: #96958b;
-  --sc-muted-faint: #aaa99f;
-  --sc-paper: #fffef9;
-  --sc-canvas: #e8eee8;
-  --sc-line: #ccd6cc;
-  --sc-accent: #f1dc7a;
-  --sc-action: #53635a;
-  --sc-action-surface: #dce9d8;
-  --sc-action-surface-strong: #e2ece0;
-  --sc-selected-surface: #edf3e9;
-  --sc-line-strong: #b9c8bc;
-  --sc-timeline: #aebbb1;
-  --sc-surface-soft: #fbfcf7;
-  --sc-surface-warm: #f1f5ef;
-  --sc-scrim: #34423b99;
+  --sc-ink: #303d50;
+  --sc-muted: #59677b;
+  --sc-muted-soft: #7c8797;
+  --sc-muted-faint: #929bab;
+  --sc-paper: #fffefc;
+  --sc-canvas: #e9edf3;
+  --sc-line: #d5dde8;
+  --sc-accent: #d2e0f4;
+  --sc-action: #4a6388;
+  --sc-action-surface: #dce6f5;
+  --sc-action-surface-strong: #cfddf0;
+  --sc-selected-surface: #edf2fa;
+  --sc-line-strong: #a6b8d2;
+  --sc-timeline: #aab9cd;
+  --sc-surface-soft: #f7f8fb;
+  --sc-surface-warm: #f1f3f8;
+  --sc-scrim: #303d5099;
   --sc-page-gutter: 32rpx;
   --sc-control-height: 88rpx;
 }
 
 @media (prefers-color-scheme: dark) {
   page {
-    --sc-ink: #edf3ee;
-    --sc-muted: #aebbb2;
-    --sc-muted-soft: #96a39a;
-    --sc-muted-faint: #7f8c83;
-    --sc-paper: #18211b;
-    --sc-canvas: #111813;
-    --sc-line: #3a4a40;
-    --sc-line-strong: #52655a;
-    --sc-accent: #d8c568;
-    --sc-action: #a9bcae;
-    --sc-action-surface: #29382e;
-    --sc-action-surface-strong: #314337;
-    --sc-selected-surface: #2d3d32;
-    --sc-surface-soft: #1d2821;
-    --sc-surface-warm: #222e26;
-    --sc-timeline: #687a6f;
-    --sc-scrim: #050806b3;
+    --sc-ink: #edf1f6;
+    --sc-muted: #aeb9c7;
+    --sc-muted-soft: #96a2b3;
+    --sc-muted-faint: #7f8ca0;
+    --sc-paper: #1a2130;
+    --sc-canvas: #131a28;
+    --sc-line: #3a4557;
+    --sc-line-strong: #52627a;
+    --sc-accent: #c6d6f0;
+    --sc-action: #a9bcd8;
+    --sc-action-surface: #29344a;
+    --sc-action-surface-strong: #313e57;
+    --sc-selected-surface: #2d3a52;
+    --sc-surface-soft: #1e2736;
+    --sc-surface-warm: #232d3f;
+    --sc-timeline: #68768f;
+    --sc-scrim: #05070db3;
   }
 }

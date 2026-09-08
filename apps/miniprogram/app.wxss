@@ -16,10 +16,10 @@
 @import './styles/vendor/reset/button-after.wxss';
 
 page {
-  background-color: #fffef9;
-  background-color: var(--sc-paper, #fffef9);
-  color: #34423b;
-  color: var(--sc-ink, #34423b);
+  background-color: #fffefc;
+  background-color: var(--sc-paper, #fffefc);
+  color: #303d50;
+  color: var(--sc-ink, #303d50);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
 }
 
