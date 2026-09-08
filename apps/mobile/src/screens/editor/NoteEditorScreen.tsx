@@ -210,7 +210,7 @@ export function NoteEditorScreen() {
             style={[styles.counter, overContentLimit && styles.counterOver]}
             accessibilityLiveRegion="polite"
           >
-            {`${contentLength.toLocaleString()} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString()}`}
+            {`${contentLength.toLocaleString('en-US')} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString('en-US')}`}
           </Text>
         )}
         {photoUri ? (
