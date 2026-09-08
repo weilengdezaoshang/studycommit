@@ -17,8 +17,7 @@ export type ToastType = 'success' | 'error' | 'info'
 
 export type ToastShowOptions = {
   message: string
-  /** 旧调用可能传 'default',按 info 处理。 */
-  type?: ToastType | 'default'
+  type?: ToastType
   durationMs?: number
 }
 
@@ -40,11 +39,6 @@ const TYPE_DURATION_MS: Record<ToastType, number> = {
   success: 2_500,
   error: 5_000,
   info: 3_000,
-}
-
-/** 旧调用可能传 'default',按 info 处理。 */
-export function normalizeToastType(type: ToastShowOptions['type']): ToastType {
-  return type === 'success' || type === 'error' ? type : 'info'
 }
 
 /** 显式 durationMs 优先,否则按类型取默认时长。 */
@@ -83,7 +77,7 @@ export function ToastProvider({
   const show = useCallback(
     (input: string | ToastShowOptions) => {
       const next = typeof input === 'string' ? input : input.message
-      const nextType = normalizeToastType(typeof input === 'string' ? undefined : input.type)
+      const nextType = typeof input === 'string' ? 'info' : (input.type ?? 'info')
       // 同类文案合并为一条,由渲染层显示 ×N 计数
       if (next === message && nextType === type && timer.current !== null) {
         setCount((current) => current + 1)
