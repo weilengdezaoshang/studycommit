@@ -9,9 +9,16 @@ import {
   type ReactNode,
 } from 'react'
 
+/**
+ * 反馈三层分工:操作结果走 Toast;进行中/长状态走行内 status;
+ * 破坏性确认走 Dialog。Toast 只有三态:success / error / info。
+ */
+export type ToastType = 'success' | 'error' | 'info'
+
 export type ToastShowOptions = {
   message: string
-  type?: 'default' | 'error'
+  /** 旧调用可能传 'default',按 info 处理。 */
+  type?: ToastType | 'default'
   durationMs?: number
 }
 
@@ -22,11 +29,29 @@ export type ToastApi = {
 
 export type ToastViewState = {
   message: string | null
-  type: 'default' | 'error'
+  type: ToastType
+  /** 同一文案连续出现的次数;>1 时渲染层显示「×N」。 */
+  count: number
   onClose: () => void
 }
 
-const DEFAULT_DURATION_MS = 4000
+/** 分类型默认时长:成功 2.5s / 失败 5s / 提示 3s;显式 durationMs 优先。 */
+const TYPE_DURATION_MS: Record<ToastType, number> = {
+  success: 2_500,
+  error: 5_000,
+  info: 3_000,
+}
+
+/** 旧调用可能传 'default',按 info 处理。 */
+export function normalizeToastType(type: ToastShowOptions['type']): ToastType {
+  return type === 'success' || type === 'error' ? type : 'info'
+}
+
+/** 显式 durationMs 优先,否则按类型取默认时长。 */
+export function resolveToastDuration(type: ToastType, explicit?: number): number {
+  return explicit ?? TYPE_DURATION_MS[type]
+}
+
 const ToastContext = createContext<ToastApi | null>(null)
 
 export function ToastProvider({
@@ -37,48 +62,59 @@ export function ToastProvider({
   renderToast: (state: ToastViewState) => ReactNode
 }): React.JSX.Element {
   const [message, setMessage] = useState<string | null>(null)
-  const [type, setType] = useState<ToastViewState['type']>('default')
+  const [type, setType] = useState<ToastType>('info')
+  const [count, setCount] = useState(1)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const close = useCallback(() => {
+  const clearTimer = useCallback(() => {
     if (timer.current !== null) {
       clearTimeout(timer.current)
       timer.current = null
     }
-    setMessage(null)
-    setType('default')
   }, [])
 
-  const show = useCallback((input: string | ToastShowOptions) => {
-    const next = typeof input === 'string' ? input : input.message
-    const nextType = typeof input === 'string' ? 'default' : (input.type ?? 'default')
-    const durationMs =
-      typeof input === 'string' ? DEFAULT_DURATION_MS : (input.durationMs ?? DEFAULT_DURATION_MS)
-    if (timer.current !== null) {
-      clearTimeout(timer.current)
-    }
-    setMessage(next)
-    setType(nextType)
-    timer.current = setTimeout(() => {
-      timer.current = null
-      setMessage(null)
-    }, durationMs)
-  }, [])
+  const close = useCallback(() => {
+    clearTimer()
+    setMessage(null)
+    setCount(1)
+    setType('info')
+  }, [clearTimer])
+
+  const show = useCallback(
+    (input: string | ToastShowOptions) => {
+      const next = typeof input === 'string' ? input : input.message
+      const nextType = normalizeToastType(typeof input === 'string' ? undefined : input.type)
+      // 同类文案合并为一条,由渲染层显示 ×N 计数
+      if (next === message && nextType === type && timer.current !== null) {
+        setCount((current) => current + 1)
+      } else {
+        setCount(1)
+        setType(nextType)
+        setMessage(next)
+      }
+      clearTimer()
+      const duration =
+        typeof input === 'string'
+          ? resolveToastDuration('info')
+          : resolveToastDuration(nextType, input.durationMs)
+      timer.current = setTimeout(() => {
+        timer.current = null
+        setMessage(null)
+      }, duration)
+    },
+    [clearTimer, message, type],
+  )
 
   useEffect(() => {
-    return () => {
-      if (timer.current !== null) {
-        clearTimeout(timer.current)
-      }
-    }
-  }, [])
+    return clearTimer
+  }, [clearTimer])
 
   const api = useMemo<ToastApi>(() => ({ show, close }), [close, show])
 
   return (
     <ToastContext.Provider value={api}>
       {children}
-      {renderToast({ message, onClose: close, type })}
+      {renderToast({ message, type, count, onClose: close })}
     </ToastContext.Provider>
   )
 }
