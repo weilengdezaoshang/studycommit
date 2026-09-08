@@ -512,6 +512,18 @@ export function RecordsListPage({
                 </p>
               )}
               <p className="collection-detail-content">{detailPaper.content}</p>
+              {detailPaper.questionText && (
+                <div className="collection-detail-question">
+                  <span className="collection-detail-label">当时留下的疑问</span>
+                  <p>{detailPaper.questionText}</p>
+                </div>
+              )}
+              {detailPaper.understandingText && (
+                <div className="collection-detail-understanding">
+                  <span className="collection-detail-label">我的理解</span>
+                  <p>{detailPaper.understandingText}</p>
+                </div>
+              )}
             </article>
           ) : (
             <div>

@@ -6650,3 +6650,135 @@ button:focus-visible {
   align-self: flex-start;
   cursor: pointer;
 }
+
+/* V7 搜索列表：暖白纸面卡片、不规则圆角、轻阴影与雾蓝角标（R62/R63）。 */
+.search-page h2 {
+  margin: 0;
+  font-size: var(--font-size-title);
+  line-height: var(--line-height-title);
+  color: var(--color-text);
+}
+.search-field__label {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+.search-field__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.search-field__row input {
+  flex: 1;
+  min-width: 0;
+}
+.search-field__clear {
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.search-note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+}
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-sm-plus);
+}
+@media (min-width: 1000px) {
+  .search-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.search-card {
+  position: relative;
+  min-width: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px 4px 14px 14px;
+  box-shadow:
+    0 1px 2px rgba(48, 61, 80, 0.05),
+    0 6px 18px rgba(48, 61, 80, 0.05);
+  transition:
+    box-shadow 160ms ease-out,
+    border-color 160ms ease-out;
+}
+.search-card::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  right: 10px;
+  width: 26px;
+  height: 7px;
+  border-radius: 4px;
+  background: var(--color-primary-surface);
+  transform: rotate(6deg);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-card {
+    transition: none;
+  }
+}
+.search-card:hover {
+  border-color: var(--color-border-strong);
+  box-shadow:
+    0 1px 2px rgba(48, 61, 80, 0.06),
+    0 10px 24px rgba(48, 61, 80, 0.08);
+}
+.search-card:hover::after {
+  background: var(--color-primary-surface);
+  filter: brightness(0.96);
+}
+.search-card__link {
+  display: grid;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  color: inherit;
+  text-decoration: none;
+  border-radius: inherit;
+  outline-offset: 3px;
+}
+.search-card__link:focus-visible {
+  outline: 2px solid var(--color-primary);
+}
+.search-card__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+  font-variant-numeric: tabular-nums;
+}
+.search-card__name {
+  color: var(--color-text);
+  font-size: var(--font-size-body-small);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.search-card__body {
+  color: var(--color-text);
+  font-size: var(--font-size-body);
+  line-height: 1.7;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.search-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+.search-empty p {
+  margin: 0;
+}

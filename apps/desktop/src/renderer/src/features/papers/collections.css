@@ -726,3 +726,33 @@
 .paper-explain__body p {
   margin: var(--space-xs) 0;
 }
+
+/* V7 详情阅读（R61）：疑问用轻纸面，理解用浅蓝区域，完整换行。 */
+.collection-detail-question,
+.collection-detail-understanding {
+  margin-top: var(--space-lg);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: grid;
+  gap: var(--space-xs);
+}
+.collection-detail-question {
+  border-left: 3px solid var(--paper-action);
+  background: var(--paper-surfaceSoft);
+}
+.collection-detail-understanding {
+  background: var(--paper-actionSurface);
+}
+.collection-detail-label {
+  color: var(--paper-muted, var(--paper-action));
+  font-size: var(--font-size-caption);
+}
+.collection-detail-question p,
+.collection-detail-understanding p {
+  margin: 0;
+  color: var(--paper-ink);
+  font-size: var(--font-size-body);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
