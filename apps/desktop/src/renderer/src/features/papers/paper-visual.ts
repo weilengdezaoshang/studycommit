@@ -1,3 +1,3 @@
-import { studyCommitColors } from '@studycommit/design-tokens'
+import { studyCommitMistBlueColors } from '@studycommit/design-tokens'
 
-export const paperColors = studyCommitColors
+export const paperColors = studyCommitMistBlueColors

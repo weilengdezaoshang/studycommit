@@ -672,7 +672,7 @@
 
 .collection-topic-manage summary {
   cursor: pointer;
-  color: var(--paper-muted, #7b867e);
+  color: var(--paper-muted, #59677b);
   width: fit-content;
 }
 
@@ -687,20 +687,20 @@
   flex: 1;
   max-width: 240px;
   height: 32px;
-  border: 1px solid var(--paper-line, #ccd6cc);
+  border: 1px solid var(--paper-line, #d5dde8);
   border-radius: 8px;
   padding: 0 10px;
   font-size: 13px;
-  color: var(--paper-ink, #34423b);
-  background: var(--paper-surface-soft, #fbfcf7);
+  color: var(--paper-ink, #303d50);
+  background: var(--paper-surface-soft, #f7f8fb);
 }
 
 .paper-explain {
   margin-top: var(--space-lg);
   padding: var(--space-lg);
-  border: 1px solid var(--paper-line, #ccd6cc);
+  border: 1px solid var(--paper-line, #d5dde8);
   border-radius: 14px;
-  background: var(--paper-surface-soft, #fbfcf7);
+  background: var(--paper-surface-soft, #f7f8fb);
 }
 
 .paper-explain__header,
@@ -713,13 +713,13 @@
 
 .paper-explain__header h3 {
   margin: 0;
-  color: var(--paper-ink, #34423b);
+  color: var(--paper-ink, #303d50);
   font-size: var(--font-size-body);
 }
 
 .paper-explain__body {
   margin: var(--space-md) 0;
-  color: var(--paper-ink, #34423b);
+  color: var(--paper-ink, #303d50);
   line-height: 1.7;
 }
 

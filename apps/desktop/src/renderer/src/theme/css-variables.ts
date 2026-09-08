@@ -1,6 +1,6 @@
 import {
   darkColors,
-  lightColors,
+  mistLightColors,
   motion,
   radii,
   sizes,
@@ -38,7 +38,8 @@ function appendPixels(
 
 export function createCssVariables(colorScheme: ColorScheme): CssVariables {
   const variables: CssVariables = {}
-  appendColors(variables, colorScheme === 'dark' ? darkColors : lightColors)
+  // 浅色走雾蓝主题（V7），深色沿用既有 darkColors，待雾蓝深色板确认后再切。
+  appendColors(variables, colorScheme === 'dark' ? darkColors : mistLightColors)
   appendPixels(variables, 'space', spacing)
   appendPixels(variables, 'radius', radii)
   appendPixels(variables, 'size', sizes)

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   darkColors,
-  lightColors,
+  mistLightColors,
   motion,
   radii,
   spacing,
@@ -13,7 +13,7 @@ describe('desktop CSS variable adapter', () => {
   it('maps shared light tokens to stable CSS variable names and units', () => {
     const variables = createCssVariables('light')
 
-    expect(variables['--color-primary']).toBe(lightColors.primary)
+    expect(variables['--color-primary']).toBe(mistLightColors.primary)
     expect(variables['--space-md']).toBe(`${spacing.md}px`)
     expect(variables['--radius-md']).toBe(`${radii.md}px`)
     expect(variables['--font-size-body']).toBe(`${typography.body.fontSize}px`)
@@ -21,7 +21,8 @@ describe('desktop CSS variable adapter', () => {
     expect(variables['--motion-disabled-opacity']).toBe(String(motion.disabledOpacity))
   })
 
-  it('keeps light and dark variable keys aligned', () => {
+  it('浅色使用雾蓝主题，深色沿用既有深色板且变量键对齐', () => {
+    expect(createCssVariables('light')['--color-text']).toBe(mistLightColors.text)
     expect(Object.keys(createCssVariables('dark')).sort()).toEqual(
       Object.keys(createCssVariables('light')).sort(),
     )
@@ -40,7 +41,7 @@ describe('desktop CSS variable adapter', () => {
     }
 
     const dispose = observeSystemTheme({ setProperty }, mediaQuery)
-    expect(setProperty).toHaveBeenCalledWith('--color-primary', lightColors.primary)
+    expect(setProperty).toHaveBeenCalledWith('--color-primary', mistLightColors.primary)
 
     mediaQuery.matches = true
     changeListener?.()

@@ -4,10 +4,10 @@ import { RecordsListPage } from './features/papers/RecordsListPage'
 import { ProblemsPage } from './features/papers/ProblemsPage'
 import { usePapersState } from './features/papers/papers-store'
 import { applyTheme } from './theme/css-variables'
-import { studyCommitColors } from '@studycommit/design-tokens'
+import { studyCommitMistBlueColors } from '@studycommit/design-tokens'
 import './styles.css'
 applyTheme(document.documentElement.style, 'light')
-document.body.style.background = studyCommitColors.canvas
+document.body.style.background = studyCommitMistBlueColors.canvas
 function Preview({ inbox = false }: { inbox?: boolean }) {
   const state = usePapersState()
   return (
@@ -59,7 +59,7 @@ createRoot(document.getElementById('root')!).render(
         display: 'flex',
         gap: 24,
         padding: '20px 40px',
-        borderBottom: `1px solid ${studyCommitColors.line}`,
+        borderBottom: `1px solid ${studyCommitMistBlueColors.line}`,
       }}
     >
       <NavLink to="/" end>
