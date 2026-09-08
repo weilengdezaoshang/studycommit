@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
@@ -7,6 +7,8 @@ import { paperColors } from '../../features/papers/paper-visual'
 import { papersActions, usePapersState } from '../../features/papers/papers-store'
 import { formatDateLabelOf } from '../../features/papers/view-model'
 import { Toast } from '../../components/toast/Toast'
+import { useMobileServices } from '../../core/MobileServicesProvider'
+import { resolveAssetUrl } from '../../features/papers/asset-url-cache'
 
 /** 纸页详情:优先呈现日期、状态、所属箱子和正文;继续弄懂是唯一常驻动作。 */
 export function PaperDetailScreen() {
@@ -24,6 +26,25 @@ export function PaperDetailScreen() {
   )
   const extra = paper ? state.extras[paper.id] : undefined
   const topic = paper?.topicId ? state.topics.find((item) => item.id === paper.topicId) : undefined
+  const { uploads } = useMobileServices()
+  const [remoteImageUrl, setRemoteImageUrl] = useState<string | null>(null)
+  const remoteAsset = paper?.assets?.find((asset) => asset.kind === 'image')
+
+  useEffect(() => {
+    // 本地预览优先;无本地图且云端有资产时异步换短时地址
+    if (!remoteAsset || extra?.photoPath) {
+      return
+    }
+    let cancelled = false
+    void resolveAssetUrl(remoteAsset.id, uploads).then((url) => {
+      if (!cancelled && url) {
+        setRemoteImageUrl(url)
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [remoteAsset, extra?.photoPath, uploads])
 
   if (!paper) {
     return <View style={styles.page} />
@@ -100,6 +121,8 @@ export function PaperDetailScreen() {
         <Text style={styles.content}>{paper.content}</Text>
         {extra?.photoPath ? (
           <Image source={{ uri: extra.photoPath }} style={styles.photoPreview} />
+        ) : remoteImageUrl ? (
+          <Image source={{ uri: remoteImageUrl }} style={styles.photoPreview} />
         ) : null}
       </ScrollView>
 
