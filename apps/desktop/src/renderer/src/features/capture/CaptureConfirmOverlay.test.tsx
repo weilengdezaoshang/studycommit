@@ -9,6 +9,7 @@ const mockCreateSession = vi.fn()
 const mockCancel = vi.fn()
 const mockPreview = vi.fn()
 const mockOcr = vi.fn()
+const mockUpload = vi.fn()
 
 vi.mock('../papers/papers-store', () => ({
   papersActions: { createPaper: (...args: unknown[]) => mockCreatePaper(...args) },
@@ -26,6 +27,7 @@ function installBridge() {
       cancel: mockCancel,
       preview: mockPreview,
       ocr: mockOcr,
+      upload: mockUpload,
     },
   })
 }
@@ -46,6 +48,7 @@ describe('CaptureConfirmOverlay', () => {
     mockCancel.mockReset().mockResolvedValue({ ok: true as const, data: true })
     mockPreview.mockReset().mockResolvedValue({ ok: true as const, data: null })
     mockOcr.mockReset()
+    mockUpload.mockReset().mockResolvedValue({ ok: true as const, data: { uploadId: 'upload-1' } })
     installBridge()
   })
 
@@ -125,6 +128,79 @@ describe('CaptureConfirmOverlay', () => {
     await renderOverlay()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('检测到疑似敏感信息')
+  })
+
+  it('截图上传失败时显式提示,可选择重试或不保存截图直接开始', async () => {
+    mockOcr.mockResolvedValue({
+      ok: true as const,
+      data: { text: '识别到的正文', confidence: null },
+    })
+    mockUpload.mockRejectedValue(new Error('network down'))
+    mockCreateSession.mockResolvedValue({
+      id: 'b4c9d2e1-2222-4222-8222-222222222222',
+    })
+
+    await renderOverlay()
+    await screen.findByLabelText(/识别原文/)
+    const question = screen.getByLabelText(/这次要弄懂的问题/)
+    await userEvent.clear(question)
+    await userEvent.type(question, '什么是事件循环')
+
+    // 上传失败:不创建会话,给出显式提示与两条出路
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '从这里开始' }))
+    })
+    expect(await screen.findByText(/截图没有保存成功/)).toBeInTheDocument()
+    expect(mockCreateSession).not.toHaveBeenCalled()
+
+    // 选择不保存截图:会话继续创建且不携带截图
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '不保存截图，直接开始' }))
+    })
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledTimes(1)
+    })
+    const input = mockCreateSession.mock.calls[0][0] as {
+      draftPaper: { questionText: string; screenshotUploadId?: string }
+    }
+    expect(input.draftPaper.questionText).toBe('什么是事件循环')
+    expect(input.draftPaper.screenshotUploadId).toBeUndefined()
+  })
+
+  it('截图上传失败后可重试上传并在成功后开始会话', async () => {
+    mockOcr.mockResolvedValue({
+      ok: true as const,
+      data: { text: '识别到的正文', confidence: null },
+    })
+    mockUpload
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValue({ ok: true as const, data: { uploadId: 'upload-retry' } })
+    mockCreateSession.mockResolvedValue({
+      id: 'b4c9d2e1-3333-4333-8333-333333333333',
+    })
+
+    await renderOverlay()
+    await screen.findByLabelText(/识别原文/)
+    const question = screen.getByLabelText(/这次要弄懂的问题/)
+    await userEvent.clear(question)
+    await userEvent.type(question, '什么是事件循环')
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '从这里开始' }))
+    })
+    expect(await screen.findByText(/截图没有保存成功/)).toBeInTheDocument()
+
+    // 重试上传:成功后携带 uploadId 创建会话
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '重试上传并开始' }))
+    })
+    await waitFor(() => {
+      expect(mockCreateSession).toHaveBeenCalledTimes(1)
+    })
+    const input = mockCreateSession.mock.calls[0][0] as {
+      draftPaper: { screenshotUploadId?: string }
+    }
+    expect(input.draftPaper.screenshotUploadId).toBe('upload-retry')
   })
 
   it('取消并丢弃截图调用主进程删除临时文件', async () => {

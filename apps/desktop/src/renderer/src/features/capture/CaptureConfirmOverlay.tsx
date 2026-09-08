@@ -36,6 +36,8 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
   const [question, setQuestion] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** 截图上传失败后暂停“从这里开始”，等用户显式选择重试或仅文字继续。 */
+  const [screenshotUploadFailed, setScreenshotUploadFailed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -106,23 +108,31 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
     }
   }
 
-  const startFromHere = async () => {
+  const startFromHere = async (options?: { ignoreUploadFailure?: boolean }) => {
     if (busy || !hasQuestion) {
       return
     }
     setBusy(true)
     setError(null)
     try {
-      // 先直传截图(BE-308):失败不阻塞开始学习,仅降级为无截图绑定
+      // 直传截图(BE-308):失败不再静默降级,显式请用户选择重试或仅文字继续
       let screenshotUploadId: string | undefined
+      let uploadFailed = false
       try {
         const upload = await window.studyCommit.capture.upload({ captureId })
         if (upload.ok) {
           screenshotUploadId = upload.data.uploadId
+        } else {
+          uploadFailed = true
         }
       } catch {
-        screenshotUploadId = undefined
+        uploadFailed = true
       }
+      if (uploadFailed && !options?.ignoreUploadFailure) {
+        setScreenshotUploadFailed(true)
+        return
+      }
+      setScreenshotUploadFailed(false)
       await studySessions.create({
         draftPaper: {
           paperId: crypto.randomUUID(),
@@ -152,7 +162,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(15, 18, 16, 0.55)',
+        background: 'rgba(48, 61, 80, 0.55)',
       }}
     >
       <div
@@ -239,6 +249,30 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
           <p className="study-alert" role="alert">
             {error}
           </p>
+        ) : null}
+
+        {screenshotUploadFailed ? (
+          <div className="study-alert" role="alert">
+            <p style={{ margin: 0 }}>截图没有保存成功，不会随本次学习上传；文字内容不受影响。</p>
+            <div className="study-form__actions">
+              <button
+                type="button"
+                className="button"
+                disabled={busy}
+                onClick={() => void startFromHere()}
+              >
+                重试上传并开始
+              </button>
+              <button
+                type="button"
+                className="button button--secondary"
+                disabled={busy}
+                onClick={() => void startFromHere({ ignoreUploadFailure: true })}
+              >
+                不保存截图，直接开始
+              </button>
+            </div>
+          </div>
         ) : null}
 
         <div className="study-form__actions">
