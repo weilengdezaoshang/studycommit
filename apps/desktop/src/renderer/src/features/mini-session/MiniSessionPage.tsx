@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  createDesktopStudySessionGateway,
-} from '../study-session/api/desktop-study-session-gateway'
+import { createDesktopStudySessionGateway } from '../study-session/api/desktop-study-session-gateway'
 import { useSessionClock } from '@studycommit/common/study-session-react'
 import { FragmentComposer } from '../study-session/components/FragmentComposer'
 import { paperColors } from '../../features/papers/paper-visual'
+import { mistLightColors } from '@studycommit/design-tokens'
 
 /**
  * 学习小窗页面(DE-313):计时 + 片段写入 + 纸页收尾;
@@ -134,7 +133,7 @@ export function MiniSessionPage(): React.JSX.Element {
           style={{ width: '100%', boxSizing: 'border-box', minHeight: 32 }}
         />
         {error ? (
-          <p role="alert" style={{ margin: 0, color: paperColors.action, fontSize: 12 }}>
+          <p role="alert" style={{ margin: 0, color: mistLightColors.danger, fontSize: 12 }}>
             {error}
           </p>
         ) : null}
@@ -143,7 +142,24 @@ export function MiniSessionPage(): React.JSX.Element {
             type="button"
             className="button button--secondary"
             style={{ flex: 1 }}
-            onClick={() => (session.status === 'paused' ? void gateway.resume({ sessionId: session.id, version: session.version, idempotencyKey: crypto.randomUUID() }).then(refresh).catch(() => undefined) : void gateway.pause({ sessionId: session.id, version: session.version, idempotencyKey: crypto.randomUUID() }).then(refresh).catch(() => undefined))}
+            onClick={() => {
+              const failing = session.status === 'paused' ? '继续失败，请重试' : '暂停失败，请重试'
+              void (
+                session.status === 'paused'
+                  ? gateway.resume({
+                      sessionId: session.id,
+                      version: session.version,
+                      idempotencyKey: crypto.randomUUID(),
+                    })
+                  : gateway.pause({
+                      sessionId: session.id,
+                      version: session.version,
+                      idempotencyKey: crypto.randomUUID(),
+                    })
+              )
+                .then(refresh)
+                .catch(() => setError(failing))
+            }}
           >
             {session.status === 'paused' ? '继续' : '暂停'}
           </button>
