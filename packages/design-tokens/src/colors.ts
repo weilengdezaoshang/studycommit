@@ -44,30 +44,9 @@ export const darkColors: { readonly [Key in keyof typeof lightColors]: string } 
   scrim: '#00000099',
 }
 
-/** StudyCommit 纸张/鼠尾草主题，供 PRD 与原生小程序复用。 */
-export const studyCommitColors = {
-  ink: '#34423B',
-  muted: '#7B867E',
-  paper: '#FFFEF9',
-  canvas: '#E8EEE8',
-  line: '#CCD6CC',
-  accent: '#F1DC7A',
-  action: '#53635A',
-  actionSurface: '#DCE9D8',
-  actionSurfaceStrong: '#E2ECE0',
-  selectedSurface: '#EDF3E9',
-  surfaceSoft: '#FBFCF7',
-  surfaceWarm: '#F1F5EF',
-  lineStrong: '#B9C8BC',
-  timeline: '#AEBBB1',
-  mutedSoft: '#96958B',
-  mutedFaint: '#AAA99F',
-  scrim: '#34423B99',
-} as const
-
 export type SemanticColors = typeof lightColors | typeof darkColors
 
-/** 雾蓝手绘主题：跨端原型统一使用，既有主题保持兼容。 */
+/** StudyCommit 雾蓝纸面主题，供 PRD 与原生小程序复用。 */
 export const studyCommitMistBlueColors = {
   ink: '#303D50',
   muted: '#59677B',

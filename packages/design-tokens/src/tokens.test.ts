@@ -7,7 +7,6 @@ import {
   radii,
   sizes,
   spacing,
-  studyCommitColors,
   studyCommitMistBlueColors,
   typography,
 } from './index'
@@ -27,10 +26,26 @@ describe('cross-platform design tokens', () => {
     expect(mistLightColors.warning).toBe(lightColors.warning)
   })
 
-  it('保持雾蓝纸面色板与鼠尾草纸面色板同键', () => {
-    expect(Object.keys(studyCommitMistBlueColors).sort()).toEqual(
-      Object.keys(studyCommitColors).sort(),
-    )
+  it('雾蓝纸面色板导出完整键位', () => {
+    expect(Object.keys(studyCommitMistBlueColors).sort()).toEqual([
+      'accent',
+      'action',
+      'actionSurface',
+      'actionSurfaceStrong',
+      'canvas',
+      'ink',
+      'line',
+      'lineStrong',
+      'muted',
+      'mutedFaint',
+      'mutedSoft',
+      'paper',
+      'scrim',
+      'selectedSurface',
+      'surfaceSoft',
+      'surfaceWarm',
+      'timeline',
+    ])
   })
 
   it('uses portable hexadecimal color values', () => {
@@ -38,7 +53,6 @@ describe('cross-platform design tokens', () => {
       ...Object.values(lightColors),
       ...Object.values(darkColors),
       ...Object.values(mistLightColors),
-      ...Object.values(studyCommitColors),
       ...Object.values(studyCommitMistBlueColors),
     ]) {
       expect(value).toMatch(/^#[0-9A-F]{6}(?:[0-9A-F]{2})?$/i)

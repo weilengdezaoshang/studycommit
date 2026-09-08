@@ -2,7 +2,6 @@ export {
   darkColors,
   lightColors,
   mistLightColors,
-  studyCommitColors,
   studyCommitMistBlueColors,
   type SemanticColors,
 } from './colors'
