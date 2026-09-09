@@ -195,14 +195,6 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
           </button>
         </header>
 
-        {preview ? (
-          <img
-            src={preview}
-            alt="截图预览"
-            style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 10, alignSelf: 'center' }}
-          />
-        ) : null}
-
         {ocrFailed ? (
           <p role="status" style={{ margin: 0, fontSize: 13, opacity: 0.75 }}>
             本地识别暂不可用，可以直接手写问题；原始截图已保留在本机。
@@ -217,25 +209,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
           </div>
         ) : null}
 
-        <div className="field">
-          <label htmlFor="capture-ocr-text">识别原文（可编辑，仅保存在本机与纸页正文）</label>
-          <textarea
-            id="capture-ocr-text"
-            className="capture-textarea"
-            value={ocrText}
-            rows={5}
-            maxLength={PAPER_CONTENT_MAX_LENGTH}
-            disabled={busy}
-            onChange={(event) => setOcrText(event.target.value)}
-            placeholder="识别不到文字时，可以直接写下想记的内容"
-          />
-          {nearTextLimit && (
-            <span className="capture-counter" role="status">
-              {`${ocrText.length.toLocaleString()} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString()}`}
-            </span>
-          )}
-        </div>
-
+        {/* R71:问题优先;截图与识别原文折叠查看,可展开修改 */}
         <div className="field">
           <label htmlFor="capture-question">
             这次要弄懂的问题（必填，从这里开始时作为新纸页的问题）
@@ -243,13 +217,43 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
           <textarea
             id="capture-question"
             value={question}
-            rows={2}
+            rows={3}
             maxLength={PAPER_QUESTION_MAX_LENGTH}
             disabled={busy}
+            autoFocus
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="把截图里没弄懂的部分写成一个问题"
           />
         </div>
+
+        <details className="capture-source">
+          <summary>查看截图与识别原文</summary>
+          {preview ? (
+            <img
+              src={preview}
+              alt="截图预览"
+              style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 10, alignSelf: 'center' }}
+            />
+          ) : null}
+          <div className="field">
+            <label htmlFor="capture-ocr-text">识别原文（可编辑，仅保存在本机与纸页正文）</label>
+            <textarea
+              id="capture-ocr-text"
+              className="capture-textarea"
+              value={ocrText}
+              rows={5}
+              maxLength={PAPER_CONTENT_MAX_LENGTH}
+              disabled={busy}
+              onChange={(event) => setOcrText(event.target.value)}
+              placeholder="识别不到文字时，可以直接写下想记的内容"
+            />
+            {nearTextLimit && (
+              <span className="capture-counter" role="status">
+                {`${ocrText.length.toLocaleString()} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString()}`}
+              </span>
+            )}
+          </div>
+        </details>
 
         {error ? (
           <p className="study-alert" role="alert">

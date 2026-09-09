@@ -41,6 +41,13 @@ async function renderOverlay() {
   })
 }
 
+/** R71:截图与识别原文默认折叠,断言前先展开 */
+async function findOcrTextarea() {
+  const user = userEvent.setup()
+  await user.click(screen.getByText('查看截图与识别原文'))
+  return screen.findByLabelText(/识别原文/)
+}
+
 describe('CaptureConfirmOverlay', () => {
   beforeEach(() => {
     mockCreatePaper.mockReset()
@@ -60,7 +67,7 @@ describe('CaptureConfirmOverlay', () => {
 
     await renderOverlay()
 
-    expect(await screen.findByLabelText(/识别原文/)).toHaveValue('React 调度器为什么用优先级队列')
+    expect(await findOcrTextarea()).toHaveValue('React 调度器为什么用优先级队列')
     expect(screen.getByLabelText(/这次要弄懂的问题/)).toHaveValue('React 调度器为什么用优先级队列')
   })
 
@@ -74,7 +81,7 @@ describe('CaptureConfirmOverlay', () => {
     })
 
     await renderOverlay()
-    const ocrText = await screen.findByLabelText(/识别原文/)
+    const ocrText = await findOcrTextarea()
     // 清空预填的问题:验证纯文字保存不携带问题
     await userEvent.clear(screen.getByLabelText(/这次要弄懂的问题/))
     expect(ocrText).toHaveValue('识别到的正文')
@@ -99,7 +106,7 @@ describe('CaptureConfirmOverlay', () => {
     })
 
     await renderOverlay()
-    await screen.findByLabelText(/识别原文/)
+    await findOcrTextarea()
     const question = screen.getByLabelText(/这次要弄懂的问题/)
     await userEvent.clear(question)
     await userEvent.type(question, '什么是事件循环')
@@ -141,7 +148,7 @@ describe('CaptureConfirmOverlay', () => {
     })
 
     await renderOverlay()
-    await screen.findByLabelText(/识别原文/)
+    await findOcrTextarea()
     const question = screen.getByLabelText(/这次要弄懂的问题/)
     await userEvent.clear(question)
     await userEvent.type(question, '什么是事件循环')
@@ -180,7 +187,7 @@ describe('CaptureConfirmOverlay', () => {
     })
 
     await renderOverlay()
-    await screen.findByLabelText(/识别原文/)
+    await findOcrTextarea()
     const question = screen.getByLabelText(/这次要弄懂的问题/)
     await userEvent.clear(question)
     await userEvent.type(question, '什么是事件循环')

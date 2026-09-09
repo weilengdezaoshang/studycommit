@@ -7980,3 +7980,25 @@ button:focus-visible {
     transition: none;
   }
 }
+
+/* 截图确认:问题优先,截图与识别原文折叠查看(R71) */
+.capture-source {
+  border-top: 1px solid var(--line, #d5dde8);
+  padding-top: 4px;
+}
+.capture-source summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--action, #4a6388);
+  font-size: 13px;
+  cursor: pointer;
+}
+.capture-source summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.capture-source[open] {
+  display: grid;
+  gap: 12px;
+}
