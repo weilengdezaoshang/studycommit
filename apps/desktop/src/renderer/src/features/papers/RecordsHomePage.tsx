@@ -7,15 +7,24 @@ import { papersActions, todayKey, usePapersState } from './papers-store'
 import { isOpenQuestion, paperWithExtra, type PaperWithExtra } from './view-model'
 import { RecordReader } from './RecordReader'
 import { useStudyController } from '../study-session/StudyControllerProvider'
-import { buildVirtualRows, columnsOf, type DayGroup, type VirtualRow } from './virtual-rows'
+import {
+  buildVirtualRows,
+  columnsOf,
+  estimateRowSize,
+  type DayGroup,
+  type VirtualRow,
+} from './virtual-rows'
 
 const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六']
 
-/** 卡片网格列数:与 CSS 断点一致(≥1100px 三列),阅读栏打开时恒两列。 */
+/** 卡片网格三列断点:列数由 JS 注入,这里是唯一事实来源(R58)。 */
+const WIDE_GRID_QUERY = '(min-width: 1100px)'
+
+/** 卡片网格列数:与 CSS 断点一致,阅读栏打开时恒两列。 */
 function useGridColumns(reading: boolean): number {
-  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1100px)').matches)
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE_GRID_QUERY).matches)
   useEffect(() => {
-    const query = window.matchMedia('(min-width: 1100px)')
+    const query = window.matchMedia(WIDE_GRID_QUERY)
     const update = () => setWide(query.matches)
     update()
     query.addEventListener('change', update)
@@ -523,14 +532,6 @@ function TopicManage({
       )}
     </details>
   )
-}
-
-/** 行高估算:动态测量前的初始值,标题/按钮矮,卡片行高。 */
-function estimateRowSize(row: VirtualRow | undefined): number {
-  if (row && row.kind !== 'card-row') {
-    return 64
-  }
-  return 250
 }
 
 function DayHeadingRow({ group }: { group: DayGroup }): React.JSX.Element {

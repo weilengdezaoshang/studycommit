@@ -3,6 +3,10 @@ import type { PaperWithExtra } from './view-model'
 /** 记录本主页每日期默认展示两行(R58),展开按同步长增加。 */
 export const DAY_PAGE_ROWS = 2
 
+/** 行高估算(动态测量前的初始值):标题/按钮行矮,卡片行高。 */
+export const HEADER_ROW_ESTIMATE_PX = 64
+export const CARD_ROW_ESTIMATE_PX = 250
+
 export interface DayGroup {
   dateKey: string
   dayNumber: string
@@ -67,4 +71,12 @@ export function columnsOf(reading: boolean, wideViewport: boolean): number {
     return 2
   }
   return wideViewport ? 3 : 2
+}
+
+/** 单行高度估算:动态测量前的初始值,测量后以真实高度为准。 */
+export function estimateRowSize(row: VirtualRow | undefined): number {
+  if (row && row.kind !== 'card-row') {
+    return HEADER_ROW_ESTIMATE_PX
+  }
+  return CARD_ROW_ESTIMATE_PX
 }
