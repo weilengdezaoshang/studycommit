@@ -1,23 +1,41 @@
 import { describe, expect, it } from 'vitest'
-import { buildVirtualRows, columnsOf, type DayGroup } from './virtual-rows'
 import type { PaperWithExtra } from './view-model'
+import { buildVirtualRows, columnsOf, type DayGroup } from './virtual-rows'
+
+/** 构造满足纸页结构的最小夹具:仅日期与数量参与分组计算。 */
+function paperOf(dateKey: string, index: number): PaperWithExtra {
+  return {
+    id: `${dateKey}-p${index}`,
+    content: `内容 ${index}`,
+    status: 'organized',
+    topicId: null,
+    version: 1,
+    createdAt: `${dateKey}T0${index % 10}:00:00.000Z`,
+    updatedAt: `${dateKey}T0${index % 10}:00:00.000Z`,
+    deletedAt: null,
+    hasQuestion: false,
+    isQuestionResolved: false,
+    questionStatus: 'none',
+    questionText: null,
+    understandingText: null,
+    questionResolvedAt: null,
+    extra: {
+      hasQuestion: false,
+      isQuestionResolved: false,
+      questionStatus: 'none',
+      photoPath: null,
+    },
+  }
+}
 
 function dayOf(dateKey: string, count: number): DayGroup {
-  const papers = Array.from({ length: count }, (_, index) => {
-    const paper = {
-      id: `${dateKey}-p${index}`,
-      content: `内容 ${index}`,
-      createdAt: `${dateKey}T0${index % 10}:00:00.000Z`,
-    } as Partial<PaperWithExtra>
-    return paper as PaperWithExtra
-  })
   return {
     dateKey,
     dayNumber: dateKey.slice(8),
     monthLabel: '9 月',
     weekday: '周四',
     suffix: '今天',
-    papers,
+    papers: Array.from({ length: count }, (_, index) => paperOf(dateKey, index)),
   }
 }
 
