@@ -1,6 +1,5 @@
-import { useCallback, useState } from 'react'
 import { View } from 'react-native'
-import { validateLocalDateTimeValue } from '@studycommit/common/study-session-runtime'
+import { useDialogController } from '@studycommit/common/dialog-react'
 import { useOptionalToast } from '@studycommit/common/toast-react'
 import { useAppTheme } from '../../theme/ThemeProvider'
 import { AppText } from '../AppText'
@@ -8,163 +7,78 @@ import { Button } from '../Button'
 import { TextField } from '../TextField'
 import { Dialog } from './Dialog'
 
-export interface DialogFieldOptions {
-  label: string
-  type?: 'text' | 'datetime-local'
-  defaultValue: string
-  maxLength?: number
-  min?: string
-  required?: boolean
-  helperText?: string
-}
+export type {
+  DialogFieldOptions,
+  DialogNoteField,
+  DialogShowOptions,
+} from '@studycommit/common/dialog-react'
 
-export interface DialogNoteField {
-  key: string
-  label: string
-  placeholder?: string
-  maxLength?: number
-  defaultValue?: string
-}
-
-export interface DialogShowOptions {
-  title: string
-  description?: string
-  cancelLabel?: string
-  confirmLabel?: string
-  confirmBusyLabel?: string
-  field?: DialogFieldOptions
-  notes?: ReadonlyArray<DialogNoteField>
-  onConfirm?: (payload: {
-    fieldValue?: string
-    notes: Record<string, string>
-  }) => void | Promise<void>
-}
-
+/**
+ * 移动对话框:状态机复用 @studycommit/common/dialog-react。
+ * 确认失败直接关闭并把错误交给 Toast(桌面端为保持打开内联展示)。
+ */
 export function useDialog() {
   const theme = useAppTheme()
   const toast = useOptionalToast()
-  const [options, setOptions] = useState<DialogShowOptions | null>(null)
-  const [visible, setVisible] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [fieldValue, setFieldValue] = useState('')
-  const [notes, setNotes] = useState<Record<string, string>>({})
-  const [fieldError, setFieldError] = useState<string | null>(null)
-
-  const close = useCallback(() => {
-    if (busy) {
-      return
-    }
-    setVisible(false)
-    setFieldError(null)
-  }, [busy])
-
-  const show = useCallback((next: DialogShowOptions) => {
-    setFieldValue(next.field?.defaultValue ?? '')
-    setNotes(notesRecord(next.notes))
-    setFieldError(null)
-    setBusy(false)
-    setOptions(next)
-    setVisible(true)
-  }, [])
-
-  const confirm = async () => {
-    if (!options) {
-      return
-    }
-    const nextFieldError = validateDialogField(options.field, fieldValue)
-    if (nextFieldError) {
-      setFieldError(nextFieldError)
-      return
-    }
-    setBusy(true)
-    try {
-      await options.onConfirm?.({ fieldValue, notes })
-      setVisible(false)
-      setOptions(null)
-      setFieldError(null)
-    } catch (error) {
-      setVisible(false)
-      setOptions(null)
-      setFieldError(null)
+  const controller = useDialogController({
+    actionErrorMode: 'dismiss',
+    onActionError: (error) => {
       toast?.show({
         message: error instanceof Error ? error.message : '操作失败，请稍后重试。',
         type: 'error',
       })
-    } finally {
-      setBusy(false)
-    }
-  }
+    },
+  })
+  const { options } = controller
 
   const dialog = (
     <Dialog
-      busy={busy}
-      onClose={close}
-      onDismiss={() => setOptions(null)}
-      open={visible}
+      busy={controller.busy}
+      onClose={controller.close}
+      onDismiss={controller.dismiss}
+      open={controller.visible}
       title={options?.title ?? ''}
     >
       {options?.description ? <AppText color="muted">{options.description}</AppText> : null}
       {options?.field ? (
         <TextField
-          error={fieldError ?? undefined}
+          error={controller.fieldError ?? undefined}
           helperText={options.field.helperText}
           label={options.field.label}
           maxLength={options.field.maxLength}
-          onChangeText={(value) => {
-            setFieldValue(value)
-            setFieldError(null)
-          }}
+          onChangeText={controller.updateField}
           placeholder={options.field.type === 'datetime-local' ? 'YYYY-MM-DDTHH:mm' : undefined}
-          value={fieldValue}
+          value={controller.fieldValue}
         />
       ) : null}
-      {fieldError && !options?.field ? <AppText color="danger">{fieldError}</AppText> : null}
+      {controller.fieldError && !options?.field ? (
+        <AppText color="danger">{controller.fieldError}</AppText>
+      ) : null}
       {options?.notes?.map((note) => (
         <TextField
           key={note.key}
           label={note.label}
           maxLength={note.maxLength}
           multiline
-          onChangeText={(value) => {
-            setNotes((current) => ({ ...current, [note.key]: value }))
-          }}
+          onChangeText={(value) => controller.updateNote(note.key, value)}
           placeholder={note.placeholder}
           scrollEnabled
           style={{ height: 96, maxHeight: 96 }}
-          value={notes[note.key] ?? ''}
+          value={controller.notes[note.key] ?? ''}
         />
       ))}
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm, justifyContent: 'flex-end' }}>
-        <Button disabled={busy} onPress={close} variant="secondary">
+        <Button disabled={controller.busy} onPress={controller.close} variant="secondary">
           {options?.cancelLabel ?? '取消'}
         </Button>
-        <Button loading={busy} onPress={() => void confirm()}>
-          {busy ? (options?.confirmBusyLabel ?? '处理中') : (options?.confirmLabel ?? '确认')}
+        <Button loading={controller.busy} onPress={() => void controller.confirm()}>
+          {controller.busy
+            ? (options?.confirmBusyLabel ?? '处理中')
+            : (options?.confirmLabel ?? '确认')}
         </Button>
       </View>
     </Dialog>
   )
 
-  return { show, close, dialog }
-}
-
-function notesRecord(notes: DialogShowOptions['notes']): Record<string, string> {
-  const record: Record<string, string> = {}
-  for (const note of notes ?? []) {
-    record[note.key] = note.defaultValue ?? ''
-  }
-  return record
-}
-
-function validateDialogField(field: DialogFieldOptions | undefined, value: string): string | null {
-  if (!field) {
-    return null
-  }
-  if (field.type === 'datetime-local') {
-    return validateLocalDateTimeValue(value, field.min)
-  }
-  if (field.required && !value.trim()) {
-    return `请填写${field.label}`
-  }
-  return null
+  return { show: controller.show, close: controller.close, dialog }
 }

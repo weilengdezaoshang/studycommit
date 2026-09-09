@@ -1,109 +1,46 @@
-import { useCallback, useState } from 'react'
-import { validateLocalDateTimeValue } from '@studycommit/common/study-session-runtime'
+import { useDialogController } from '@studycommit/common/dialog-react'
 import { Dialog } from './Dialog'
 
-export interface DialogNoteField {
-  key: string
-  label: string
-  placeholder?: string
-  maxLength?: number
-  defaultValue?: string
-}
+export type { DialogNoteField, DialogShowOptions } from '@studycommit/common/dialog-react'
 
-export interface DialogShowOptions {
-  title: string
-  description?: string
-  cancelLabel?: string
-  confirmLabel?: string
-  confirmBusyLabel?: string
-  field?: {
-    label: string
-    type: 'datetime-local'
-    defaultValue: string
-    min?: string
-    required?: boolean
-    helperText?: string
-  }
-  notes?: ReadonlyArray<DialogNoteField>
-  onConfirm?: (payload: {
-    fieldValue?: string
-    notes: Record<string, string>
-  }) => void | Promise<void>
-}
-
+/**
+ * 桌面对话框:状态机复用 @studycommit/common/dialog-react,
+ * 确认失败保持打开并内联展示错误;本文件只负责 DOM 渲染。
+ */
 export function useDialog() {
-  const [options, setOptions] = useState<DialogShowOptions | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [fieldValue, setFieldValue] = useState('')
-  const [notes, setNotes] = useState<Record<string, string>>({})
-  const [fieldError, setFieldError] = useState<string | null>(null)
-
-  const close = useCallback(() => {
-    if (busy) {
-      return
-    }
-    setOptions(null)
-    setFieldError(null)
-  }, [busy])
-
-  const show = useCallback((next: DialogShowOptions) => {
-    setFieldValue(next.field?.defaultValue ?? '')
-    setNotes(notesRecord(next.notes))
-    setFieldError(null)
-    setBusy(false)
-    setOptions(next)
-  }, [])
-
-  const confirm = async () => {
-    if (!options) {
-      return
-    }
-    if (options.field?.type === 'datetime-local') {
-      const nextFieldError = validateLocalDateTimeValue(fieldValue, options.field.min)
-      if (nextFieldError) {
-        setFieldError(nextFieldError)
-        return
-      }
-    }
-    setBusy(true)
-    try {
-      await options.onConfirm?.({ fieldValue, notes })
-      setOptions(null)
-      setFieldError(null)
-    } catch (error) {
-      setFieldError(error instanceof Error ? error.message : '操作失败')
-    } finally {
-      setBusy(false)
-    }
-  }
+  const controller = useDialogController()
+  const { options } = controller
 
   const dialog = (
-    <Dialog open={options !== null} title={options?.title ?? ''} busy={busy} onClose={close}>
+    <Dialog
+      open={controller.visible}
+      title={options?.title ?? ''}
+      busy={controller.busy}
+      onClose={controller.close}
+    >
       {options?.description ? <p>{options.description}</p> : null}
       {options?.field ? (
         <label className="field">
           <span>{options.field.label}</span>
           <input
-            type={options.field.type}
-            value={fieldValue}
+            type={options.field.type ?? 'text'}
+            value={controller.fieldValue}
             min={options.field.min}
-            onChange={(event) => {
-              setFieldValue(event.target.value)
-              setFieldError(null)
-            }}
+            maxLength={options.field.maxLength}
+            onChange={(event) => controller.updateField(event.target.value)}
             required={options.field.required}
           />
-          {fieldError ? (
+          {controller.fieldError ? (
             <span className="field__hint" role="alert">
-              {fieldError}
+              {controller.fieldError}
             </span>
           ) : options.field.helperText ? (
             <span className="field__hint">{options.field.helperText}</span>
           ) : null}
         </label>
-      ) : fieldError ? (
+      ) : controller.fieldError ? (
         <p className="field__hint" role="alert">
-          {fieldError}
+          {controller.fieldError}
         </p>
       ) : null}
       {options?.notes?.map((note) => (
@@ -111,35 +48,36 @@ export function useDialog() {
           <label htmlFor={`dialog-note-${note.key}`}>{note.label}</label>
           <textarea
             id={`dialog-note-${note.key}`}
-            value={notes[note.key] ?? ''}
+            value={controller.notes[note.key] ?? ''}
             maxLength={note.maxLength}
             rows={3}
             placeholder={note.placeholder}
-            onChange={(event) => {
-              const value = event.target.value
-              setNotes((current) => ({ ...current, [note.key]: value }))
-            }}
+            onChange={(event) => controller.updateNote(note.key, event.target.value)}
           />
         </div>
       ))}
       <div className="dialog__actions">
-        <button type="button" className="button button--secondary" onClick={close} disabled={busy}>
+        <button
+          type="button"
+          className="button button--secondary"
+          onClick={controller.close}
+          disabled={controller.busy}
+        >
           {options?.cancelLabel ?? '取消'}
         </button>
-        <button type="button" className="button" onClick={() => void confirm()} disabled={busy}>
-          {busy ? (options?.confirmBusyLabel ?? '处理中') : (options?.confirmLabel ?? '确认')}
+        <button
+          type="button"
+          className="button"
+          onClick={() => void controller.confirm()}
+          disabled={controller.busy}
+        >
+          {controller.busy
+            ? (options?.confirmBusyLabel ?? '处理中')
+            : (options?.confirmLabel ?? '确认')}
         </button>
       </div>
     </Dialog>
   )
 
-  return { show, close, dialog }
-}
-
-function notesRecord(notes: DialogShowOptions['notes']): Record<string, string> {
-  const record: Record<string, string> = {}
-  for (const note of notes ?? []) {
-    record[note.key] = note.defaultValue ?? ''
-  }
-  return record
+  return { show: controller.show, close: controller.close, dialog }
 }
