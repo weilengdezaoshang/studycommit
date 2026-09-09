@@ -109,10 +109,11 @@ export function SessionPanel({
             <span className="study-card__label">已学习</span>
             <SessionTimer value={elapsed} />
           </div>
-          <div className="study-card__actions">
+          {/* R71:暂停与小窗为次级操作;片段输入突出;收尾放在底部 */}
+          <div className="study-card__actions study-card__actions--secondary">
             <button
               type="button"
-              className="button"
+              className="button button--secondary"
               disabled={toggleBusy}
               onClick={() => {
                 if (session.status === 'paused') {
@@ -124,7 +125,6 @@ export function SessionPanel({
             >
               {toggleLabel}
             </button>
-            <CompleteStudyButton disabled={completing} onClick={() => showCompleteDialog()} />
             {onOpenMiniWindow ? (
               <button
                 type="button"
@@ -137,6 +137,9 @@ export function SessionPanel({
             ) : null}
           </div>
           <FragmentComposer sessionId={session.id} />
+          <div className="study-card__footer">
+            <CompleteStudyButton disabled={completing} onClick={() => showCompleteDialog()} />
+          </div>
         </article>
       </div>
       {dialog.dialog}

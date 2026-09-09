@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { StartStudyPanel } from '../components/StartStudyPanel'
 import { SessionPanel } from '../components/SessionPanel'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
-import { createIdempotencyKey } from '@studycommit/common/study-session-runtime'
-import { useDesktopServices } from '../api/DesktopServicesProvider'
+import { useCompletePaperHandler } from '../use-complete-paper'
 
 export function TodayPage({ study }: { study: StudySessionController }): React.JSX.Element {
   const [starting, setStarting] = useState(false)
-  const { studySessions } = useDesktopServices()
+  const onCompletePaper = useCompletePaperHandler(study)
   if ((study.phase === 'active' || study.phase === 'completed') && starting) {
     setStarting(false)
   }
@@ -44,22 +43,7 @@ export function TodayPage({ study }: { study: StudySessionController }): React.J
         onPause={study.pause}
         onResume={study.resume}
         onComplete={study.complete}
-        onCompletePaper={async ({ understandingText, nextQuestionText }) => {
-          const session = study.session
-          if (!session) {
-            return
-          }
-          await studySessions.completePaper({
-            sessionId: session.id,
-            version: session.version,
-            understandingText,
-            ...(nextQuestionText
-              ? { nextQuestionText, nextPaperId: crypto.randomUUID() }
-              : {}),
-            idempotencyKey: createIdempotencyKey(),
-          })
-          study.reload()
-        }}
+        onCompletePaper={onCompletePaper}
         onOpenMiniWindow={() => window.studyCommit.mini.open()}
         onBackToStart={study.reload}
       />

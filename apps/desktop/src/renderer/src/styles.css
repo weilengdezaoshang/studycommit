@@ -7809,3 +7809,183 @@ button:focus-visible {
     transition: none;
   }
 }
+
+/* ============================== V7:范围视图与学习面板(R34/R70/R71) ============================== */
+
+/* 主题范围管理(C06) */
+.records-home__manage {
+  margin: -6px 0 16px;
+  border-top: 1px solid var(--line, #d5dde8);
+  padding-top: 4px;
+}
+.records-home__manage summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--action, #4a6388);
+  font-size: 13px;
+  cursor: pointer;
+}
+.records-home__rename {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+.records-home__rename input {
+  flex: 1;
+  min-width: 0;
+  max-width: 280px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong, #a6b8d2);
+  border-radius: 9px;
+  background: var(--paper, #fffefc);
+  color: var(--ink, #303d50);
+}
+.records-home__rename .records-home__compose {
+  min-height: 44px;
+  padding: 6px 16px;
+  font-size: 14px;
+}
+.records-home__manage-actions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+
+/* 学习中状态入口(R71):仅活动学习存在且面板隐藏时显示 */
+.records-home__study-status {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--selected, #edf2fa);
+  color: var(--action, #4a6388);
+  font-family: var(--font-hand);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 150ms ease-out;
+}
+.records-home__study-status:hover {
+  background: var(--accent, #d2e0f4);
+}
+
+/* 学习面板:非模态浮层,后面的记录仍可操作(R70/R71) */
+.study-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  pointer-events: none;
+}
+.study-overlay__panel {
+  pointer-events: auto;
+  width: min(880px, 94vw);
+  max-height: min(88vh, 820px);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper, #fffefc);
+  border: 1px solid color-mix(in srgb, var(--line, #d5dde8) 80%, transparent);
+  border-radius: 14px 18px 15px 17px / 17px 14px 19px 15px;
+  box-shadow: 0 24px 64px rgba(48, 61, 80, 0.18);
+  overflow: hidden;
+}
+.study-overlay__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 12px 6px 22px;
+  border-bottom: 1px solid var(--line, #d5dde8);
+}
+.study-overlay__bar h2 {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 19px;
+  line-height: 28px;
+  font-weight: 400;
+  color: var(--ink, #303d50);
+}
+.study-overlay__close {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink, #303d50);
+  cursor: pointer;
+}
+.study-overlay__close:hover {
+  background: var(--surface-soft, #f7f8fb);
+}
+.study-overlay__close svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+}
+.study-overlay__body {
+  flex: 1;
+  overflow: auto;
+  padding: 18px 22px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line, #d5dde8) transparent;
+}
+
+/* 学习面板内页样式收口:纸面卡片、问题突出、收尾在底部 */
+.study-overlay .study-page {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+  display: block;
+}
+.study-overlay .study-session-layout {
+  display: block;
+}
+.study-overlay .study-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.study-overlay .study-card__title {
+  font-family: var(--font-hand);
+  font-size: 20px;
+  line-height: 30px;
+  color: var(--ink, #303d50);
+}
+.study-overlay .study-card__elapsed .study-card__label {
+  font-size: 12px;
+}
+.study-overlay .study-card__actions--secondary {
+  display: flex;
+  gap: 8px;
+}
+.study-overlay .study-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--line, #d5dde8);
+}
+.study-overlay .study-companion {
+  display: none;
+}
+.study-overlay .study-banner {
+  margin: 0 0 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .records-home__study-status {
+    transition: none;
+  }
+}

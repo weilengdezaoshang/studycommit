@@ -38,8 +38,9 @@ describe('drawer wiring', () => {
     await user.click(openDrawer())
     await user.click(screen.getByRole('button', { name: /待整理/ }))
 
-    expect(screen.getAllByText('待整理的纸页').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('heading', { name: '待整理', level: 2 })).toBeInTheDocument()
     expect(screen.getAllByText(/React 的状态更新/).length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryAllByText(/Safe Area 不只是顶部留白/)).toHaveLength(0)
   })
 
   it('点击还在思考进入问题页', async () => {
@@ -50,8 +51,10 @@ describe('drawer wiring', () => {
     await user.click(openDrawer())
     await user.click(screen.getByRole('button', { name: /还在思考/ }))
 
-    expect(await screen.findByText(/暂时没有记下的问题|Safe Area/)).toBeInTheDocument()
-    expect(document.querySelector('.collection--questions')).not.toBeNull()
+    expect(screen.getByRole('heading', { name: '还在思考', level: 2 })).toBeInTheDocument()
+    expect(screen.getAllByText(/Safe Area|React 的状态更新/).length).toBeGreaterThanOrEqual(1)
+    // 无疑问的纸页不进入该范围
+    expect(screen.queryAllByText(/闭包会保留创建时的词法作用域/)).toHaveLength(0)
   })
 
   it('抽屉点选日期后记录本只看当天,并可清除日期', async () => {

@@ -1,7 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
-import { usePapersState } from '../features/papers/papers-store'
-import { paperWithExtra } from '../features/papers/view-model'
 import { loadNavigationPreferences } from './navigation-preferences'
 import { routes } from './routes'
 import { AppShell } from '../layouts/AppShell'
@@ -9,10 +7,8 @@ import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
 import { SettingsPage } from '../features/papers/SettingsPage'
-import { RecordsHomePage } from '../features/papers/RecordsHomePage'
+import { RecordsHomePage, type RecordsScope } from '../features/papers/RecordsHomePage'
 import { ComposePage } from '../features/papers/ComposePage'
-import { ProblemsPage } from '../features/papers/ProblemsPage'
-import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { CaptureOverlay } from '../features/capture/CaptureOverlay'
 import { MiniSessionPage } from '../features/mini-session/MiniSessionPage'
@@ -31,38 +27,13 @@ function LandingRedirect(): React.JSX.Element {
   return <Navigate to={preferences.lastTopLevelPath} replace />
 }
 
-function RecordsListPageBridge({
-  title,
-  emptyCopy,
-  matcher,
-  topicId,
-}: {
-  title: string
-  emptyCopy: string
-  matcher: (paper: import('../features/papers/view-model').PaperWithExtra) => boolean
-  topicId?: string
-}): React.JSX.Element {
-  const state = usePapersState()
-  const papers = state.papers
-    .filter((paper) => !paper.deletedAt)
-    .map((paper) => paperWithExtra(state, paper))
-    .filter((paper) => matcher(paper))
-  const topicById = new Map(state.topics.map((topic) => [topic.id, topic]))
+function ScopeBridge({ scope }: { scope: RecordsScope }): React.JSX.Element {
+  return <RecordsHomePage key={scope.kind} scope={scope} />
+}
 
-  return (
-    <RecordsListPage
-      key={title}
-      mode={title === '待整理的纸页' ? 'inbox' : 'box'}
-      title={title}
-      papers={papers}
-      emptyCopy={emptyCopy}
-      topicId={topicId}
-      topicNameOf={(paper) => {
-        const topic = paper.topicId ? topicById.get(paper.topicId) : undefined
-        return topic?.name ?? '待整理'
-      }}
-    />
-  )
+function TopicScopeBridge(): React.JSX.Element {
+  const { topicId } = useParams()
+  return <RecordsHomePage key={topicId} scope={{ kind: 'topic', topicId: topicId ?? '' }} />
 }
 
 function DateHomeBridge(): React.JSX.Element {
@@ -72,20 +43,6 @@ function DateHomeBridge(): React.JSX.Element {
     return <RecordsHomePage />
   }
   return <RecordsHomePage key={dateKey} dateKey={dateKey} />
-}
-
-function BoxRecordsBridge(): React.JSX.Element {
-  const { topicId } = useParams()
-  const state = usePapersState()
-  const topic = state.topics.find((item) => item.id === topicId)
-  return (
-    <RecordsListPageBridge
-      title={topic?.name ?? '箱子'}
-      emptyCopy="这个箱子还没有纸页。"
-      matcher={(paper) => paper.topicId === topicId}
-      topicId={topicId}
-    />
-  )
 }
 
 function NotFoundPage(): React.JSX.Element {
@@ -154,21 +111,12 @@ export function AppRoutes({
             />
             <Route path="timeline" element={<RecordsHomePage />} />
             <Route path="compose" element={<ComposePage />} />
-            <Route path="problems" element={<ProblemsPage />} />
+            <Route path="problems" element={<ScopeBridge scope={{ kind: 'questions' }} />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="review" element={<ReviewPage />} />
             <Route path="records/:dateKey" element={<DateHomeBridge />} />
-            <Route
-              path="inbox"
-              element={
-                <RecordsListPageBridge
-                  title="待整理的纸页"
-                  emptyCopy="整理完成后，这里会清空。"
-                  matcher={(paper) => paper.status === 'inbox'}
-                />
-              }
-            />
-            <Route path="boxes/:topicId" element={<BoxRecordsBridge />} />
+            <Route path="inbox" element={<ScopeBridge scope={{ kind: 'inbox' }} />} />
+            <Route path="boxes/:topicId" element={<TopicScopeBridge />} />
             <Route
               path="desk"
               element={
