@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { PaperFragment } from '@studycommit/common/contracts'
+import { PAPER_QUESTION_MAX_LENGTH } from '@studycommit/common/paper-runtime'
 import { useDesktopServices } from '../api/DesktopServicesProvider'
 
 /**
@@ -54,7 +55,7 @@ export function FragmentComposer({ sessionId }: { sessionId: string }): React.JS
         <input
           aria-label="记下一点"
           value={value}
-          maxLength={2_000}
+          maxLength={PAPER_QUESTION_MAX_LENGTH}
           placeholder="记下一点…（Enter 保存）"
           disabled={busy}
           onChange={(event) => setValue(event.target.value)}
@@ -66,7 +67,12 @@ export function FragmentComposer({ sessionId }: { sessionId: string }): React.JS
           }}
           style={{ flex: 1, minHeight: 36 }}
         />
-        <button type="button" className="button button--secondary" disabled={busy || !value.trim()} onClick={() => void submit()}>
+        <button
+          type="button"
+          className="button button--secondary"
+          disabled={busy || !value.trim()}
+          onClick={() => void submit()}
+        >
           记下
         </button>
       </div>

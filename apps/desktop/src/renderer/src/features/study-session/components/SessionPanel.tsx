@@ -14,6 +14,10 @@ import {
   trimToNull,
 } from '@studycommit/common/study-session-runtime'
 import {
+  PAPER_CONTENT_MAX_LENGTH,
+  PAPER_QUESTION_MAX_LENGTH,
+} from '@studycommit/common/paper-runtime'
+import {
   useSessionClock,
   type SessionCommand,
   type StudySessionController,
@@ -172,13 +176,13 @@ export function SessionPanel({
           key: 'understanding',
           label: '这次弄懂了什么（必填）',
           placeholder: '用一两句话写下这次的理解',
-          maxLength: 20_000,
+          maxLength: PAPER_CONTENT_MAX_LENGTH,
         },
         {
           key: 'nextQuestion',
           label: '下一个问题（可选，将生成新纸页继续）',
           placeholder: '把还没弄懂的部分写成新问题',
-          maxLength: 2_000,
+          maxLength: PAPER_QUESTION_MAX_LENGTH,
         },
       ],
       onConfirm: async ({ notes }) => {

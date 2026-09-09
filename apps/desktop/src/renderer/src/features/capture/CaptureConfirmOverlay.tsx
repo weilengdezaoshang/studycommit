@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  PAPER_CONTENT_MAX_LENGTH,
+  PAPER_QUESTION_MAX_LENGTH,
+} from '@studycommit/common/paper-runtime'
+import {
   findSensitiveContent,
   SENSITIVE_NOTICE,
   type SensitiveFinding,
@@ -8,8 +12,8 @@ import { papersActions } from '../papers/papers-store'
 import { useDesktopServices } from '../study-session/api/DesktopServicesProvider'
 import { closeCaptureConfirm } from './confirm-store'
 
-const QUESTION_MAX = 2_000
-const UNDERSTANDING_MAX = 20_000
+/** OCR 原文接近正文上限时的预警缓冲。 */
+const TEXT_LIMIT_WARNING_BUFFER = 2_000
 
 /** OCR 建议句:取识别文本的首个非空行截断为问题输入预填。 */
 export function suggestedQuestionOf(ocrText: string): string {
@@ -20,7 +24,9 @@ export function suggestedQuestionOf(ocrText: string): string {
   if (!firstLine) {
     return ''
   }
-  return firstLine.length > QUESTION_MAX ? firstLine.slice(0, QUESTION_MAX) : firstLine
+  return firstLine.length > PAPER_QUESTION_MAX_LENGTH
+    ? firstLine.slice(0, PAPER_QUESTION_MAX_LENGTH)
+    : firstLine
 }
 
 /**
@@ -78,7 +84,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
   )
   const hasQuestion = question.trim().length > 0
   const hasText = ocrText.trim().length > 0
-  const nearTextLimit = ocrText.length >= UNDERSTANDING_MAX - 2_000
+  const nearTextLimit = ocrText.length >= PAPER_CONTENT_MAX_LENGTH - TEXT_LIMIT_WARNING_BUFFER
 
   const close = () => {
     closeCaptureConfirm()
@@ -218,14 +224,14 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
             className="capture-textarea"
             value={ocrText}
             rows={5}
-            maxLength={UNDERSTANDING_MAX}
+            maxLength={PAPER_CONTENT_MAX_LENGTH}
             disabled={busy}
             onChange={(event) => setOcrText(event.target.value)}
             placeholder="识别不到文字时，可以直接写下想记的内容"
           />
           {nearTextLimit && (
             <span className="capture-counter" role="status">
-              {`${ocrText.length.toLocaleString()} / ${UNDERSTANDING_MAX.toLocaleString()}`}
+              {`${ocrText.length.toLocaleString()} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString()}`}
             </span>
           )}
         </div>
@@ -238,7 +244,7 @@ export function CaptureConfirmOverlay({ captureId }: { captureId: string }): Rea
             id="capture-question"
             value={question}
             rows={2}
-            maxLength={QUESTION_MAX}
+            maxLength={PAPER_QUESTION_MAX_LENGTH}
             disabled={busy}
             onChange={(event) => setQuestion(event.target.value)}
             placeholder="把截图里没弄懂的部分写成一个问题"
