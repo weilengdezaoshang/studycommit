@@ -121,6 +121,39 @@ if (typeof window !== 'undefined') {
   if (typeof Element.prototype.scrollIntoView !== 'function') {
     Element.prototype.scrollIntoView = () => {}
   }
+  // jsdom 未实现 ResizeObserver;虚拟列表的动态测量依赖它
+  if (typeof window.ResizeObserver !== 'function') {
+    class ResizeObserverStub {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+  }
+  // jsdom 未实现 matchMedia;列数断点等媒体查询依赖它
+  if (typeof window.matchMedia !== 'function') {
+    const matchMediaStub = (query: string): MediaQueryList =>
+      ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent: () => false,
+      }) as unknown as MediaQueryList
+    window.matchMedia = matchMediaStub as typeof window.matchMedia
+  }
+  // jsdom 没有布局引擎,视口尺寸恒为 0 会让窗口虚拟化渲染空列表;给定常规桌面视口
+  Object.defineProperty(document.documentElement, 'clientHeight', {
+    configurable: true,
+    value: 768,
+  })
+  Object.defineProperty(document.documentElement, 'clientWidth', {
+    configurable: true,
+    value: 1280,
+  })
 }
 
 beforeEach(() => {

@@ -1,16 +1,28 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { useWindowVirtualizer } from '@tanstack/react-virtual'
 import { routes } from '../../app/routes'
 import { useCaptureEntry } from '../capture/use-capture-entry'
 import { papersActions, todayKey, usePapersState } from './papers-store'
 import { isOpenQuestion, paperWithExtra, type PaperWithExtra } from './view-model'
 import { RecordReader } from './RecordReader'
 import { useStudyController } from '../study-session/StudyControllerProvider'
-
-/** 记录本主页每日期默认展示条数(约两行卡片),展开按同步长增加。 */
-const DAY_PAGE_SIZE = 6
+import { buildVirtualRows, columnsOf, type DayGroup, type VirtualRow } from './virtual-rows'
 
 const WEEKDAY_NAMES = ['日', '一', '二', '三', '四', '五', '六']
+
+/** 卡片网格列数:与 CSS 断点一致(≥1100px 三列),阅读栏打开时恒两列。 */
+function useGridColumns(reading: boolean): number {
+  const [wide, setWide] = useState(() => window.matchMedia('(min-width: 1100px)').matches)
+  useEffect(() => {
+    const query = window.matchMedia('(min-width: 1100px)')
+    const update = () => setWide(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  return columnsOf(reading, wide)
+}
 
 /** 记录本范围(R34):主题、待整理、还在思考是同一记录本的范围视图。 */
 export type RecordsScope =
@@ -29,18 +41,10 @@ const SCOPE_EMPTY_COPY: Record<RecordsScope['kind'], string> = {
   topic: '这个主题还没有纸页。',
 }
 
-interface DayGroup {
-  dateKey: string
-  dayNumber: string
-  monthLabel: string
-  weekday: string
-  suffix: string
-  papers: PaperWithExtra[]
-}
-
 /**
  * 记录本主页(V7/R34/R43/R58):默认跨月展示全部记录,
  * 日期分组 + 纸面卡片网格;≥1000px 点卡片在右侧阅读栏打开。
+ * 列表按行窗口虚拟化(R58 遗留项):仅渲染视口附近的行,支撑大量历史记录。
  */
 export function RecordsHomePage({
   scope = { kind: 'all' },
@@ -146,6 +150,36 @@ export function RecordsHomePage({
   }
 
   const emptyBecauseFiltered = total > 0 && scopedTotal === 0
+  const reading = Boolean(detailPaper)
+  const cols = useGridColumns(reading)
+  const rows = useMemo(
+    () => buildVirtualRows(groups, expandedDays, cols),
+    [groups, expandedDays, cols],
+  )
+
+  const listRef = useRef<HTMLDivElement>(null)
+  const [scrollMargin, setScrollMargin] = useState(0)
+  useLayoutEffect(() => {
+    // 窗口虚拟化需要列表在文档中的起始位置,才能对齐可见窗口
+    const measure = () => {
+      const el = listRef.current
+      if (el) {
+        setScrollMargin(el.getBoundingClientRect().top + window.scrollY)
+      }
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [filtersOpen, detailId, scopeTitle])
+
+  const virtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: (index) => estimateRowSize(rows[index]),
+    overscan: 5,
+    getItemKey: (index) => rows[index].key,
+    scrollMargin,
+  })
+
   const headingSummary = activeDateKey
     ? `${Number(activeDateKey.slice(5, 7))} 月 ${Number(activeDateKey.slice(8))} 日 · ${scopedTotal} 条记录`
     : scope.kind === 'all'
@@ -263,20 +297,51 @@ export function RecordsHomePage({
         )}
 
         {scopedTotal > 0 ? (
-          groups.map((group) => (
-            <DaySection
-              key={group.dateKey}
-              group={group}
-              expanded={expandedDays[group.dateKey] ?? false}
-              onToggle={() =>
-                setExpandedDays((current) => ({
-                  ...current,
-                  [group.dateKey]: !(current[group.dateKey] ?? false),
-                }))
-              }
-              onOpen={openPaper}
-            />
-          ))
+          <div ref={listRef}>
+            <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const row = rows[virtualItem.index]
+                return (
+                  <div
+                    key={row.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      // window 虚拟化的 start 含 scrollMargin,容器本身已在文档该处,需扣除
+                      transform: `translateY(${virtualItem.start - scrollMargin}px)`,
+                    }}
+                  >
+                    {row.kind === 'day-heading' ? (
+                      <DayHeadingRow group={row.group} />
+                    ) : row.kind === 'card-row' ? (
+                      <div
+                        className="records-home__row"
+                        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                      >
+                        {row.papers.map((paper) => (
+                          <RecordCard key={paper.id} paper={paper} onOpen={openPaper} />
+                        ))}
+                      </div>
+                    ) : (
+                      <DayFooterRow
+                        row={row}
+                        onToggle={() =>
+                          setExpandedDays((current) => ({
+                            ...current,
+                            [row.group.dateKey]: !(current[row.group.dateKey] ?? false),
+                          }))
+                        }
+                      />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         ) : (
           <div className="records-home__empty">
             <h3>
@@ -458,51 +523,49 @@ function TopicManage({
   )
 }
 
-/** 单日分组:标题 + 卡片网格 + 超出默认条数时的步进展开。 */
-function DaySection({
-  group,
-  expanded,
-  onToggle,
-  onOpen,
-}: {
-  group: DayGroup
-  expanded: boolean
-  onToggle: () => void
-  onOpen: (paperId: string) => void
-}): React.JSX.Element {
-  const visible = expanded ? group.papers : group.papers.slice(0, DAY_PAGE_SIZE)
+/** 行高估算:动态测量前的初始值,标题/按钮矮,卡片行高。 */
+function estimateRowSize(row: VirtualRow | undefined): number {
+  if (row && row.kind !== 'card-row') {
+    return 64
+  }
+  return 250
+}
+
+function DayHeadingRow({ group }: { group: DayGroup }): React.JSX.Element {
   const fullDate = `${group.dateKey.slice(0, 4)} 年 ${Number(group.dateKey.slice(5, 7))} 月 ${Number(group.dateKey.slice(8))} 日 ${group.weekday.replace('周', '星期')}`
   return (
-    <section className="records-home__day" aria-label={fullDate}>
-      <header className="records-home__day-heading">
-        <h3>
-          <span className="records-home__day-number" aria-hidden="true">
-            {group.dayNumber}
-          </span>
-          <span className="records-home__day-meta">
-            {group.monthLabel} · {group.weekday}
-            <span className="records-home__day-suffix">{group.suffix}</span>
-          </span>
-          <span className="visually-hidden">{fullDate}</span>
-        </h3>
-        <span className="records-home__day-count">{group.papers.length} 条记录</span>
-      </header>
-      <div className="records-home__grid">
-        {visible.map((paper) => (
-          <RecordCard key={paper.id} paper={paper} onOpen={onOpen} />
-        ))}
-      </div>
-      {group.papers.length > DAY_PAGE_SIZE && (
-        <button
-          type="button"
-          className="records-home__expand"
-          aria-expanded={expanded}
-          onClick={onToggle}
-        >
-          {expanded ? '收起这一天的记录' : `展开其余 ${group.papers.length - DAY_PAGE_SIZE} 条`}
-        </button>
-      )}
-    </section>
+    <div className="records-home__day-heading" role="heading" aria-level={3} aria-label={fullDate}>
+      <h3>
+        <span className="records-home__day-number" aria-hidden="true">
+          {group.dayNumber}
+        </span>
+        <span className="records-home__day-meta">
+          {group.monthLabel} · {group.weekday}
+          <span className="records-home__day-suffix">{group.suffix}</span>
+        </span>
+        <span className="visually-hidden">{fullDate}</span>
+      </h3>
+      <span className="records-home__day-count">{group.papers.length} 条记录</span>
+    </div>
+  )
+}
+
+function DayFooterRow({
+  row,
+  onToggle,
+}: {
+  row: Extract<VirtualRow, { kind: 'day-footer' }>
+  onToggle: () => void
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      className="records-home__expand"
+      aria-expanded={row.expanded}
+      onClick={onToggle}
+    >
+      {row.expanded ? '收起这一天的记录' : `展开其余 ${row.hiddenCount} 条`}
+    </button>
   )
 }
 
