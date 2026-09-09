@@ -160,17 +160,19 @@ export function RecordsHomePage({
   const listRef = useRef<HTMLDivElement>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
   useLayoutEffect(() => {
-    // 窗口虚拟化需要列表在文档中的起始位置,才能对齐可见窗口
+    // 窗口虚拟化需要列表在文档中的起始位置;提示条/筛选等任何布局变化都要重测,
+    // 因此每次渲染后测量,值无变化时不触发更新
     const measure = () => {
       const el = listRef.current
       if (el) {
-        setScrollMargin(el.getBoundingClientRect().top + window.scrollY)
+        const margin = el.getBoundingClientRect().top + window.scrollY
+        setScrollMargin((current) => (Math.abs(current - margin) < 0.5 ? current : margin))
       }
     }
     measure()
     window.addEventListener('resize', measure)
     return () => window.removeEventListener('resize', measure)
-  }, [filtersOpen, detailId, scopeTitle])
+  })
 
   const virtualizer = useWindowVirtualizer({
     count: rows.length,
