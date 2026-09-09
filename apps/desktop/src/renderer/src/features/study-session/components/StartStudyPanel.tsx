@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef, useState, type FormEvent } from 'react'
 import { Select } from '../../../components/select/Select'
-import { openCaptureConfirm } from '../../capture/confirm-store'
+import { useCaptureEntry } from '../../capture/use-capture-entry'
 import { useDesktopServices } from '../api/DesktopServicesProvider'
 import type { StudySessionController } from '@studycommit/common/study-session-react'
 import {
@@ -13,46 +13,6 @@ import {
 } from '@studycommit/common/study-session-runtime'
 
 const GOAL_MAX = 500
-
-/** 截图学习入口状态(DE-310):权限拒绝时展示解释与系统设置跳转。 */
-function useCaptureEntry() {
-  const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
-  const [permissionDenied, setPermissionDenied] = useState(false)
-
-  const start = async () => {
-    if (busy) {
-      return
-    }
-    setBusy(true)
-    setNotice(null)
-    try {
-      const permission = await window.studyCommit.capture.permissionCheck()
-      if (!(permission.ok && (permission.data === 'granted' || permission.data === 'not-needed'))) {
-        setPermissionDenied(true)
-        return
-      }
-      const result = await window.studyCommit.capture.request()
-      if (!result.ok) {
-        setNotice('截图失败，请重试')
-        return
-      }
-      if (result.data.status === 'completed') {
-        // 截图完成:打开问题确认页(DE-311)
-        openCaptureConfirm(result.data.captureId)
-      } else if (result.data.status === 'permission-denied') {
-        setPermissionDenied(true)
-      } else if (result.data.status === 'failed') {
-        setNotice(`截图失败：${result.data.message}`)
-      }
-      // cancelled:用户主动取消,静默
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return { busy, notice, permissionDenied, start }
-}
 
 export function StartStudyPanel({
   onCancel,

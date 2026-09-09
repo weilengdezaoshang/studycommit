@@ -5,10 +5,15 @@ import {
   parseDateKey,
   shiftDateKey,
 } from '@studycommit/common/study-session-runtime'
+import {
+  normalizeTopicName,
+  TOPIC_NAME_ERROR_MESSAGE,
+} from '@studycommit/common/topic-store-runtime'
 import { routes } from '../../app/routes'
 import { useNavigate } from 'react-router'
 import { AppIcon } from './AppIcon'
-import { papersActions, usePapersState } from '../../features/papers/papers-store'
+import { papersActions, todayKey, usePapersState } from '../../features/papers/papers-store'
+import { useAuthSession } from '../../features/auth/session'
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 function currentCursor() {
@@ -20,61 +25,89 @@ const WHEEL_ROW_HEIGHT = 40
 const WHEEL_YEAR_START = 1900
 const WHEEL_YEAR_COUNT = 191
 
-function BoxSection({
-  onSelectBox,
-}: {
-  onSelectBox: (topicId: string) => void
-}): React.JSX.Element {
-  const state = usePapersState()
+/** R47 保留字:与现有路由语义冲突的系统范围名称。 */
+const RESERVED_TOPIC_NAMES = new Set(['all', 'inbox', 'questions'])
 
+function countTier(count: number): 0 | 1 | 2 | 3 | 4 {
+  if (count <= 0) {
+    return 0
+  }
+  if (count === 1) {
+    return 1
+  }
+  if (count <= 4) {
+    return 2
+  }
+  if (count <= 9) {
+    return 3
+  }
+  return 4
+}
+
+/** 身份区(R45):头像、名字与状态;搜索与设置并列 44px 图标钮。 */
+function DrawerIdentity({ onClose }: { onClose: () => void }): React.JSX.Element {
+  const navigate = useNavigate()
+  const session = useAuthSession()
+  const name = session?.user.nickname ?? '登录 / 注册'
+  const status = session ? '已登录 · 本机与云端同步' : '未登录 · 本机记录'
   return (
-    <section className="drawer-section" aria-label="我的箱子">
-      <div className="drawer-section__heading">
-        <h2>我的箱子</h2>
-        <button
-          type="button"
-          className="drawer-add"
-          aria-label="新建箱子并打开"
-          onClick={() => {
-            const topic = papersActions.createTopic(`未命名的知识 ${state.topics.length + 1}`)
-            onSelectBox(topic.id)
-          }}
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
+    <div className="drawer-identity">
+      <span className="drawer-avatar" aria-hidden="true">
+        {session ? (
+          session.user.nickname.slice(0, 1)
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <circle cx="12" cy="9" r="3.2" />
+            <path d="M5.5 19a6.5 6.5 0 0 1 13 0" />
           </svg>
-        </button>
-      </div>
-      {state.topics.map((topic) => {
-        const count = state.papers.filter(
-          (paper) => !paper.deletedAt && paper.topicId === topic.id,
-        ).length
-        return (
-          <button
-            key={topic.id}
-            type="button"
-            className="drawer-link"
-            aria-label={`打开${topic.name}箱子`}
-            onClick={() => onSelectBox(topic.id)}
-          >
-            <AppIcon name="box" />
-            {topic.name}
-            <span className="drawer-count">{count}</span>
-          </button>
-        )
-      })}
-      {state.topics.length === 0 && <p className="drawer-empty-hint">还没有箱子，点 + 建一个。</p>}
-    </section>
+        )}
+      </span>
+      <button
+        type="button"
+        className="drawer-auth"
+        onClick={() => {
+          onClose()
+          navigate(session ? routes.settings() : routes.auth())
+        }}
+      >
+        <span className="drawer-auth-name">{name}</span>
+        <span className="drawer-auth-status">{status}</span>
+      </button>
+      <button
+        type="button"
+        className="drawer-icon-action"
+        aria-label="搜索记录与主题"
+        onClick={() => {
+          onClose()
+          navigate('/search')
+        }}
+      >
+        <AppIcon name="search" />
+      </button>
+      <button
+        type="button"
+        className="drawer-icon-action"
+        aria-label="个人设置"
+        onClick={() => {
+          onClose()
+          navigate(routes.settings())
+        }}
+      >
+        <AppIcon name="settings" />
+      </button>
+    </div>
   )
 }
 
+/** 热力月历(R38/R43/R52):五档底色、今天描边、点日期直达;统计行加按需图例。 */
 function LearningHeatmap({ onClose }: { onClose: () => void }): React.JSX.Element {
   const navigate = useNavigate()
   const papers = usePapersState()
   const [cursor, setCursor] = useState(currentCursor)
+  const [helpOpen, setHelpOpen] = useState(false)
   const selectedDateKey = papers.selectedDateKey
+  const today = todayKey()
 
-  // 热力图计数直接来自真实纸页数据,保证与首页时间轴一致
   const countByDate: Record<string, number> = {}
   for (const paper of papers.papers) {
     if (paper.deletedAt) {
@@ -105,31 +138,26 @@ function LearningHeatmap({ onClose }: { onClose: () => void }): React.JSX.Elemen
   const shiftMonth = (delta: number) => {
     const anchor = `${cursor.year}-${String(cursor.month).padStart(2, '0')}-15`
     setCursor(parseDateKey(shiftDateKey(anchor, delta)))
+    // R52:切月重新收起图例
+    setHelpOpen(false)
   }
 
+  const monthPrefix = `${cursor.year}-${String(cursor.month).padStart(2, '0')}`
   const weeks = chunkIntoWeeks(
     buildMonthCells(cursor.year, cursor.month, selectedDateKey, countByDate),
   )
+  const monthTotal = Object.entries(countByDate)
+    .filter(([dateKey]) => dateKey.startsWith(monthPrefix))
+    .reduce((total, [, count]) => total + count, 0)
+  const monthDays = Object.keys(countByDate).filter((dateKey) =>
+    dateKey.startsWith(monthPrefix),
+  ).length
 
   return (
     <div
       className="drawer-calendar"
       aria-label={`${cursor.year} 年 ${cursor.month} 月学习记录热力图`}
     >
-      <nav className="drawer-section" aria-label="工作区">
-        <button
-          type="button"
-          className="drawer-link"
-          aria-label="回到工作台"
-          onClick={() => {
-            onClose()
-            navigate('/today')
-          }}
-        >
-          <AppIcon name="today" />
-          工作台
-        </button>
-      </nav>
       <div className="drawer-month-nav">
         <button
           type="button"
@@ -143,14 +171,14 @@ function LearningHeatmap({ onClose }: { onClose: () => void }): React.JSX.Elemen
         </button>
         <button
           type="button"
-          className="month-label month-label--button"
+          className="month-label month-label--button drawer-hand"
           aria-label="选择年月"
           onClick={() => {
             setDraft({ year: cursor.year, month: cursor.month })
             setWheelOpen(true)
           }}
         >
-          {cursor.year} 年 {cursor.month} 月
+          {cursor.year} 年 · {cursor.month} 月
         </button>
         <button
           type="button"
@@ -162,7 +190,6 @@ function LearningHeatmap({ onClose }: { onClose: () => void }): React.JSX.Elemen
             <path d="m10 6 6 6-6 6" />
           </svg>
         </button>
-        <span className="month-spacer" />
       </div>
 
       {wheelOpen && (
@@ -255,69 +282,182 @@ function LearningHeatmap({ onClose }: { onClose: () => void }): React.JSX.Elemen
 
       {weeks.map((week, weekIndex) => (
         <div key={weekIndex} className="mini-calendar__days">
-          {week.map((cell) =>
-            cell.isBlank ? (
-              <span
-                key={cell.dateKey}
-                className="calendar-cell calendar-cell--blank"
-                aria-hidden="true"
-              />
-            ) : (
+          {week.map((cell) => {
+            if (cell.isBlank) {
+              return (
+                <span
+                  key={cell.dateKey}
+                  className="calendar-cell calendar-cell--blank"
+                  aria-hidden="true"
+                />
+              )
+            }
+            const isFuture = cell.dateKey > today
+            const tier = countTier(cell.count)
+            return (
               <button
                 key={cell.dateKey}
                 type="button"
-                aria-label={`${cell.dateKey.slice(5, 7).replace(/^0/, '')} 月 ${Number(cell.dateKey.slice(8))} 日，${cell.count} 张纸页`}
+                disabled={isFuture}
+                aria-label={`${cell.dateKey.slice(0, 4)}年${cell.dateKey.slice(5, 7).replace(/^0/, '')}月${Number(cell.dateKey.slice(8))}日，${cell.count} 条记录${cell.dateKey === today ? '，今天' : ''}${isFuture ? '，未来日期' : ''}`}
+                aria-pressed={cell.isSelected}
                 onClick={() => {
                   papersActions.selectDate(cell.dateKey)
                   onClose()
                   navigate(routes.timeline())
                 }}
-                className={`calendar-cell${cell.isSelected ? ' calendar-cell--selected' : ''}`}
+                className={[
+                  'calendar-cell',
+                  `calendar-cell--tier${tier}`,
+                  cell.isSelected ? 'calendar-cell--selected' : '',
+                  cell.dateKey === today ? 'calendar-cell--today' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
-                {cell.count > 0 ? (
-                  <span className="calendar-paper-visual">
-                    {[2, 1, 0]
-                      .filter((layer) => layer < Math.min(cell.count, 3))
-                      .map((layer) => {
-                        const base = 3 - (Math.min(cell.count, 3) - 1)
-                        return (
-                          <span
-                            key={layer}
-                            className="calendar-paper"
-                            style={{ left: base + layer * 2, top: base + layer * 2 }}
-                          />
-                        )
-                      })}
-                  </span>
-                ) : (
-                  <span className="calendar-day__dot" aria-hidden="true" />
-                )}
+                {Number(cell.dateKey.slice(8))}
               </button>
-            ),
-          )}
+            )
+          })}
         </div>
       ))}
 
-      <div className="mini-calendar__legend" aria-label="纸页数量从少到多">
-        <span>少</span>
-        <span className="calendar-day__dot" aria-hidden="true" />
-        {[1, 2, 3].map((count) => (
-          <span key={count} className="calendar-paper-visual">
-            {[...Array(count).keys()].reverse().map((layer) => {
-              const base = 3 - (count - 1)
-              return (
-                <span
-                  key={layer}
-                  className="calendar-paper"
-                  style={{ left: base + layer * 2, top: base + layer * 2 }}
-                />
-              )
-            })}
-          </span>
-        ))}
-        <span>多</span>
+      <div className="drawer-month-summary">
+        <p className="drawer-hand">
+          本月记录 {monthTotal} 条 · 分布在 {monthDays} 天
+        </p>
+        <button
+          type="button"
+          className="drawer-help"
+          aria-label="颜色含义说明"
+          aria-expanded={helpOpen}
+          onClick={() => setHelpOpen((value) => !value)}
+        >
+          ?
+        </button>
       </div>
+      {helpOpen && (
+        <p className="drawer-month-help" role="note">
+          底色越深表示当天记录越多；点一个日期可以直接查看那一天的记录。
+        </p>
+      )}
     </div>
+  )
+}
+
+/** 我的主题(R47):就地新建,输入自动聚焦,Enter 提交,取消留在抽屉。 */
+function TopicSection({ onClose }: { onClose: () => void }): React.JSX.Element {
+  const navigate = useNavigate()
+  const state = usePapersState()
+  const [creating, setCreating] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (creating) {
+      inputRef.current?.focus()
+    }
+  }, [creating])
+
+  const submitTopic = () => {
+    const name = normalizeTopicName(draftName)
+    if (!name) {
+      setError(TOPIC_NAME_ERROR_MESSAGE)
+      return
+    }
+    if (RESERVED_TOPIC_NAMES.has(name.toLowerCase())) {
+      setError('这个名称被系统保留了')
+      return
+    }
+    const duplicated = state.topics.some((topic) => topic.name.toLowerCase() === name.toLowerCase())
+    if (duplicated) {
+      setError('已经有同名的主题了')
+      return
+    }
+    papersActions.createTopic(name)
+    setDraftName('')
+    setError(null)
+    setCreating(false)
+  }
+
+  return (
+    <section className="drawer-section" aria-label="我的主题">
+      <div className="drawer-section__heading">
+        <h2 className="drawer-hand">我的主题</h2>
+        <button
+          type="button"
+          className="drawer-add"
+          aria-label="新建主题"
+          onClick={() => {
+            setCreating(true)
+            setError(null)
+          }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </div>
+      {creating && (
+        <form
+          className="drawer-topic-create"
+          onSubmit={(event) => {
+            event.preventDefault()
+            submitTopic()
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={draftName}
+            maxLength={18}
+            placeholder="主题名称（最多 18 字）"
+            aria-label="主题名称"
+            aria-invalid={error ? true : undefined}
+            onChange={(event) => {
+              setDraftName(event.target.value)
+              setError(null)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                setCreating(false)
+                setDraftName('')
+                setError(null)
+              }
+            }}
+          />
+          {error && (
+            <span className="drawer-topic-error" role="alert">
+              {error}
+            </span>
+          )}
+        </form>
+      )}
+      {state.topics.map((topic) => {
+        const count = state.papers.filter(
+          (paper) => !paper.deletedAt && paper.topicId === topic.id,
+        ).length
+        return (
+          <button
+            key={topic.id}
+            type="button"
+            className="drawer-link drawer-hand"
+            aria-label={`打开${topic.name}主题`}
+            onClick={() => {
+              onClose()
+              navigate(`/boxes/${encodeURIComponent(topic.id)}`)
+            }}
+          >
+            <AppIcon name="box" />
+            {topic.name}
+            <span className="drawer-count">{count}</span>
+          </button>
+        )
+      })}
+      {state.topics.length === 0 && !creating && (
+        <p className="drawer-empty-hint">还没有主题，点 + 建一个。</p>
+      )}
+    </section>
   )
 }
 
@@ -345,13 +485,16 @@ export function Sidebar({
     onClose()
     navigate(path)
   }
-  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!open) {
       return undefined
     }
-    closeButtonRef.current?.focus()
+    // R45:打开抽屉首焦点为搜索;Esc 或遮罩关闭
+    const searchButton = document.querySelector<HTMLButtonElement>(
+      '#study-drawer .drawer-icon-action',
+    )
+    searchButton?.focus()
     const closeOnEscape = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         onClose()
@@ -390,76 +533,45 @@ export function Sidebar({
           }
         }}
       >
-        <div className="brand" aria-label="StudyCommit">
-          <span className="brand__mark" aria-hidden="true">
-            S
-          </span>
-          <span>StudyCommit</span>
+        <DrawerIdentity onClose={onClose} />
+
+        <nav className="drawer-section" aria-label="工作区">
           <button
-            ref={closeButtonRef}
-            className="drawer-close"
             type="button"
-            aria-label="打开设置"
-            onClick={() => {
-              onClose()
-              navigate(routes.settings())
-            }}
+            className="drawer-link drawer-hand"
+            aria-label="打开记录本"
+            aria-current="page"
+            onClick={() => navigateAndClose(routes.timeline())}
           >
-            <AppIcon name="settings" />
+            <AppIcon name="today" />
+            记录本
           </button>
-        </div>
+        </nav>
 
         <LearningHeatmap onClose={onClose} />
 
-        <BoxSection
-          onSelectBox={(topicId) => navigateAndClose(`/boxes/${encodeURIComponent(topicId)}`)}
-        />
-        <section className="drawer-section" aria-label="查找与回顾">
-          <div className="drawer-section__heading">
-            <h2>查找与回顾</h2>
-          </div>
-          <button
-            type="button"
-            className="drawer-link"
-            onClick={() => {
-              onClose()
-              navigate('/search')
-            }}
-          >
-            <AppIcon name="search" />
-            搜索纸页与箱子
-          </button>
-          <button
-            type="button"
-            className="drawer-link"
-            onClick={() => {
-              onClose()
-              navigate('/review')
-            }}
-          >
-            <AppIcon name="calendar" />
-            月度装订
-          </button>
-        </section>
+        <TopicSection onClose={onClose} />
+
         <section className="drawer-section" aria-label="需要留意">
           <div className="drawer-section__heading">
-            <h2>需要留意</h2>
+            <h2 className="drawer-hand">需要留意</h2>
           </div>
-          <button type="button" className="drawer-link" onClick={() => navigateAndClose('/inbox')}>
+          <button
+            type="button"
+            className="drawer-link drawer-hand"
+            onClick={() => navigateAndClose(routes.inbox())}
+          >
             <AppIcon name="inbox-tray" />
-            待整理的纸页
+            待整理
             <span className="drawer-count">{inboxCount}</span>
           </button>
           <button
             type="button"
-            className="drawer-link"
-            onClick={() => {
-              onClose()
-              navigate('/problems')
-            }}
+            className="drawer-link drawer-hand"
+            onClick={() => navigateAndClose(routes.problems())}
           >
             <AppIcon name="history" />
-            还在思考的问题
+            还在思考
             <span className="drawer-count">{problemsCount}</span>
           </button>
         </section>

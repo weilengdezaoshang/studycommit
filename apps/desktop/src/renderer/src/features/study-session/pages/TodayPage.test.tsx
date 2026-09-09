@@ -50,7 +50,7 @@ describe('TodayPage', () => {
     })
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: '打开学习抽屉' }))
+    await user.click(screen.getByRole('button', { name: '打开我的抽屉' }))
     await user.keyboard('{Escape}')
 
     expect(screen.getByRole('button', { name: '暂停' })).toBeEnabled()

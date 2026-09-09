@@ -4,7 +4,7 @@ import { routes } from '../../app/routes'
 import { AppIcon } from '../../components/navigation/AppIcon'
 import { paperColors } from './paper-visual'
 import { papersActions, usePapersState } from './papers-store'
-import type { PaperWithExtra } from './view-model'
+import { isOpenQuestion, type PaperWithExtra } from './view-model'
 import './collections.css'
 import { useOptionalDesktopServices } from '../study-session/api/DesktopServicesProvider'
 import { PaperExplainPanel } from './PaperExplainPanel'
@@ -61,10 +61,7 @@ export function RecordsListPage({
   const [renamingTopic, setRenamingTopic] = useState(false)
   const [topicDraftName, setTopicDraftName] = useState('')
   const [topicActionPending, setTopicActionPending] = useState(false)
-  const isOpen = (paper: PaperWithExtra) =>
-    paper.extra.questionStatus
-      ? paper.extra.questionStatus === 'thinking'
-      : paper.extra.hasQuestion && !paper.extra.isQuestionResolved
+  const isOpen = isOpenQuestion
   /** 切换问题状态并按结果提示:成功/被其他设备更改/失败三种文案。 */
   async function runQuestionCommand(paper: PaperWithExtra, status: 'thinking' | 'resolved') {
     const result = await papersActions.updateQuestionStatus(paper.id, status)

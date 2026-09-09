@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Link, Navigate, Route, Routes, useParams } from 'react-router'
-import { usePapersState, todayKey } from '../features/papers/papers-store'
-import { parseDateKey } from '@studycommit/common/study-session-runtime'
+import { usePapersState } from '../features/papers/papers-store'
+import { paperWithExtra } from '../features/papers/view-model'
 import { loadNavigationPreferences } from './navigation-preferences'
 import { routes } from './routes'
 import { AppShell } from '../layouts/AppShell'
@@ -9,7 +9,8 @@ import { ToastProvider } from '@studycommit/common/toast-react'
 import { Toast } from '../components/toast/Toast'
 import { DesktopServicesProvider } from '../features/study-session/api/DesktopServicesProvider'
 import { SettingsPage } from '../features/papers/SettingsPage'
-import { PapersHomePage } from '../features/papers/PapersHomePage'
+import { RecordsHomePage } from '../features/papers/RecordsHomePage'
+import { ComposePage } from '../features/papers/ComposePage'
 import { ProblemsPage } from '../features/papers/ProblemsPage'
 import { RecordsListPage } from '../features/papers/RecordsListPage'
 import { AuthPage } from '../features/auth/AuthPage'
@@ -44,14 +45,7 @@ function RecordsListPageBridge({
   const state = usePapersState()
   const papers = state.papers
     .filter((paper) => !paper.deletedAt)
-    .map((paper) => ({
-      ...paper,
-      extra: state.extras[paper.id] ?? {
-        hasQuestion: false,
-        isQuestionResolved: false,
-        photoPath: null,
-      },
-    }))
+    .map((paper) => paperWithExtra(state, paper))
     .filter((paper) => matcher(paper))
   const topicById = new Map(state.topics.map((topic) => [topic.id, topic]))
 
@@ -71,36 +65,13 @@ function RecordsListPageBridge({
   )
 }
 
-function DateRecordsBridge({ dateKey: dateKeyProp }: { dateKey?: string }): React.JSX.Element {
+function DateHomeBridge(): React.JSX.Element {
   const params = useParams()
-  const dateKey = dateKeyProp ?? params.dateKey
-  const state = usePapersState()
-  const papers = state.papers
-    .filter((paper) => !paper.deletedAt && paper.createdAt.slice(0, 10) === dateKey)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-    .map((paper) => ({
-      ...paper,
-      extra: state.extras[paper.id] ?? {
-        hasQuestion: false,
-        isQuestionResolved: false,
-        photoPath: null,
-      },
-    }))
-  const topicById = new Map(state.topics.map((topic) => [topic.id, topic]))
-  const selected = dateKey ? parseDateKey(dateKey) : null
-
-  return (
-    <RecordsListPage
-      mode="date"
-      title={selected ? `${selected.month} 月 ${selected.day} 日 · 记录` : '记录'}
-      papers={papers}
-      emptyCopy="这天还没有纸页。"
-      topicNameOf={(paper) => {
-        const topic = paper.topicId ? topicById.get(paper.topicId) : undefined
-        return topic?.name ?? '待整理'
-      }}
-    />
-  )
+  const dateKey = params.dateKey
+  if (!dateKey) {
+    return <RecordsHomePage />
+  }
+  return <RecordsHomePage key={dateKey} dateKey={dateKey} />
 }
 
 function BoxRecordsBridge(): React.JSX.Element {
@@ -179,17 +150,14 @@ export function AppRoutes({
             <Route index element={<LandingRedirect />} />
             <Route
               path="today"
-              element={
-                workspaceMode === 'study-session' ? null : (
-                  <DateRecordsBridge dateKey={todayKey()} />
-                )
-              }
+              element={workspaceMode === 'study-session' ? null : <RecordsHomePage />}
             />
-            <Route path="timeline" element={<PapersHomePage />} />
+            <Route path="timeline" element={<RecordsHomePage />} />
+            <Route path="compose" element={<ComposePage />} />
             <Route path="problems" element={<ProblemsPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="review" element={<ReviewPage />} />
-            <Route path="records/:dateKey" element={<DateRecordsBridge />} />
+            <Route path="records/:dateKey" element={<DateHomeBridge />} />
             <Route
               path="inbox"
               element={

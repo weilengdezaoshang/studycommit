@@ -48,7 +48,8 @@ let state: PapersState = {
   papers: buildSeedPapers(),
   topics: DESKTOP_TOPICS,
   extras: buildSeedExtras(),
-  selectedDateKey: todayKey(),
+  // 空串表示未选择日期(记录本默认展示全部);抽屉点选日期后写入
+  selectedDateKey: '',
   source: 'seed',
   syncing: false,
   lastSyncedAt: null,
@@ -252,6 +253,7 @@ const papersActions = {
         })
     }
   },
+  /** 传入空串清除日期条件(R43:列表只有「清除日期」操作)。 */
   selectDate(dateKey: string) {
     setState({ selectedDateKey: dateKey })
   },

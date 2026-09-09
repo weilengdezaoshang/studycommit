@@ -12,95 +12,95 @@ function renderAt(path: string) {
   )
 }
 
-function recordsPage() {
-  const node = document.querySelector('.collection')
-  expect(node).not.toBeNull()
-  return within(node as HTMLElement)
+function openDrawer() {
+  return screen.getByRole('button', { name: '打开我的抽屉' })
 }
 
 describe('drawer wiring', () => {
-  it('点击箱子后筛选首页时间轴并关闭抽屉', async () => {
+  it('点击主题后进入该主题的纸页并关闭抽屉', async () => {
     const user = userEvent.setup()
     renderAt('/today')
     expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
 
-    await user.click(screen.getByRole('button', { name: '打开学习抽屉' }))
-    await user.click(screen.getByRole('button', { name: '打开移动端设计箱子' }))
+    await user.click(openDrawer())
+    await user.click(screen.getByRole('button', { name: '打开移动端设计主题' }))
 
-    expect(screen.getByRole('button', { name: '打开学习抽屉' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
+    expect(openDrawer()).toHaveAttribute('aria-expanded', 'false')
     expect(screen.getAllByText('移动端设计').length).toBeGreaterThanOrEqual(1)
-    expect(recordsPage().getAllByText(/Safe Area 不只是顶部留白/).length).toBeGreaterThanOrEqual(1)
-    expect(recordsPage().queryAllByText(/React 的状态更新/)).toHaveLength(0)
+    expect(screen.getAllByText(/Safe Area 不只是顶部留白/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('点击待整理的纸页筛选 inbox 记录', async () => {
+  it('点击待整理进入待整理页', async () => {
     const user = userEvent.setup()
     renderAt('/today')
     expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
 
-    await user.click(screen.getByRole('button', { name: '打开学习抽屉' }))
-    await user.click(screen.getByRole('button', { name: /待整理的纸页/ }))
+    await user.click(openDrawer())
+    await user.click(screen.getByRole('button', { name: /待整理/ }))
 
     expect(screen.getAllByText('待整理的纸页').length).toBeGreaterThanOrEqual(1)
-    expect(recordsPage().getAllByText(/React 的状态更新/).length).toBeGreaterThanOrEqual(1)
-    expect(recordsPage().queryAllByText(/Safe Area 不只是顶部留白/)).toHaveLength(0)
+    expect(screen.getAllByText(/React 的状态更新/).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('点击还在思考的问题进入问题页', async () => {
+  it('点击还在思考进入问题页', async () => {
     const user = userEvent.setup()
     renderAt('/today')
     expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
 
-    await user.click(screen.getByRole('button', { name: '打开学习抽屉' }))
-    await user.click(screen.getByRole('button', { name: /还在思考的问题/ }))
+    await user.click(openDrawer())
+    await user.click(screen.getByRole('button', { name: /还在思考/ }))
 
     expect(await screen.findByText(/暂时没有记下的问题|Safe Area/)).toBeInTheDocument()
     expect(document.querySelector('.collection--questions')).not.toBeNull()
   })
 
-  it('单击时间线卡片在右侧阅读器直接打开全文', async () => {
+  it('抽屉点选日期后记录本只看当天,并可清除日期', async () => {
     const user = userEvent.setup()
     renderAt('/timeline')
-    // 时间线展示选中日期(默认今天)的纸页;种子数据今天只有 React 那张
-    const card = await screen.findByRole('button', { name: /React 的状态更新/ })
-    expect(screen.getByRole('complementary', { name: '纸页阅读器' })).toHaveTextContent(
-      '点左侧任意一张纸页',
-    )
+    expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
+
+    // 种子数据:昨天只有 Safe Area 一张纸页
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const dayLabel = `${yesterday.getFullYear()}年${yesterday.getMonth() + 1}月${yesterday.getDate()}日，1 条记录`
+
+    await user.click(openDrawer())
+    await user.click(screen.getByRole('button', { name: dayLabel }))
+
+    // 只剩选中日期的记录组,并出现清除日期入口
+    expect(screen.getByText(/· 1 条记录/)).toBeInTheDocument()
+    expect(screen.queryAllByText(/React 的状态更新/)).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: '清除日期' }))
+    expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('单击记录卡片在右侧阅读与思考栏打开全文', async () => {
+    const user = userEvent.setup()
+    renderAt('/timeline')
+    const card = await screen.findByRole('button', { name: /打开记录：.*React 的状态更新/ })
+    expect(screen.queryByRole('complementary', { name: '阅读与思考' })).not.toBeInTheDocument()
     await user.click(card)
 
-    const reader = screen.getByRole('complementary', { name: '纸页阅读器' })
+    const reader = screen.getByRole('complementary', { name: '阅读与思考' })
     expect(reader).toHaveTextContent(/React 的状态更新/)
-    expect(reader).toHaveTextContent('归入箱子')
-    // 地址未发生变化,仍在时间线页
-    expect(document.querySelector('.collection')).toBeNull()
+    expect(reader).toHaveTextContent('整理与更多')
   })
 
-  it('时间线卡片的查看当天入口进入当日记录页', async () => {
+  it('阅读栏内整理与更多展开后可归入主题', async () => {
     const user = userEvent.setup()
     renderAt('/timeline')
-    const card = await screen.findByRole('button', { name: /React 的状态更新/ })
-    await user.click(within(card).getByText('查看当天'))
+    const card = await screen.findByRole('button', { name: /打开记录：.*React 的状态更新/ })
+    await user.click(card)
 
-    expect(document.querySelector('.collection--date')).not.toBeNull()
-    expect(screen.getAllByText(/React 的状态更新/).length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('时间线键盘向下移动选中并直读,再次回车进入沉浸详情', async () => {
-    const user = userEvent.setup()
-    renderAt('/timeline')
-    const card = await screen.findByRole('button', { name: /React 的状态更新/ })
-    card.focus()
-    await user.keyboard('{ArrowDown}')
-
-    expect(screen.getByRole('complementary', { name: '纸页阅读器' }).textContent).toContain(
-      'React 的状态更新',
+    const reader = screen.getByRole('complementary', { name: '阅读与思考' })
+    await user.click(within(reader).getByText('整理与更多'))
+    await user.selectOptions(
+      within(reader).getByLabelText(/收纳到主题|给这张纸页找个归属/),
+      'topic-mobile',
     )
+    await user.click(within(reader).getByRole('button', { name: '归入主题' }))
 
-    await user.keyboard('{Enter}')
-    expect(document.querySelector('.collection-detail')).not.toBeNull()
+    expect(await screen.findByText(/纸页已归入「移动端设计」/)).toBeInTheDocument()
   })
 
   it('滚轮滚动后预览跟随滚动位置', async () => {

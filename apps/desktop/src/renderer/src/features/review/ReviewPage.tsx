@@ -1,26 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  canShiftTo,
+  localTimezone,
+  monthKeyOf,
+  monthLabelOf,
+  shiftMonth,
+  heatmapCells,
+  type MonthCursor,
+} from '@studycommit/common/review-runtime'
 import { createDesktopReviewGateway, type ReviewGateway } from './review-gateway'
 
-type MonthCursor = { year: number; month: number }
-
-function monthKeyOf(cursor: MonthCursor): string {
-  return `${cursor.year}-${String(cursor.month).padStart(2, '0')}`
-}
-
-function shiftMonth(cursor: MonthCursor, delta: number): MonthCursor {
-  const total = cursor.year * 12 + (cursor.month - 1) + delta
-  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
-}
-
-function timezoneOf(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    return 'UTC'
-  }
-}
-
-/** 月度装订页(M5):服务端按用户时区聚合;纸页数/箱子数/解决数与逐日热力。 */
+/** 月度装订页(M5):服务端按用户时区聚合;纸页数/主题数/解决数与逐日热力。 */
 export function ReviewPage(): React.JSX.Element {
   const [gateway] = useState(() => createDesktopReviewGateway())
   const today = useMemo(() => new Date(), [])
@@ -36,7 +26,7 @@ export function ReviewPage(): React.JSX.Element {
     let cancelled = false
     const month = monthKeyOf(cursor)
     void gateway
-      .monthly({ month, timezone: timezoneOf() })
+      .monthly({ month, timezone: localTimezone() })
       .then((data) => {
         if (!cancelled) {
           setReview(data)
@@ -56,31 +46,20 @@ export function ReviewPage(): React.JSX.Element {
   }, [cursor, gateway])
   const loading = loadedMonth !== monthKeyOf(cursor)
 
-  const nextDisabled = (() => {
-    const next = shiftMonth(cursor, 1)
-    return next.year * 12 + next.month > today.getFullYear() * 12 + (today.getMonth() + 1)
-  })()
-
-  const countByDate = useMemo(
-    () => new Map((review?.days ?? []).map((day) => [day.date, day.count])),
-    [review],
-  )
-  const daysInMonth = new Date(cursor.year, cursor.month, 0).getDate()
-  const cells = Array.from({ length: daysInMonth }, (_, index) => {
-    const dateKey = `${monthKeyOf(cursor)}-${String(index + 1).padStart(2, '0')}`
-    const count = countByDate.get(dateKey) ?? 0
-    return { dateKey, count }
-  })
+  const nextDisabled = !canShiftTo(shiftMonth(cursor, 1), today)
+  const cells = useMemo(() => heatmapCells(review?.days ?? [], cursor), [review, cursor])
+  const statValue = (value: number) => (loading ? '…' : String(value))
 
   return (
-    <section className="study-page" aria-label="月度装订">
-      <h2>
-        {cursor.year} 年 {cursor.month} 月装订
-      </h2>
-      <div className="study-form__actions" style={{ marginBottom: 16 }}>
+    <section className="review-page-v7" aria-label="月度装订">
+      <header className="utility-heading">
+        <h2>{monthLabelOf(cursor)}装订</h2>
+      </header>
+
+      <div className="review-page-v7__controls">
         <button
           type="button"
-          className="button button--secondary"
+          className="review-page-v7__shift"
           aria-label="上一个月"
           onClick={() => setCursor(shiftMonth(cursor, -1))}
         >
@@ -88,7 +67,7 @@ export function ReviewPage(): React.JSX.Element {
         </button>
         <button
           type="button"
-          className="button button--secondary"
+          className="review-page-v7__shift"
           aria-label="下一个月"
           disabled={nextDisabled}
           onClick={() => setCursor(shiftMonth(cursor, 1))}
@@ -98,42 +77,33 @@ export function ReviewPage(): React.JSX.Element {
       </div>
 
       {failed ? (
-        <p role="alert">装订统计暂时不可用，请稍后重试。</p>
+        <p className="review-page-v7__failed" role="alert">
+          装订统计暂时不可用，请稍后重试。
+        </p>
       ) : (
-        <>
-          <div style={{ display: 'flex', gap: 32, marginBottom: 16 }}>
-            <Stat label="纸页" value={loading ? '…' : String(review?.paperCount ?? 0)} />
-            <Stat label="箱子" value={loading ? '…' : String(review?.topicCount ?? 0)} />
-            <Stat label="解决" value={loading ? '…' : String(review?.resolvedCount ?? 0)} />
+        <div className="review-page-v7__sheet">
+          <div className="review-page-v7__stats">
+            <Stat label="纸页" value={statValue(review?.paperCount ?? 0)} />
+            <Stat label="主题" value={statValue(review?.topicCount ?? 0)} />
+            <Stat label="解决" value={statValue(review?.resolvedCount ?? 0)} />
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxWidth: 480 }}>
-            {cells.map((cell) => (
-              <div
-                key={cell.dateKey}
-                title={`${cell.dateKey}:${cell.count} 张`}
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: 6,
-                  display: 'grid',
-                  placeItems: 'center',
-                  fontSize: 11,
-                  background:
-                    cell.count <= 0
-                      ? 'var(--color-surface-soft, rgba(0,0,0,0.05))'
-                      : cell.count === 1
-                        ? 'rgba(83, 99, 90, 0.35)'
-                        : cell.count <= 3
-                          ? 'rgba(83, 99, 90, 0.6)'
-                          : 'rgba(83, 99, 90, 1)',
-                  color: cell.count > 3 ? '#fff' : 'inherit',
-                }}
+          <div
+            className="review-page-v7__grid"
+            role="img"
+            aria-label={`${monthLabelOf(cursor)}逐日记录数量`}
+          >
+            {cells.map((cell, index) => (
+              <span
+                key={cell.dateKey ?? `empty-${index}`}
+                className={`review-page-v7__cell${cell.dateKey ? ` review-page-v7__cell--level${cell.level}` : ''}`}
+                title={cell.dateKey ? `${cell.dateKey}:${cell.count} 张` : undefined}
               >
-                {Number(cell.dateKey.slice(-2))}
-              </div>
+                {cell.dateKey ? Number(cell.dateKey.slice(-2)) : ''}
+              </span>
             ))}
           </div>
-        </>
+          <p className="review-page-v7__note">热力只表示记录数量，不代表掌握程度。</p>
+        </div>
       )}
     </section>
   )
@@ -141,9 +111,9 @@ export function ReviewPage(): React.JSX.Element {
 
 function Stat({ label, value }: { label: string; value: string }): React.JSX.Element {
   return (
-    <div style={{ display: 'grid', gap: 2, justifyItems: 'center' }}>
-      <span style={{ fontSize: 26, fontWeight: 600 }}>{value}</span>
-      <span style={{ fontSize: 12, opacity: 0.7 }}>{label}</span>
+    <div className="review-page-v7__stat">
+      <span className="review-page-v7__stat-value">{value}</span>
+      <span className="review-page-v7__stat-label">{label}</span>
     </div>
   )
 }

@@ -4,6 +4,7 @@ export const routes = {
   settings: (): string => '/settings',
   problems: (): string => '/problems',
   inbox: (): string => '/inbox',
+  compose: (): string => '/compose',
   dateRecords: (dateKey: string): string => `/records/${encodeURIComponent(dateKey)}`,
   timeline: (): string => '/timeline',
   boxRecords: (topicId: string): string => `/boxes/${encodeURIComponent(topicId)}`,

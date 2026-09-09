@@ -5,6 +5,7 @@ import {
   radii,
   sizes,
   spacing,
+  studyCommitMistBlueColors,
   typography,
   type SemanticColors,
 } from '@studycommit/design-tokens'
@@ -36,10 +37,50 @@ function appendPixels(
   }
 }
 
+/**
+ * V7 雾蓝纸面的短名变量(--ink/--paper 等):浅色直接取公共雾蓝色板,
+ * 深色映射到深色语义色,两套键保持一致,V7 样式在两种配色下都有定义。
+ */
+function appendV7Palette(variables: CssVariables, colorScheme: ColorScheme) {
+  const light = colorScheme === 'light'
+  variables['--ink'] = light ? studyCommitMistBlueColors.ink : darkColors.text
+  variables['--muted'] = light ? studyCommitMistBlueColors.muted : darkColors.textMuted
+  variables['--muted-soft'] = light ? studyCommitMistBlueColors.mutedSoft : darkColors.textDisabled
+  variables['--muted-faint'] = light
+    ? studyCommitMistBlueColors.mutedFaint
+    : darkColors.textDisabled
+  variables['--paper'] = light ? studyCommitMistBlueColors.paper : darkColors.surface
+  variables['--canvas'] = light ? studyCommitMistBlueColors.canvas : darkColors.background
+  variables['--line'] = light ? studyCommitMistBlueColors.line : darkColors.border
+  variables['--line-strong'] = light
+    ? studyCommitMistBlueColors.lineStrong
+    : darkColors.borderStrong
+  variables['--accent'] = light ? studyCommitMistBlueColors.accent : darkColors.primarySurface
+  variables['--action'] = light ? studyCommitMistBlueColors.action : darkColors.primary
+  variables['--action-surface'] = light
+    ? studyCommitMistBlueColors.actionSurface
+    : darkColors.primarySurface
+  variables['--action-surface-strong'] = light
+    ? studyCommitMistBlueColors.actionSurfaceStrong
+    : darkColors.primarySurface
+  variables['--selected'] = light
+    ? studyCommitMistBlueColors.selectedSurface
+    : darkColors.primarySurface
+  variables['--surface-soft'] = light
+    ? studyCommitMistBlueColors.surfaceSoft
+    : darkColors.surfaceMuted
+  variables['--surface-warm'] = light
+    ? studyCommitMistBlueColors.surfaceWarm
+    : darkColors.surfaceMuted
+  variables['--timeline'] = light ? studyCommitMistBlueColors.timeline : darkColors.borderStrong
+  variables['--scrim'] = light ? studyCommitMistBlueColors.scrim : darkColors.scrim
+}
+
 export function createCssVariables(colorScheme: ColorScheme): CssVariables {
   const variables: CssVariables = {}
   // 浅色走雾蓝主题（V7），深色沿用既有 darkColors，待雾蓝深色板确认后再切。
   appendColors(variables, colorScheme === 'dark' ? darkColors : mistLightColors)
+  appendV7Palette(variables, colorScheme)
   appendPixels(variables, 'space', spacing)
   appendPixels(variables, 'radius', radii)
   appendPixels(variables, 'size', sizes)
