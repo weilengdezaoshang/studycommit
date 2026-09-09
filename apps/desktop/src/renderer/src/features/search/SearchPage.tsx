@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useSearchResults } from '@studycommit/common/search-react'
 import { searchRowKey } from '@studycommit/common/search-runtime'
 import { createDesktopSearchGateway } from './search-gateway'
+import { highlightKeyword } from './highlight'
 import { usePapersState } from '../papers/papers-store'
 
 /** 统一搜索页(M5):服务端命中纸页与箱子,失败回退本地记录;查询逻辑复用公共 Hook。 */
@@ -55,14 +56,14 @@ export function SearchPage(): React.JSX.Element {
                     <time>{row.title}</time>
                     <span>记录</span>
                   </span>
-                  <span className="search-card__body">{row.detail}</span>
+                  <span className="search-card__body">{highlightKeyword(row.detail, keyword)}</span>
                 </Link>
               </li>
             ) : (
               <li key={searchRowKey(row)} className="search-card search-card--topic">
                 <Link to={`/boxes/${encodeURIComponent(row.id)}`} className="search-card__link">
                   <span className="search-card__meta">
-                    <span className="search-card__name">{row.name}</span>
+                    <span className="search-card__name">{highlightKeyword(row.name, keyword)}</span>
                     <span>箱子</span>
                   </span>
                   <span className="search-card__body">

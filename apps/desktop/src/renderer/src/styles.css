@@ -8002,3 +8002,11 @@ button:focus-visible {
   display: grid;
   gap: 12px;
 }
+
+/* 搜索命中关键词高亮(R62/R63):雾蓝浅底,不改变字色层级 */
+.search-hit {
+  border-radius: 3px;
+  padding: 0 1px;
+  background: var(--accent, #d2e0f4);
+  color: inherit;
+}
