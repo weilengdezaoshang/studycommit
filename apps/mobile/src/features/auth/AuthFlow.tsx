@@ -11,6 +11,18 @@ import {
   View,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import {
+  AUTH_ACCOUNT_MAX_LENGTH,
+  AUTH_ERROR,
+  AUTH_NICKNAME_MAX_LENGTH,
+  AUTH_PASSWORD_MAX_LENGTH,
+  authAgreementFooter,
+  authCanSubmit,
+  authSubmitLabel,
+  authSwitchPrompt,
+  extractAuthErrorMessage,
+  validateAuthSubmit,
+} from '@studycommit/common/auth-runtime'
 import { useAppTheme } from '../../theme/ThemeProvider'
 import { paperColors } from '../papers/paper-visual'
 import { loginWithAccount, registerAccount } from './auth-api'
@@ -28,18 +40,11 @@ export function AuthFlow() {
   const [notice, setNotice] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  const accountValid = account.trim().length >= 2
-  // 昵称与后端契约对齐为可选:留空跳过,填写时仍需 2-30 字
-  const trimmedNickname = nickname.trim()
-  const nicknameValid =
-    mode === 'login' ||
-    trimmedNickname.length === 0 ||
-    (trimmedNickname.length >= 2 && trimmedNickname.length <= 30)
-  const passwordValid = password.length >= 8
-  const confirmValid = mode === 'login' || password === confirmPassword
-  const agreementValid = mode === 'login' || agreed
-  const canSubmit =
-    accountValid && nicknameValid && passwordValid && confirmValid && agreementValid && !submitting
+  const canSubmit = authCanSubmit(
+    mode,
+    { account, password, confirmPassword, nickname, agreed },
+    submitting,
+  )
 
   const switchMode = (next: 'login' | 'register') => {
     setMode(next)
@@ -57,12 +62,15 @@ export function AuthFlow() {
     setNotice(null)
     try {
       if (mode === 'register') {
-        if (password !== confirmPassword) {
-          setError('两次输入的密码不一致')
-          return
-        }
-        if (!agreed) {
-          setError('请先勾选同意《用户协议》和《隐私政策》')
+        const submitError = validateAuthSubmit(mode, {
+          account,
+          password,
+          confirmPassword,
+          nickname,
+          agreed,
+        })
+        if (submitError) {
+          setError(submitError)
           return
         }
         await registerAccount(account.trim(), password, nickname.trim())
@@ -71,7 +79,7 @@ export function AuthFlow() {
         setPassword('')
         setConfirmPassword('')
         setAgreed(false)
-        setNotice('注册成功，请登录')
+        setNotice(AUTH_ERROR.registerSuccessNotice)
         return
       }
       await loginWithAccount(account.trim(), password)
@@ -79,11 +87,10 @@ export function AuthFlow() {
       setPassword('')
       setConfirmPassword('')
       setError(
-        requestError instanceof Error
-          ? requestError.message
-          : mode === 'register'
-            ? '注册失败'
-            : '登录失败',
+        extractAuthErrorMessage(
+          requestError,
+          mode === 'register' ? AUTH_ERROR.registerFallback : AUTH_ERROR.loginFallback,
+        ),
       )
     } finally {
       setSubmitting(false)
@@ -113,7 +120,7 @@ export function AuthFlow() {
           style={styles.field}
           autoCapitalize="none"
           autoCorrect={false}
-          maxLength={32}
+          maxLength={AUTH_ACCOUNT_MAX_LENGTH}
           placeholder="账号"
           placeholderTextColor={paperColors.mutedFaint}
           value={account}
@@ -124,7 +131,7 @@ export function AuthFlow() {
           secureTextEntry
           autoCapitalize="none"
           autoCorrect={false}
-          maxLength={128}
+          maxLength={AUTH_PASSWORD_MAX_LENGTH}
           placeholder="密码"
           placeholderTextColor={paperColors.mutedFaint}
           value={password}
@@ -136,7 +143,7 @@ export function AuthFlow() {
               style={styles.field}
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={30}
+              maxLength={AUTH_NICKNAME_MAX_LENGTH}
               placeholder="昵称（选填，2-30 字）"
               placeholderTextColor={paperColors.mutedFaint}
               value={nickname}
@@ -147,7 +154,7 @@ export function AuthFlow() {
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              maxLength={128}
+              maxLength={AUTH_PASSWORD_MAX_LENGTH}
               placeholder="确认密码"
               placeholderTextColor={paperColors.mutedFaint}
               value={confirmPassword}
@@ -187,28 +194,16 @@ export function AuthFlow() {
           onPress={() => void submit()}
           style={[styles.loginButton, !canSubmit && styles.loginButtonDisabled]}
         >
-          <Text style={styles.loginButtonText}>
-            {submitting
-              ? mode === 'register'
-                ? '注册中'
-                : '登录中'
-              : mode === 'register'
-                ? '注册'
-                : '登录'}
-          </Text>
+          <Text style={styles.loginButtonText}>{authSubmitLabel(mode, submitting)}</Text>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
           onPress={() => switchMode(mode === 'login' ? 'register' : 'login')}
         >
-          <Text style={styles.hint}>
-            {mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
-          </Text>
+          <Text style={styles.hint}>{authSwitchPrompt(mode)}</Text>
         </Pressable>
-        <Text style={styles.agreement}>
-          {mode === 'login' ? '登录' : '注册'}即代表你同意《用户协议》和《隐私政策》
-        </Text>
+        <Text style={styles.agreement}>{authAgreementFooter(mode)}</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   )

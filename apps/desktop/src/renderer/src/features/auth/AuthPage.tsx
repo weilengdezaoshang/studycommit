@@ -1,4 +1,16 @@
 import { useRef, useState } from 'react'
+import {
+  AUTH_ACCOUNT_MAX_LENGTH,
+  AUTH_ERROR,
+  AUTH_PASSWORD_MAX_LENGTH,
+  AUTH_PASSWORD_MIN_LENGTH,
+  authAgreementFooter,
+  authCanSubmit,
+  authSubmitLabel,
+  authSwitchPrompt,
+  extractAuthErrorMessage,
+  validateAuthSubmit,
+} from '@studycommit/common/auth-runtime'
 import type { DesktopAuthSession } from './session'
 
 type AuthMode = 'login' | 'register'
@@ -33,10 +45,7 @@ export function AuthPage({
   const [showPassword, setShowPassword] = useState(false)
   const accountRef = useRef<HTMLInputElement>(null)
 
-  const accountValid = account.trim().length >= 2
-  const passwordValid = password.length >= 8
-  const confirmValid = mode === 'login' || password === confirmPassword
-  const canSubmit = accountValid && passwordValid && confirmValid && !submitting
+  const canSubmit = authCanSubmit(mode, { account, password, confirmPassword }, submitting)
 
   const switchMode = (next: AuthMode) => {
     setMode(next)
@@ -52,40 +61,46 @@ export function AuthPage({
     setNotice(null)
     try {
       if (mode === 'register') {
-        if (password !== confirmPassword) {
-          setError('两次输入的密码不一致')
+        const submitError = validateAuthSubmit(mode, { account, password, confirmPassword })
+        if (submitError) {
+          setError(submitError)
           return
         }
         const result = await api.registerAccount({ account: account.trim(), password })
         if (!result.ok) {
           setPassword('')
           setConfirmPassword('')
-          setError(result.error?.message ?? '注册失败')
+          setError(result.error?.message ?? AUTH_ERROR.registerFallback)
           return
         }
         setMode('login')
         setPassword('')
         setConfirmPassword('')
-        setNotice('注册成功，请登录')
+        setNotice(AUTH_ERROR.registerSuccessNotice)
         accountRef.current?.focus()
         return
       }
       const result = await api.loginAccount({ account: account.trim(), password })
       if (!result.ok) {
         setPassword('')
-        setError(result.error?.message ?? '登录失败')
+        setError(result.error?.message ?? AUTH_ERROR.loginFallback)
         return
       }
       if (!result.data) {
         setPassword('')
-        setError('登录响应格式异常')
+        setError(AUTH_ERROR.loginResponseMalformed)
         return
       }
       onSession(result.data)
     } catch (requestError) {
       setPassword('')
       setConfirmPassword('')
-      setError(extractError(requestError, mode === 'register' ? '注册失败' : '登录失败'))
+      setError(
+        extractAuthErrorMessage(
+          requestError,
+          mode === 'register' ? AUTH_ERROR.registerFallback : AUTH_ERROR.loginFallback,
+        ),
+      )
     } finally {
       setSubmitting(false)
     }
@@ -122,8 +137,8 @@ export function AuthPage({
             <input
               ref={accountRef}
               autoComplete="username"
-              maxLength={32}
-              placeholder="2 到 32 个字符"
+              maxLength={AUTH_ACCOUNT_MAX_LENGTH}
+              placeholder={`2 到 ${AUTH_ACCOUNT_MAX_LENGTH} 个字符`}
               value={account}
               onChange={(event) => setAccount(event.target.value)}
             />
@@ -133,8 +148,8 @@ export function AuthPage({
             <input
               type={showPassword ? 'text' : 'password'}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              maxLength={128}
-              placeholder="至少 8 位"
+              maxLength={AUTH_PASSWORD_MAX_LENGTH}
+              placeholder={`至少 ${AUTH_PASSWORD_MIN_LENGTH} 位`}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
@@ -153,7 +168,7 @@ export function AuthPage({
               <input
                 type="password"
                 autoComplete="new-password"
-                maxLength={128}
+                maxLength={AUTH_PASSWORD_MAX_LENGTH}
                 placeholder="再输入一次密码"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
@@ -167,39 +182,18 @@ export function AuthPage({
             </p>
           ) : null}
           <button type="submit" className="button auth-form__submit" disabled={!canSubmit}>
-            {submitting
-              ? mode === 'register'
-                ? '注册中'
-                : '登录中'
-              : mode === 'register'
-                ? '注册'
-                : '登录'}
+            {authSubmitLabel(mode, submitting)}
           </button>
           <button
             type="button"
             className="auth-form__footnote"
             onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
           >
-            {mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}
+            {authSwitchPrompt(mode)}
           </button>
-          <p className="auth-form__footnote">
-            {mode === 'login' ? '登录' : '注册'}即代表你同意《用户协议》和《隐私政策》
-          </p>
+          <p className="auth-form__footnote">{authAgreementFooter(mode)}</p>
         </form>
       </div>
     </section>
   )
-}
-
-function extractError(error: unknown, fallback: string): string {
-  if (error && typeof error === 'object' && 'error' in error) {
-    const payload = (error as { error?: { message?: string } }).error
-    if (payload?.message) {
-      return payload.message
-    }
-  }
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-  return fallback
 }
