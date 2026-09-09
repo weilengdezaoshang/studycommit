@@ -14,9 +14,6 @@ import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { motion } from '@studycommit/design-tokens'
 import type { MonthlyReview } from '@studycommit/common/contracts'
-import { paperColors } from '../../features/papers/paper-visual'
-import { usePapersState } from '../../features/papers/papers-store'
-import { useMobileServices } from '../../core/MobileServicesProvider'
 import {
   buildLocalMonthlyReview,
   canShiftTo,
@@ -27,7 +24,10 @@ import {
   shiftMonth,
   type HeatCell,
   type MonthCursor,
-} from '../../features/review/monthly-review'
+} from '@studycommit/common/review-runtime'
+import { paperColors } from '../../features/papers/paper-visual'
+import { usePapersState } from '../../features/papers/papers-store'
+import { useMobileServices } from '../../core/MobileServicesProvider'
 
 const BOOK_FLIP_MS = motion.durationSlow
 

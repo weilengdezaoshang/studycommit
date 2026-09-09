@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest'
 import {
   buildLocalMonthlyReview,
   canShiftTo,
@@ -5,30 +6,18 @@ import {
   monthKeyOf,
   monthLabelOf,
   shiftMonth,
-} from './monthly-review'
-import type { PapersState } from '../papers/papers-store'
+  type MonthlyReviewPaper,
+} from './index'
 
-function stateWith(
-  papers: Partial<PapersState['papers'][number]>[],
-): Pick<PapersState, 'papers' | 'extras'> {
+function papersWith(papers: Partial<MonthlyReviewPaper>[]): { papers: MonthlyReviewPaper[] } {
   return {
     papers: papers.map((paper) => ({
-      id: paper.id ?? 'a4c9d2e1-1111-4111-8111-111111111111',
-      content: paper.content ?? '内容',
-      status: paper.status ?? 'inbox',
-      topicId: paper.topicId ?? null,
-      version: 1,
-      createdAt: paper.createdAt ?? '2026-09-05T02:00:00.000Z',
-      updatedAt: paper.updatedAt ?? paper.createdAt ?? '2026-09-05T02:00:00.000Z',
       deletedAt: paper.deletedAt ?? null,
-      hasQuestion: paper.hasQuestion ?? false,
-      isQuestionResolved: paper.isQuestionResolved ?? false,
+      createdAt: paper.createdAt ?? '2026-09-05T02:00:00.000Z',
+      topicId: paper.topicId ?? null,
       questionStatus: paper.questionStatus ?? 'none',
-      questionText: paper.questionText ?? null,
-      understandingText: paper.understandingText ?? null,
       questionResolvedAt: paper.questionResolvedAt ?? null,
     })),
-    extras: {},
   }
 }
 
@@ -46,26 +35,42 @@ describe('monthly review helpers', () => {
   })
 
   it('本地聚合纸页数、箱子数与解决数并排除软删', () => {
-    const state = stateWith([
+    const source = papersWith([
       { createdAt: '2026-09-05T02:00:00.000Z', topicId: 'a4c9d2e1-2222-4222-8222-222222222222' },
       { createdAt: '2026-09-08T02:00:00.000Z' },
       {
         createdAt: '2026-09-10T02:00:00.000Z',
         questionStatus: 'resolved',
-        hasQuestion: true,
-        isQuestionResolved: true,
         questionResolvedAt: '2026-09-12T03:00:00.000Z',
       },
       { createdAt: '2026-08-30T02:00:00.000Z' },
       { createdAt: '2026-09-20T02:00:00.000Z', deletedAt: '2026-09-21T00:00:00.000Z' },
     ])
-    const review = buildLocalMonthlyReview(state, { year: 2026, month: 9 })
+    const review = buildLocalMonthlyReview(source, { year: 2026, month: 9 })
     expect(review).toMatchObject({ paperCount: 3, topicCount: 1, resolvedCount: 1 })
     expect(review.days).toEqual([
       { date: '2026-09-05', count: 1 },
       { date: '2026-09-08', count: 1 },
       { date: '2026-09-10', count: 1 },
     ])
+  })
+
+  it('解决数只统计解决时间落在本月的纸页', () => {
+    const source = papersWith([
+      {
+        createdAt: '2026-08-01T02:00:00.000Z',
+        questionStatus: 'resolved',
+        questionResolvedAt: '2026-09-02T03:00:00.000Z',
+      },
+      {
+        createdAt: '2026-09-03T02:00:00.000Z',
+        questionStatus: 'resolved',
+        questionResolvedAt: '2026-10-01T03:00:00.000Z',
+      },
+    ])
+    const review = buildLocalMonthlyReview(source, { year: 2026, month: 9 })
+    expect(review.paperCount).toBe(1)
+    expect(review.resolvedCount).toBe(0)
   })
 
   it('热力格子周一开头补空位并按记录数分档', () => {

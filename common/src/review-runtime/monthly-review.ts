@@ -1,27 +1,21 @@
-import type { MonthlyReview, ReviewDay } from '@studycommit/common/contracts'
-import type { PapersState } from '../papers/papers-store'
+import type { MonthlyReview, ReviewDay } from '../contracts'
+import { monthKeyOf, type MonthCursor } from './month-cursor'
 
-/** 装订月份游标与本地聚合(BE-311 服务端不可用时的回退数据源)。 */
-
-export type MonthCursor = { year: number; month: number }
-
-export function monthKeyOf(cursor: MonthCursor): string {
-  return `${cursor.year}-${String(cursor.month).padStart(2, '0')}`
+/** 本地聚合的纸页输入:与纸页契约字段结构兼容,不绑定具体端 store。 */
+export interface MonthlyReviewPaper {
+  deletedAt: string | null
+  createdAt: string
+  topicId: string | null
+  questionStatus: string
+  questionResolvedAt: string | null
 }
 
-export function shiftMonth(cursor: MonthCursor, delta: number): MonthCursor {
-  const total = cursor.year * 12 + (cursor.month - 1) + delta
-  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
-}
-
-export function monthLabelOf(cursor: MonthCursor): string {
-  return `${cursor.year} 年 ${cursor.month} 月`
-}
-
-/** 装订册不允许翻到未来:以本地今天为界。 */
-export function canShiftTo(cursor: MonthCursor, today: Date): boolean {
-  const next = cursor
-  return next.year * 12 + next.month <= today.getFullYear() * 12 + (today.getMonth() + 1)
+export function localTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+  } catch {
+    return 'UTC'
+  }
 }
 
 function dateKeyOf(date: Date): string {
@@ -30,7 +24,7 @@ function dateKeyOf(date: Date): string {
 
 /** 本地聚合:与服务端同语义,但按本地时区;服务端失败时的回退数据源。 */
 export function buildLocalMonthlyReview(
-  state: Pick<PapersState, 'papers' | 'extras'>,
+  source: { papers: ReadonlyArray<MonthlyReviewPaper> },
   cursor: MonthCursor,
 ): MonthlyReview {
   const month = monthKeyOf(cursor)
@@ -38,7 +32,7 @@ export function buildLocalMonthlyReview(
   let paperCount = 0
   const topicIds = new Set<string>()
   let resolvedCount = 0
-  for (const paper of state.papers) {
+  for (const paper of source.papers) {
     if (paper.deletedAt || !paper.createdAt.startsWith(month)) {
       continue
     }
@@ -65,15 +59,11 @@ export function buildLocalMonthlyReview(
   }
 }
 
-export function localTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-  } catch {
-    return 'UTC'
-  }
+export interface HeatCell {
+  dateKey: string | null
+  count: number
+  level: 0 | 1 | 2 | 3
 }
-
-export type HeatCell = { dateKey: string | null; count: number; level: 0 | 1 | 2 | 3 }
 
 /** 当月热力格子:周一开头补空位,按 count 分 3 档深度(0=无记录)。 */
 export function heatmapCells(days: ReviewDay[], cursor: MonthCursor): HeatCell[] {
