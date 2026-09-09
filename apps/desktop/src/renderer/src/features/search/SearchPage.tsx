@@ -1,110 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
+import { useSearchResults } from '@studycommit/common/search-react'
+import { searchRowKey } from '@studycommit/common/search-runtime'
 import { createDesktopSearchGateway } from './search-gateway'
 import { usePapersState } from '../papers/papers-store'
 
-type ResultRow =
-  | { type: 'paper'; id: string; title: string; detail: string }
-  | { type: 'topic'; id: string; name: string; count: number }
-
-const DEBOUNCE_MS = 300
-
-/** 统一搜索页(M5):服务端命中纸页与箱子,失败回退本地记录。 */
+/** 统一搜索页(M5):服务端命中纸页与箱子,失败回退本地记录;查询逻辑复用公共 Hook。 */
 export function SearchPage(): React.JSX.Element {
   const [gateway] = useState(() => createDesktopSearchGateway())
   const state = usePapersState()
-  const [query, setQuery] = useState('')
-  const keyword = query.trim()
-  const [serverRows, setServerRows] = useState<ResultRow[] | null>(null)
-  const [serverFailed, setServerFailed] = useState(false)
-  const seq = useRef(0)
-
-  useEffect(() => {
-    if (!keyword) {
-      return
-    }
-    const current = ++seq.current
-    const timer = setTimeout(() => {
-      void gateway
-        .query({ q: keyword })
-        .then((result) => {
-          if (seq.current !== current) {
-            return
-          }
-          setServerRows([
-            ...result.topics.map((topic) => ({
-              type: 'topic' as const,
-              id: topic.id,
-              name: topic.name,
-              count: topic.paperCount,
-            })),
-            ...result.papers.items.map((paper) => ({
-              type: 'paper' as const,
-              id: paper.id,
-              title: paper.createdAt.slice(0, 10),
-              detail: paper.content,
-            })),
-          ])
-          setServerFailed(false)
-        })
-        .catch(() => {
-          if (seq.current === current) {
-            setServerRows(null)
-            setServerFailed(true)
-          }
-        })
-    }, DEBOUNCE_MS)
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [keyword, gateway])
-
-  const localRows = useMemo<ResultRow[]>(() => {
-    const lower = keyword.toLowerCase()
-    if (!lower) {
-      return []
-    }
-    const papers = state.papers
-      .filter((paper) => !paper.deletedAt && paper.content.toLowerCase().includes(lower))
-      .slice(0, 10)
-      .map((paper) => ({
-        type: 'paper' as const,
-        id: paper.id,
-        title: paper.createdAt.slice(0, 10),
-        detail: paper.content,
-      }))
-    const topics = state.topics
-      .filter((topic) => topic.name.toLowerCase().includes(lower))
-      .slice(0, 10)
-      .map((topic) => ({
-        type: 'topic' as const,
-        id: topic.id,
-        name: topic.name,
-        count: state.papers.filter((paper) => paper.topicId === topic.id && !paper.deletedAt)
-          .length,
-      }))
-    return [...topics, ...papers]
-  }, [keyword, state])
-
-  const showServer = Boolean(keyword) && serverRows !== null
-  const rows = useMemo<ResultRow[]>(() => {
-    if (showServer && serverRows) {
-      const seen = new Set(
-        serverRows.map((row) => (row.type === 'paper' ? `paper-${row.id}` : `topic-${row.id}`)),
-      )
-      return [
-        ...serverRows,
-        ...localRows.filter(
-          (row) => !seen.has(row.type === 'paper' ? `paper-${row.id}` : `topic-${row.id}`),
-        ),
-      ]
-    }
-    return localRows
-  }, [showServer, serverRows, localRows])
+  const { query, setQuery, keyword, rows, showServer, serverFailed } = useSearchResults({
+    gateway,
+    source: state,
+  })
 
   return (
     <section className="study-page search-page" aria-label="搜索纸页与箱子">
-      <h2>搜索</h2>
       <div className="field search-field">
         <label htmlFor="desktop-search-input" className="search-field__label">
           关键词
@@ -138,7 +49,7 @@ export function SearchPage(): React.JSX.Element {
         <ul className="search-results">
           {rows.map((row) =>
             row.type === 'paper' ? (
-              <li key={`paper-${row.id}`} className="search-card">
+              <li key={searchRowKey(row)} className="search-card">
                 <Link to={`/records/${row.title}`} className="search-card__link">
                   <span className="search-card__meta">
                     <time>{row.title}</time>
@@ -148,7 +59,7 @@ export function SearchPage(): React.JSX.Element {
                 </Link>
               </li>
             ) : (
-              <li key={`topic-${row.id}`} className="search-card search-card--topic">
+              <li key={searchRowKey(row)} className="search-card search-card--topic">
                 <Link to={`/boxes/${encodeURIComponent(row.id)}`} className="search-card__link">
                   <span className="search-card__meta">
                     <span className="search-card__name">{row.name}</span>
