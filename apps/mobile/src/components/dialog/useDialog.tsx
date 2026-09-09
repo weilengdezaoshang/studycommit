@@ -40,6 +40,7 @@ export function useDialog() {
       title={options?.title ?? ''}
     >
       {options?.description ? <AppText color="muted">{options.description}</AppText> : null}
+      {options?.extraContent}
       {options?.field ? (
         <TextField
           error={controller.fieldError ?? undefined}

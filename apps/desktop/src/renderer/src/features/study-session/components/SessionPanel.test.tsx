@@ -13,7 +13,71 @@ import {
   renderStudyApp,
 } from '../test/render-study'
 
+/** 带关联纸页的运行中会话:收尾走回写理解对话框(C04)。 */
+function runningPaperSessionFixture() {
+  return {
+    ...runningStudySessionFixture,
+    paperId: 'a4c9d2e1-3333-4333-8333-333333333390',
+  }
+}
+
 describe('SessionPanel on today', () => {
+  it('收尾回写理解时可展开参考片段', async () => {
+    const user = userEvent.setup()
+    renderStudyApp('/today', {
+      studySessions: createStudySessionGateway({
+        getActive: async () => ({
+          session: runningPaperSessionFixture(),
+          serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
+        }),
+        listFragments: async () => [
+          {
+            id: '8a1b2c3d-1111-4111-8111-111111111111',
+            userId: '22222222-2222-4222-8222-222222222222',
+            paperId: 'a4c9d2e1-3333-4333-8333-333333333390',
+            sessionId: '11111111-1111-4111-8111-111111111111',
+            content: '片段一：先跑通主流程再谈优化',
+            position: 0,
+            version: 1,
+            createdAt: '2026-08-17T08:05:00.000Z',
+            updatedAt: '2026-08-17T08:05:00.000Z',
+          },
+        ],
+      }),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '完成学习' }))
+    await user.click(screen.getByText('参考已记的片段'))
+
+    // 片段同时出现在输入区与参考列表中
+    expect(
+      (await screen.findAllByText('片段一：先跑通主流程再谈优化')).length,
+    ).toBeGreaterThanOrEqual(1)
+  })
+
+  it('参考片段读取失败时给出说明且不妨碍收尾', async () => {
+    const user = userEvent.setup()
+    renderStudyApp('/today', {
+      studySessions: createStudySessionGateway({
+        getActive: async () => ({
+          session: runningPaperSessionFixture(),
+          serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
+        }),
+        listFragments: async () => {
+          throw new Error('offline')
+        },
+      }),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '完成学习' }))
+    await user.click(screen.getByText('参考已记的片段'))
+
+    expect(await screen.findByText('片段暂时读不出来，不影响收尾。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '完成并回写' })).toBeEnabled()
+  })
+
   it('shows pause while running', async () => {
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({

@@ -8010,3 +8010,34 @@ button:focus-visible {
   background: var(--accent, #d2e0f4);
   color: inherit;
 }
+
+/* 收尾参考片段(R71):折叠读取本次会话片段 */
+.study-fragments {
+  margin: 4px 0;
+}
+.study-fragments summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  color: var(--action, #4a6388);
+  font-size: 13px;
+  cursor: pointer;
+}
+.study-fragments summary:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.study-fragments ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  color: var(--muted, #59677b);
+  font-size: 13px;
+  line-height: 22px;
+}
+.study-fragments p {
+  margin: 4px 0 8px;
+  color: var(--muted, #59677b);
+  font-size: 13px;
+}

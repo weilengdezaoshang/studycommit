@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { validateLocalDateTimeValue } from '../study-session-runtime'
 
 /** 对话框主字段:datetime-local 用于修正结束时间,text 用于一般输入。 */
@@ -27,6 +28,8 @@ export interface DialogConfirmPayload {
 export interface DialogShowOptions {
   title: string
   description?: string
+  /** 宿主自定义内容插槽(如收尾参考片段),渲染在描述之后、字段之前 */
+  extraContent?: ReactNode
   cancelLabel?: string
   confirmLabel?: string
   confirmBusyLabel?: string

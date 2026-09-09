@@ -1,6 +1,7 @@
-import { memo } from 'react'
-import type { LearningLog, StudySession } from '@studycommit/common/contracts'
+import { memo, useState } from 'react'
+import type { LearningLog, PaperFragment, StudySession } from '@studycommit/common/contracts'
 import { useDialog } from '../../../components/dialog/useDialog'
+import { useDesktopServices } from '../api/DesktopServicesProvider'
 import { LongSessionBanner } from './LongSessionBanner'
 import { SessionStatusBadge } from './SessionStatusBadge'
 import { SessionTimer } from './SessionTimer'
@@ -171,6 +172,7 @@ export function SessionPanel({
     dialog.show({
       title: '完成学习 · 回写理解',
       description: '写下这次弄懂了什么；也可留下下一个问题，生成新的纸页继续。',
+      extraContent: <FragmentReference sessionId={session.id} />,
       cancelLabel: '继续学习',
       confirmLabel: '完成并回写',
       confirmBusyLabel: '正在回写',
@@ -244,6 +246,41 @@ function LearningLogSummary({ learningLog }: { learningLog: LearningLog }): Reac
         </div>
       ))}
     </div>
+  )
+}
+
+/** R71:收尾可展开参考片段,按需加载本次会话已记内容;读取失败不影响收尾。 */
+function FragmentReference({ sessionId }: { sessionId: string }): React.JSX.Element {
+  const { studySessions } = useDesktopServices()
+  const [items, setItems] = useState<PaperFragment[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  return (
+    <details
+      className="study-fragments"
+      onToggle={(event) => {
+        if (event.currentTarget.open && items === null && !failed) {
+          studySessions
+            .listFragments(sessionId)
+            .then((loaded) => setItems(loaded))
+            .catch(() => setFailed(true))
+        }
+      }}
+    >
+      <summary>参考已记的片段</summary>
+      {items === null ? (
+        <p>正在读取片段…</p>
+      ) : items.length === 0 ? (
+        <p>这次还没有记下片段。</p>
+      ) : (
+        <ul>
+          {items.map((item) => (
+            <li key={item.id}>{item.content}</li>
+          ))}
+        </ul>
+      )}
+      {failed && <p>片段暂时读不出来，不影响收尾。</p>}
+    </details>
   )
 }
 

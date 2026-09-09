@@ -19,6 +19,7 @@ export function useDialog() {
       onClose={controller.close}
     >
       {options?.description ? <p>{options.description}</p> : null}
+      {options?.extraContent}
       {options?.field ? (
         <label className="field">
           <span>{options.field.label}</span>
