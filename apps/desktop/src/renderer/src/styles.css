@@ -8061,6 +8061,9 @@ button:focus-visible {
   padding: 10px 0;
   background: var(--canvas, #e9edf3);
 }
+.search-page .search-field input {
+  background: var(--paper, #fffefc);
+}
 .search-topics-toggle {
   min-height: 40px;
   margin: 8px 0 0;
