@@ -162,6 +162,17 @@ export function RecordsHomePage({
 
   const emptyBecauseFiltered = total > 0 && scopedTotal === 0
   const reading = Boolean(detailPaper)
+  /** R68:写记录保存后带 highlight 定位新记录;被筛选排除时提供查看入口 */
+  const highlightId = searchParams.get('highlight')
+  const highlightVisible =
+    Boolean(highlightId) && groups.some((group) => group.papers.some((p) => p.id === highlightId))
+  useEffect(() => {
+    if (highlightId && highlightVisible) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('highlight')
+      setSearchParams(next, { replace: true })
+    }
+  }, [highlightId, highlightVisible, searchParams, setSearchParams])
   const cols = useGridColumns(reading)
   const rows = useMemo(
     () => buildVirtualRows(groups, shownRowsByDay, cols),
@@ -278,6 +289,26 @@ export function RecordsHomePage({
         {message && (
           <p className="records-home__notice" role="status">
             {message}
+          </p>
+        )}
+        {highlightId && !highlightVisible && (
+          <p className="records-home__notice" role="status">
+            刚保存的记录被当前筛选排除了。
+            <button
+              type="button"
+              className="records-home__filter-toggle"
+              onClick={() => {
+                if (dateKey) {
+                  navigate(`${routes.timeline()}?highlight=${highlightId}`)
+                  return
+                }
+                setStatusFilter('all')
+                setSortOrder('recent')
+                papersActions.selectDate('')
+              }}
+            >
+              清除筛选查看
+            </button>
           </p>
         )}
 

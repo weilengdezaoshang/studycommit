@@ -38,11 +38,12 @@ export function ComposePage(): React.JSX.Element {
     setSaving(true)
     setError(null)
     try {
-      await papersActions.createPaper({
+      // R68:回原列表并定位刚保存的记录
+      const saved = await papersActions.createPaper({
         content: trimmed,
         ...(hasQuestion && questionText.trim() ? { questionText: questionText.trim() } : {}),
       })
-      navigate(routes.timeline())
+      navigate(saved ? `${routes.timeline()}?highlight=${saved.id}` : routes.timeline())
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : '保存失败，请重试')
     } finally {
