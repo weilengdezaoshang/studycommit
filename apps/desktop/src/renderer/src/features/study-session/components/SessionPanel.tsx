@@ -54,6 +54,7 @@ export function SessionPanel({
   onBackToStart?: () => void
 }): React.JSX.Element {
   const dialog = useDialog()
+  const { studySessions } = useDesktopServices()
   const elapsed = useSessionClock(session, serverNow)
   const toggleBusy = pendingCommand === 'pause' || pendingCommand === 'resume'
   const completing = pendingCommand === 'complete'
@@ -147,6 +148,14 @@ export function SessionPanel({
     </section>
   )
 
+  /** C04/R70:还有离线待同步片段时阻止完成,由对话框内联提示 */
+  async function assertFragmentsSynced() {
+    const pending = await studySessions.pendingFragmentCount()
+    if (pending > 0) {
+      throw new Error(`还有 ${pending} 条片段未同步到服务端，请稍候再结束学习。`)
+    }
+  }
+
   function showCompleteDialog() {
     if (session.paperId && onCompletePaper) {
       showCompletePaperDialog()
@@ -159,12 +168,14 @@ export function SessionPanel({
       confirmLabel: '完成并保存',
       confirmBusyLabel: '正在保存',
       notes: COMPLETION_NOTE_FIELDS,
-      onConfirm: ({ notes }) =>
+      onConfirm: async ({ notes }) => {
+        await assertFragmentsSynced()
         onComplete({
           gains: trimToNull(notes.gains),
           problems: trimToNull(notes.problems),
           nextStep: trimToNull(notes.nextStep),
-        }),
+        })
+      },
     })
   }
 
@@ -195,6 +206,7 @@ export function SessionPanel({
         if (!understandingText) {
           throw new Error('请先写下这次弄懂了什么')
         }
+        await assertFragmentsSynced()
         await onCompletePaper?.({
           understandingText,
           nextQuestionText: notes.nextQuestion?.trim() || undefined,

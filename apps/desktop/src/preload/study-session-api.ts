@@ -30,10 +30,15 @@ export const studySessionPreloadApi = {
   pause: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.pause, input),
   resume: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.resume, input),
   complete: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.complete, input),
-  completePaper: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.completePaper, input),
-  createFragment: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.createFragment, input),
-  updateFragment: (input: unknown) => ipcRenderer.invoke(studySessionIpcChannels.updateFragment, input),
-  listFragments: (sessionId: string) => ipcRenderer.invoke(studySessionIpcChannels.listFragments, sessionId),
+  completePaper: (input: unknown) =>
+    ipcRenderer.invoke(studySessionIpcChannels.completePaper, input),
+  createFragment: (input: unknown) =>
+    ipcRenderer.invoke(studySessionIpcChannels.createFragment, input),
+  updateFragment: (input: unknown) =>
+    ipcRenderer.invoke(studySessionIpcChannels.updateFragment, input),
+  pendingFragmentCount: () => ipcRenderer.invoke(studySessionIpcChannels.pendingFragmentCount),
+  listFragments: (sessionId: string) =>
+    ipcRenderer.invoke(studySessionIpcChannels.listFragments, sessionId),
 }
 
 export const topicPreloadApi = {

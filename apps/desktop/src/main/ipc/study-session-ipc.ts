@@ -78,6 +78,13 @@ export function registerStudySessionIpc(
   host.handle(studySessionIpcChannels.listFragments, (sessionId) =>
     client.listFragments(parseIpcInput(sessionIdSchema, sessionId)),
   )
+  host.handle(studySessionIpcChannels.pendingFragmentCount, async () => {
+    try {
+      return { ok: true as const, data: offlineQueue ? await offlineQueue.count() : 0 }
+    } catch {
+      return { ok: true as const, data: 0 }
+    }
+  })
   host.handle(studySessionIpcChannels.updateFragment, (input) =>
     client.updateFragment(parseIpcInput(updateSessionFragmentInputSchema, input)),
   )

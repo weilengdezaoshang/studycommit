@@ -33,6 +33,7 @@ describe('study session preload api', () => {
       'completePaper',
       'createFragment',
       'updateFragment',
+      'pendingFragmentCount',
       'listFragments',
     ])
     await studySessionPreloadApi.getActive()

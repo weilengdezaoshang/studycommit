@@ -59,6 +59,7 @@ export interface StudyCommitStudySessionsApi {
     position?: number
     idempotencyKey?: string
   }) => Promise<IpcResult<PaperFragment>>
+  pendingFragmentCount: () => Promise<IpcResult<number>>
   updateFragment: (input: {
     sessionId: string
     fragmentId: string
@@ -205,8 +206,16 @@ export interface StudyCommitApi {
   ai: StudyCommitAiApi
   auth: StudyCommitAuthApi
   capture: StudyCommitCaptureApi
-  reviews: { monthly: (input: { month: string; timezone: string }) => Promise<IpcResult<ReviewMonthlyResult>> }
-  search: { query: (input: { q: string; limit?: number; cursor?: string }) => Promise<IpcResult<SearchQueryResult>> }
+  reviews: {
+    monthly: (input: { month: string; timezone: string }) => Promise<IpcResult<ReviewMonthlyResult>>
+  }
+  search: {
+    query: (input: {
+      q: string
+      limit?: number
+      cursor?: string
+    }) => Promise<IpcResult<SearchQueryResult>>
+  }
   mini: { open: () => Promise<{ ok: true }>; close: () => Promise<{ ok: true }> }
 }
 

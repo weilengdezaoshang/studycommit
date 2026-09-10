@@ -49,6 +49,12 @@ export class OfflineJobQueue {
     return join(this.filePath)
   }
 
+  /** 当前待同步的离线任务数量(C04:收尾前拦截未同步片段)。 */
+  async count(): Promise<number> {
+    const jobs = await this.load()
+    return jobs.length
+  }
+
   /** 依次重放;返回值 indicates 全部成功(成功项出队,失败项保留)。 */
   async drain(retry: (job: PendingJob) => Promise<boolean>): Promise<number> {
     const jobs = await this.load()

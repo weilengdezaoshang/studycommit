@@ -39,6 +39,7 @@ export function createStudySessionGateway(
       throw new Error('updateFragment not stubbed')
     },
     listFragments: async () => [],
+    pendingFragmentCount: async () => 0,
     pause: async () => {
       throw new Error('pause not stubbed')
     },

@@ -56,6 +56,31 @@ describe('SessionPanel on today', () => {
     ).toBeGreaterThanOrEqual(1)
   })
 
+  it('还有待同步片段时收尾被拦截且不调用完成', async () => {
+    const complete = vi.fn().mockResolvedValue(completeStudySessionResultFixture)
+    const completePaper = vi.fn()
+    const user = userEvent.setup()
+    renderStudyApp('/today', {
+      studySessions: createStudySessionGateway({
+        getActive: async () => ({
+          session: runningPaperSessionFixture(),
+          serverNow: runningStudySessionFixture.updatedAt,
+          paper: null,
+        }),
+        pendingFragmentCount: async () => 2,
+        complete,
+        completePaper,
+      }),
+    })
+
+    await user.click(await screen.findByRole('button', { name: '完成学习' }))
+    await user.type(await screen.findByLabelText('这次弄懂了什么（必填）'), '弄懂了')
+    await user.click(screen.getByRole('button', { name: '完成并回写' }))
+
+    expect(await screen.findByText(/还有 2 条片段未同步/)).toBeInTheDocument()
+    expect(completePaper).not.toHaveBeenCalled()
+  })
+
   it('参考片段读取失败时给出说明且不妨碍收尾', async () => {
     const user = userEvent.setup()
     renderStudyApp('/today', {

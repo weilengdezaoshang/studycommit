@@ -24,6 +24,7 @@ function createDefaultStudyCommit() {
       createFragment: async () => ({ ok: false as const, error: configurationError() }),
       updateFragment: async () => ({ ok: false as const, error: configurationError() }),
       listFragments: async () => ({ ok: true as const, data: { items: [] } }),
+      pendingFragmentCount: async () => ({ ok: true as const, data: 0 }),
     },
     topics: {
       listActive: async () => ({

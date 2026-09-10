@@ -44,6 +44,8 @@ export interface StudySessionGateway {
   createFragment(input: CreateSessionFragmentInput): Promise<PaperFragment>
   updateFragment(input: UpdateSessionFragmentInput): Promise<PaperFragment>
   listFragments(sessionId: string): Promise<PaperFragment[]>
+  /** 待同步的离线片段数量(C04):>0 时收尾被拦截 */
+  pendingFragmentCount(): Promise<number>
 }
 
 export interface TopicGateway {
@@ -95,7 +97,9 @@ export function createDesktopStudySessionGateway(
     completePaper: (input) => invokeIpc(() => api.completePaper(input)),
     createFragment: (input) => invokeIpc(() => api.createFragment(input)),
     updateFragment: (input) => invokeIpc(() => api.updateFragment(input)),
-    listFragments: (sessionId) => invokeIpc(() => api.listFragments(sessionId)).then((page) => page.items),
+    listFragments: (sessionId) =>
+      invokeIpc(() => api.listFragments(sessionId)).then((page) => page.items),
+    pendingFragmentCount: () => invokeIpc(() => api.pendingFragmentCount()),
   }
 }
 

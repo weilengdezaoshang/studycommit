@@ -9,4 +9,5 @@ export const studySessionIpcChannels = {
   createFragment: 'study-sessions:create-fragment',
   listFragments: 'study-sessions:list-fragments',
   updateFragment: 'study-sessions:update-fragment',
+  pendingFragmentCount: 'study-sessions:pending-fragment-count',
 } as const
