@@ -20,45 +20,44 @@ export interface DayGroup {
 export type VirtualRow =
   | { kind: 'day-heading'; key: string; group: DayGroup }
   | { kind: 'card-row'; key: string; papers: PaperWithExtra[] }
-  | { kind: 'day-footer'; key: string; group: DayGroup; hiddenCount: number; expanded: boolean }
+  | {
+      kind: 'day-footer'
+      key: string
+      group: DayGroup
+      remainingCount: number
+      fullyShown: boolean
+    }
 
 /**
  * 把日期分组拍平为虚拟行(R58):卡片按列数分块成行,
- * 每天默认只展示前两行,展开后展示全部;分块随列数变化重新计算。
+ * 每天默认只展示前两行;步进展开由宿主维护「已展示行数」后重建行;
+ * 分块随列数变化重新计算。
  */
 export function buildVirtualRows(
   groups: DayGroup[],
-  expandedDays: Readonly<Record<string, boolean>>,
+  shownRowsByDay: Readonly<Record<string, number>>,
   cols: number,
 ): VirtualRow[] {
   const pageSize = Math.max(1, cols * DAY_PAGE_ROWS)
   const rows: VirtualRow[] = []
   for (const group of groups) {
     rows.push({ kind: 'day-heading', key: `${group.dateKey}:h`, group })
-    const expanded = expandedDays[group.dateKey] ?? false
-    const visible = expanded ? group.papers : group.papers.slice(0, pageSize)
-    for (let start = 0; start < visible.length; start += cols) {
+    const shown = Math.min(group.papers.length, shownRowsByDay[group.dateKey] ?? pageSize)
+    for (let start = 0; start < shown; start += cols) {
       rows.push({
         kind: 'card-row',
         key: `${group.dateKey}:r${start}`,
-        papers: visible.slice(start, start + cols),
+        papers: group.papers.slice(start, start + cols),
       })
     }
-    if (group.papers.length > visible.length) {
+    const remaining = group.papers.length - shown
+    if (remaining > 0 || group.papers.length > pageSize) {
       rows.push({
         kind: 'day-footer',
         key: `${group.dateKey}:f`,
         group,
-        hiddenCount: group.papers.length - visible.length,
-        expanded,
-      })
-    } else if (expanded && group.papers.length > pageSize) {
-      rows.push({
-        kind: 'day-footer',
-        key: `${group.dateKey}:f`,
-        group,
-        hiddenCount: 0,
-        expanded: true,
+        remainingCount: remaining,
+        fullyShown: remaining === 0,
       })
     }
   }

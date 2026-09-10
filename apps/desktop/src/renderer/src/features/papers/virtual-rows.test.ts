@@ -47,26 +47,39 @@ describe('记录本虚拟行', () => {
     expect(cardRows).toHaveLength(2)
     expect(cardRows[0].papers).toHaveLength(3)
 
-    // 两列时默认页内行数不变(2 行 × 2 列 = 4 条);展开后 6 条分 3 行
+    // 两列时默认页内条数变化(2 行 × 2 列 = 4 条);步进展开后 6 条分 3 行
     const rowsTwoColsCollapsed = buildVirtualRows(groups, {}, 2)
     expect(rowsTwoColsCollapsed.filter((row) => row.kind === 'card-row')).toHaveLength(2)
-    const rowsTwoColsExpanded = buildVirtualRows(groups, { '2026-09-10': true }, 2)
+    const rowsTwoColsExpanded = buildVirtualRows(groups, { '2026-09-10': 6 }, 2)
     const expandedCardRows = rowsTwoColsExpanded.filter((row) => row.kind === 'card-row')
     expect(expandedCardRows).toHaveLength(3)
     expect(expandedCardRows[0].kind === 'card-row' && expandedCardRows[0].papers).toHaveLength(2)
   })
 
-  it('每天默认两页行,超出时给出展开尾行并可收起', () => {
+  it('每天默认两页行,超出时给出展开尾行', () => {
     const groups = [dayOf('2026-09-10', 8)]
     const collapsed = buildVirtualRows(groups, {}, 3)
     expect(collapsed.filter((row) => row.kind === 'card-row')).toHaveLength(2)
     const footer = collapsed.at(-1)
-    expect(footer).toMatchObject({ kind: 'day-footer', hiddenCount: 2, expanded: false })
+    expect(footer).toMatchObject({ kind: 'day-footer', remainingCount: 2, fullyShown: false })
+  })
 
-    const expanded = buildVirtualRows(groups, { '2026-09-10': true }, 3)
-    expect(expanded.filter((row) => row.kind === 'card-row')).toHaveLength(3)
-    const expandedFooter = expanded.at(-1)
-    expect(expandedFooter).toMatchObject({ kind: 'day-footer', expanded: true })
+  it('步进展开按已展示行数重建,收起恢复默认', () => {
+    const groups = [dayOf('2026-09-10', 8)]
+    // 步进一次:默认 6 行卡片条目 + 6 = 12,超过总数按总数截断
+    const stepped = buildVirtualRows(groups, { '2026-09-10': 12 }, 3)
+    expect(stepped.filter((row) => row.kind === 'card-row')).toHaveLength(3)
+    const footer = stepped.at(-1)
+    expect(footer).toMatchObject({ kind: 'day-footer', remainingCount: 0, fullyShown: true })
+
+    // 部分步进:只展示 3 条(一行)时给出剩余数
+    const partial = buildVirtualRows(groups, { '2026-09-10': 3 }, 3)
+    expect(partial.filter((row) => row.kind === 'card-row')).toHaveLength(1)
+    expect(partial.at(-1)).toMatchObject({
+      kind: 'day-footer',
+      remainingCount: 5,
+      fullyShown: false,
+    })
   })
 
   it('不足默认页数的日期没有展开尾行', () => {

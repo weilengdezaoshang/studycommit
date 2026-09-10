@@ -11,6 +11,7 @@ import {
   buildVirtualRows,
   columnsOf,
   estimateRowSize,
+  DAY_PAGE_ROWS,
   type DayGroup,
   type VirtualRow,
 } from './virtual-rows'
@@ -76,7 +77,8 @@ export function RecordsHomePage({
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sortOrder, setSortOrder] = useState<'recent' | 'earliest'>('recent')
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'resolved'>('all')
-  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
+  /** 各日期已展示的卡片行数;缺省为默认两行(R58),步进展开由页脚按钮递增 */
+  const [shownRowsByDay, setShownRowsByDay] = useState<Record<string, number>>({})
   const [message, setMessage] = useState('')
   const capture = useCaptureEntry()
 
@@ -162,8 +164,8 @@ export function RecordsHomePage({
   const reading = Boolean(detailPaper)
   const cols = useGridColumns(reading)
   const rows = useMemo(
-    () => buildVirtualRows(groups, expandedDays, cols),
-    [groups, expandedDays, cols],
+    () => buildVirtualRows(groups, shownRowsByDay, cols),
+    [groups, shownRowsByDay, cols],
   )
 
   const listRef = useRef<HTMLDivElement>(null)
@@ -340,12 +342,22 @@ export function RecordsHomePage({
                     ) : (
                       <DayFooterRow
                         row={row}
-                        onToggle={() =>
-                          setExpandedDays((current) => ({
-                            ...current,
-                            [row.group.dateKey]: !(current[row.group.dateKey] ?? false),
-                          }))
-                        }
+                        onToggle={() => {
+                          const total = row.group.papers.length
+                          const step = Math.max(1, cols * DAY_PAGE_ROWS)
+                          setShownRowsByDay((current) => {
+                            if (row.fullyShown) {
+                              const next = { ...current }
+                              delete next[row.group.dateKey]
+                              return next
+                            }
+                            const shown = Math.min(
+                              total,
+                              (current[row.group.dateKey] ?? step) + step,
+                            )
+                            return { ...current, [row.group.dateKey]: shown }
+                          })
+                        }}
                       />
                     )}
                   </div>
@@ -564,10 +576,10 @@ function DayFooterRow({
     <button
       type="button"
       className="records-home__expand"
-      aria-expanded={row.expanded}
+      aria-expanded={row.fullyShown}
       onClick={onToggle}
     >
-      {row.expanded ? '收起这一天的记录' : `展开其余 ${row.hiddenCount} 条`}
+      {row.fullyShown ? '收起这一天的记录' : `展开其余 ${row.remainingCount} 条`}
     </button>
   )
 }
@@ -588,6 +600,7 @@ function RecordCard({
         type="button"
         className="record-card__body"
         aria-label={`打开记录：${paper.content.slice(0, 40)}`}
+        title={paper.content.slice(0, 240)}
         onClick={() => onOpen(paper.id)}
       >
         {paper.content}
