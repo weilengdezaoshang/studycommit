@@ -8075,3 +8075,19 @@ button:focus-visible {
   text-decoration: underline;
   text-underline-offset: 4px;
 }
+
+/* 抽屉头像图片(R45):加载失败回退默认图形 */
+.drawer-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* 抽屉头像图片(R45):加载失败回退默认图形 */
+.drawer-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}

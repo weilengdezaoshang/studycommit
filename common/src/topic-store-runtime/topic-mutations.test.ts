@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { deleteStoreTopic, renameStoreTopic, type TopicStoreHost } from './topic-mutations'
-import { normalizeTopicName, TOPIC_NAME_ERROR_MESSAGE } from './topic-name'
+import {
+  normalizeTopicName,
+  TOPIC_NAME_DUPLICATE_MESSAGE,
+  TOPIC_NAME_ERROR_MESSAGE,
+} from './topic-name'
 import { detachTopicPapers } from './detach-papers'
 
 interface TestTopic {
@@ -50,6 +54,23 @@ function createHost(options: { topics: TestTopic[]; papers: TestPaper[]; canSync
 }
 
 describe('topic-store-runtime', () => {
+  it('重命名为其他主题的名称(忽略大小写)时抛出重复错误', async () => {
+    const host = createHost({
+      topics: [
+        { id: 't1', name: '旧名称', color: '#53635A', version: 1 },
+        { id: 't2', name: '已有主题', color: '#53635A', version: 1 },
+      ],
+      papers: [],
+    })
+    await expect(renameStoreTopic(host, 't1', '已有主题')).rejects.toThrow(
+      TOPIC_NAME_DUPLICATE_MESSAGE,
+    )
+    await expect(renameStoreTopic(host, 't1', '已有主题'.toLowerCase())).rejects.toThrow(
+      TOPIC_NAME_DUPLICATE_MESSAGE,
+    )
+    expect(host.updateTopic).not.toHaveBeenCalled()
+  })
+
   it('名称去空格后合法,空白或超长名称非法', () => {
     expect(normalizeTopicName('  系统设计 ')).toBe('系统设计')
     expect(normalizeTopicName('   ')).toBeNull()

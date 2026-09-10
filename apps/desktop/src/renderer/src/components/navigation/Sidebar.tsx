@@ -50,10 +50,21 @@ function DrawerIdentity({ onClose }: { onClose: () => void }): React.JSX.Element
   const session = useAuthSession()
   const name = session?.user.nickname ?? '登录 / 注册'
   const status = session ? '已登录 · 本机与云端同步' : '未登录 · 本机记录'
+  // R45:头像图片优先,加载失败回退默认图形
+  const [brokenAvatarUrl, setBrokenAvatarUrl] = useState<string | null>(null)
+  const avatarUrl = session?.user.avatarUrl ?? null
+  const showAvatarImage = Boolean(avatarUrl) && brokenAvatarUrl !== avatarUrl
   return (
     <div className="drawer-identity">
       <span className="drawer-avatar" aria-hidden="true">
-        {session ? (
+        {showAvatarImage && avatarUrl ? (
+          <img
+            className="drawer-avatar-img"
+            src={avatarUrl}
+            alt=""
+            onError={() => setBrokenAvatarUrl(avatarUrl)}
+          />
+        ) : session ? (
           session.user.nickname.slice(0, 1)
         ) : (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -353,12 +364,21 @@ function TopicSection({ onClose }: { onClose: () => void }): React.JSX.Element {
   const [draftName, setDraftName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (creating) {
       inputRef.current?.focus()
     }
   }, [creating])
+
+  // R47:成功持久化后焦点回到加号
+  const resetDraft = () => {
+    setDraftName('')
+    setError(null)
+    setCreating(false)
+    addButtonRef.current?.focus()
+  }
 
   const submitTopic = () => {
     const name = normalizeTopicName(draftName)
@@ -376,9 +396,7 @@ function TopicSection({ onClose }: { onClose: () => void }): React.JSX.Element {
       return
     }
     papersActions.createTopic(name)
-    setDraftName('')
-    setError(null)
-    setCreating(false)
+    resetDraft()
   }
 
   return (
@@ -386,6 +404,7 @@ function TopicSection({ onClose }: { onClose: () => void }): React.JSX.Element {
       <div className="drawer-section__heading">
         <h2 className="drawer-hand">我的主题</h2>
         <button
+          ref={addButtonRef}
           type="button"
           className="drawer-add"
           aria-label="新建主题"
@@ -420,9 +439,7 @@ function TopicSection({ onClose }: { onClose: () => void }): React.JSX.Element {
             }}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
-                setCreating(false)
-                setDraftName('')
-                setError(null)
+                resetDraft()
               }
             }}
           />

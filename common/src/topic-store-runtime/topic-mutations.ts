@@ -1,6 +1,10 @@
 import type { RemoveTopicInput, RemoveTopicOutput, UpdateTopicInput } from '../ports'
 import { detachTopicPapers, type StorePaper } from './detach-papers'
-import { normalizeTopicName, TOPIC_NAME_ERROR_MESSAGE } from './topic-name'
+import {
+  normalizeTopicName,
+  TOPIC_NAME_DUPLICATE_MESSAGE,
+  TOPIC_NAME_ERROR_MESSAGE,
+} from './topic-name'
 
 /** 本地 store 中箱子的核心形态:桌面端与移动端至少都携带这些字段。 */
 export interface StoreTopic {
@@ -44,6 +48,15 @@ export async function renameStoreTopic<TTopic extends StoreTopic, TPaper extends
   const normalizedName = normalizeTopicName(name)
   if (!normalizedName) {
     throw new Error(TOPIC_NAME_ERROR_MESSAGE)
+  }
+  // C06:重命名沿用重复校验,忽略大小写与其他主题比较
+  const duplicated = host
+    .getTopics()
+    .some(
+      (topic) => topic.id !== topicId && topic.name.toLowerCase() === normalizedName.toLowerCase(),
+    )
+  if (duplicated) {
+    throw new Error(TOPIC_NAME_DUPLICATE_MESSAGE)
   }
   if (!host.canSync()) {
     const optimistic = { ...previous, name: normalizedName }

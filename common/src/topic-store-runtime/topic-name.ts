@@ -3,6 +3,8 @@ export const TOPIC_NAME_MAX_LENGTH = 18
 
 export const TOPIC_NAME_ERROR_MESSAGE = '箱子名称需为 1-18 个字符'
 
+export const TOPIC_NAME_DUPLICATE_MESSAGE = '已有同名的主题'
+
 /**
  * 校验并归一化箱子名称;非法时返回 null。
  */
