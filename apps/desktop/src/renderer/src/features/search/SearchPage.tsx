@@ -10,10 +10,15 @@ import { usePapersState } from '../papers/papers-store'
 export function SearchPage(): React.JSX.Element {
   const [gateway] = useState(() => createDesktopSearchGateway())
   const state = usePapersState()
+  const [allTopicsShown, setAllTopicsShown] = useState(false)
   const { query, setQuery, keyword, rows, showServer, serverFailed } = useSearchResults({
     gateway,
     source: state,
   })
+  // R62:主题结果独立展示,默认两项,其余可展开
+  const topicRows = rows.filter((row) => row.type === 'topic')
+  const paperRows = rows.filter((row) => row.type === 'paper')
+  const visibleTopics = allTopicsShown ? topicRows : topicRows.slice(0, 2)
 
   return (
     <section className="study-page search-page" aria-label="搜索纸页与箱子">
@@ -46,33 +51,48 @@ export function SearchPage(): React.JSX.Element {
           云端搜索不可用，正在展示本机记录（本机只筛选正文与主题）
         </p>
       ) : null}
-      {keyword && rows.length > 0 ? (
-        <ul className="search-results">
-          {rows.map((row) =>
-            row.type === 'paper' ? (
-              <li key={searchRowKey(row)} className="search-card">
-                <Link to={`/records/${row.title}`} className="search-card__link">
-                  <span className="search-card__meta">
-                    <time>{row.title}</time>
-                    <span>记录</span>
-                  </span>
-                  <span className="search-card__body">{highlightKeyword(row.detail, keyword)}</span>
-                </Link>
-              </li>
-            ) : (
+      {keyword && topicRows.length > 0 ? (
+        <>
+          <ul className="search-results search-topics">
+            {visibleTopics.map((row) => (
               <li key={searchRowKey(row)} className="search-card search-card--topic">
                 <Link to={`/boxes/${encodeURIComponent(row.id)}`} className="search-card__link">
                   <span className="search-card__meta">
                     <span className="search-card__name">{highlightKeyword(row.name, keyword)}</span>
-                    <span>箱子</span>
+                    <span>主题</span>
                   </span>
                   <span className="search-card__body">
-                    {row.count} 张纸页 · 进入后查看这个箱子里的记录
+                    {row.count} 张纸页 · 进入后查看这个主题里的记录
                   </span>
                 </Link>
               </li>
-            ),
+            ))}
+          </ul>
+          {topicRows.length > 2 && (
+            <button
+              type="button"
+              className="search-topics-toggle"
+              aria-expanded={allTopicsShown}
+              onClick={() => setAllTopicsShown((value) => !value)}
+            >
+              {allTopicsShown ? '收起主题' : `展开其余 ${topicRows.length - 2} 个主题`}
+            </button>
           )}
+        </>
+      ) : null}
+      {keyword && paperRows.length > 0 ? (
+        <ul className="search-results">
+          {paperRows.map((row) => (
+            <li key={searchRowKey(row)} className="search-card">
+              <Link to={`/records/${row.title}`} className="search-card__link">
+                <span className="search-card__meta">
+                  <time>{row.title}</time>
+                  <span>记录</span>
+                </span>
+                <span className="search-card__body">{highlightKeyword(row.detail, keyword)}</span>
+              </Link>
+            </li>
+          ))}
         </ul>
       ) : null}
       {keyword && rows.length > 0 && showServer ? (

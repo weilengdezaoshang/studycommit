@@ -6632,12 +6632,6 @@ button:focus-visible {
 }
 
 /* V7 搜索列表：暖白纸面卡片、不规则圆角、轻阴影与雾蓝角标（R62/R63）。 */
-.search-page h2 {
-  margin: 0;
-  font-size: var(--font-size-title);
-  line-height: var(--line-height-title);
-  color: var(--color-text);
-}
 .search-field__label {
   font-size: var(--font-size-caption);
   color: var(--color-text-muted);
@@ -8056,4 +8050,28 @@ button:focus-visible {
 }
 .study-banner__correct button {
   margin-top: 4px;
+}
+
+/* R62:搜索输入框滚动固定;主题结果独立默认两项 */
+.search-page .search-field {
+  position: sticky;
+  top: 64px;
+  z-index: 4;
+  margin: 0;
+  padding: 10px 0;
+  background: var(--canvas, #e9edf3);
+}
+.search-topics-toggle {
+  min-height: 40px;
+  margin: 8px 0 0;
+  padding: 6px 4px;
+  border: 0;
+  background: none;
+  color: var(--action, #4a6388);
+  font-size: 13px;
+  cursor: pointer;
+}
+.search-topics-toggle:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
