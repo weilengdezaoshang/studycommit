@@ -19,10 +19,14 @@ export function LongSessionBanner({
         <button type="button" className="button button--secondary" onClick={onComplete}>
           结束学习
         </button>
+      </div>
+      {/* R71:时长修正按需展开,不与主操作并列 */}
+      <details className="study-banner__correct">
+        <summary>调整学习时长</summary>
         <button type="button" className="button button--ghost" onClick={onCorrectEndTime}>
           修正结束时间
         </button>
-      </div>
+      </details>
     </aside>
   )
 }

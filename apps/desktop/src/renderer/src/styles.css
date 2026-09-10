@@ -8041,3 +8041,19 @@ button:focus-visible {
   color: var(--muted, #59677b);
   font-size: 13px;
 }
+
+/* 学习横幅:时长修正按需展开(R71) */
+.study-banner__correct {
+  margin: 4px 0 0;
+}
+.study-banner__correct summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  color: var(--color-text-muted, #59677b);
+  font-size: 12px;
+  cursor: pointer;
+}
+.study-banner__correct button {
+  margin-top: 4px;
+}
