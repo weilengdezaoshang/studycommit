@@ -133,6 +133,19 @@ export class AuthService {
     return { user: this.toCurrentUser(user), tokens }
   }
 
+  /**
+   * 云函数身份交换：微信上下文已提供可信 OPENID，跳过 code2session，
+   * 复用与普通登录一致的账号模型与令牌签发。
+   */
+  async loginWechatMiniprogramByOpenId(
+    openid: string,
+    unionid: string | null,
+  ): Promise<VerifyPhoneOutput> {
+    const user = await this.findOrCreateWechatUser(openid, unionid)
+    const tokens = await this.issueTokens(user.id, 'miniprogram')
+    return { user: this.toCurrentUser(user), tokens }
+  }
+
   async refresh(refreshToken: string) {
     const previousHash = sha256(refreshToken)
     const session = await this.repository.findActiveSessionByRefreshHash(previousHash)

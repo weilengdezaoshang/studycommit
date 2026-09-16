@@ -22,6 +22,8 @@ export const envSchema = z.object({
   AUTH_WECHAT_STUB: z.string().min(1).optional(),
   WECHAT_MINI_APP_ID: z.string().min(1).optional(),
   WECHAT_MINI_APP_SECRET: z.string().min(1).optional(),
+  /** 小程序云函数内部接口:HMAC 签名密钥,未配置时内部接口整体关闭 */
+  INTERNAL_API_SIGNING_SECRET: z.string().min(1).optional(),
   AUTH_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   AUTH_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
   /** AI 基建:AI_PROTOCOL 选择供应商协议(openai 兼容 / anthropic / gemini),未配置密钥时 AI 功能降级 */
