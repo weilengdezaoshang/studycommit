@@ -1,0 +1,12 @@
+{
+  "timeout": 20,
+  "envVariables": {
+    "OCR_ENABLED": "true",
+    "TENCENT_OCR_REGION": "ap-guangzhou",
+    "OCR_DAILY_LIMIT": "50",
+    "OCR_TIMEOUT_MS": "12000"
+  },
+  "permissions": {
+    "openapi": []
+  }
+}

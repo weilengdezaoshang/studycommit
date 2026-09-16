@@ -1,0 +1,20 @@
+{
+  "timeout": 20,
+  "envVariables": {
+    "CAPTURE_ENABLED": "true",
+    "IMAGE_RECORD_ENABLED": "true",
+    "MAX_CAPTURE_IMAGES": "9",
+    "FILE_MAX_BYTES": "10485760",
+    "INTERNAL_API_TIMEOUT_MS": "10000"
+  },
+  "permissions": {
+    "openapi": []
+  },
+  "triggers": [
+    {
+      "name": "staged-files-cleanup",
+      "type": "timer",
+      "config": "0 0 3 * * * *"
+    }
+  ]
+}

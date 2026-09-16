@@ -1,0 +1,10 @@
+{
+  "name": "studycommit-ocr-cloud-function",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "dependencies": {
+    "tencentcloud-sdk-nodejs-ocr": "^4.1.2",
+    "wx-server-sdk": "latest"
+  }
+}
