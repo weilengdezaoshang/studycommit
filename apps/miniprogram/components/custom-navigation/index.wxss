@@ -67,3 +67,14 @@
 .navigation-spacer {
   width: 64px;
 }
+
+.reserve-capsule {
+  grid-template-columns: 64px minmax(0, 1fr) 108px;
+}
+.reserve-capsule .navigation-spacer {
+  width: 108px;
+}
+.reserve-capsule .navigation-title {
+  text-align: left;
+  font-size: 22px;
+}

@@ -1,0 +1,111 @@
+@import '../../styles/notebook-tokens.wxss';
+.page {
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 0 var(--nb-space-md) env(safe-area-inset-bottom);
+  background: var(--sc-canvas);
+  color: var(--sc-ink);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--nb-body);
+  line-height: 1.5;
+}
+.content {
+  flex: 1;
+  min-height: 0;
+}
+.content notebook-sheet,
+.content notebook-button,
+.overlay notebook-button {
+  display: block;
+  margin-bottom: var(--nb-space-sm);
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--nb-space-sm);
+  flex-wrap: wrap;
+  margin: var(--nb-space-sm) 0;
+}
+.row notebook-button {
+  margin: 0;
+}
+.heading {
+  display: block;
+  font-size: 28px;
+  line-height: 1.4;
+  color: var(--sc-ink);
+  margin: var(--nb-space-md) 0;
+  font-family: NotebookHand, cursive;
+}
+.hint {
+  display: block;
+  font-size: 14px;
+  color: var(--sc-muted);
+  margin: var(--nb-space-sm) 0;
+}
+.large {
+  width: 100%;
+  height: 320px;
+}
+.thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--nb-radius-sm);
+}
+.empty {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--nb-space-md);
+}
+.editor {
+  width: 100%;
+  min-height: 260px;
+  font-size: var(--nb-body);
+  line-height: 1.7;
+  color: var(--sc-ink);
+}
+.notice {
+  padding: var(--nb-space-sm);
+  margin: var(--nb-space-sm) 0;
+  border-radius: var(--nb-radius-sm);
+  background: var(--sc-action-surface);
+  color: var(--sc-action);
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--sc-scrim);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--nb-space-lg);
+}
+
+.preview-photo {
+  position: relative;
+}
+.image-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--sc-scrim);
+  color: var(--sc-paper);
+}
+.source-overlay {
+  justify-content: flex-end;
+  padding: 16px 16px calc(env(safe-area-inset-bottom) + 24px);
+}
+.equal-actions notebook-button {
+  flex: 1;
+}
+.content capture-progress {
+  display: block;
+  margin-bottom: 16px;
+}

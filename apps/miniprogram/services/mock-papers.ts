@@ -543,7 +543,7 @@ function parseUpdateInput(input: unknown): UpdatePaperInput {
   return {
     id: readUuid(value.id),
     version: readVersion(value.version),
-    content: parseCreateInput({ content: value.content }).content,
+    content: parseCreateInput({ content: value.content }).content ?? '',
   }
 }
 

@@ -1,0 +1,9 @@
+@import '../../styles/notebook-tokens.wxss';
+.page {
+  padding: var(--nb-space-md);
+  background: var(--sc-canvas);
+  min-height: 100vh;
+}
+.page notebook-button {
+  margin: var(--nb-space-sm) 0;
+}

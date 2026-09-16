@@ -131,7 +131,8 @@
   font-size: 22rpx;
 }
 
-/* ---------- 时间线与纸页卡片 ---------- */.timeline-list {
+/* ---------- 时间线与纸页卡片 ---------- */
+.timeline-list {
   position: relative;
   margin-top: 24rpx;
   margin-left: 20rpx;
@@ -355,7 +356,7 @@
   background: var(--sc-surface-soft);
   color: var(--sc-action);
   line-height: 2.5;
-}/* ---------- 悬浮按钮 ---------- */
+} /* ---------- 悬浮按钮 ---------- */
 
 .fab {
   position: fixed;
@@ -650,7 +651,8 @@
 }
 
 .calendar-day.level-3 .calendar-paper-icon {
-  filter: drop-shadow(-4rpx 4rpx 0 var(--sc-line-strong)) drop-shadow(-8rpx 8rpx 0 var(--sc-timeline));
+  filter: drop-shadow(-4rpx 4rpx 0 var(--sc-line-strong))
+    drop-shadow(-8rpx 8rpx 0 var(--sc-timeline));
 }
 
 .calendar-dot {
@@ -841,7 +843,7 @@
   font-size: 20rpx;
   font-weight: 400;
   text-align: left;
-}/* ---------- 覆盖层：箱子、搜索、装订、问题 ---------- */
+} /* ---------- 覆盖层：箱子、搜索、装订、问题 ---------- */
 
 .overlay-panel {
   position: fixed;
@@ -922,7 +924,8 @@
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
-}.search-field-row {
+}
+.search-field-row {
   display: flex;
   align-items: center;
   gap: 12rpx;

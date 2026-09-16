@@ -1,6 +1,6 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { monitor } from '../../services/monitor-adapter'
-import { getPapersApi } from '../../services/papers-api'
+import { getMiniprogramServices } from '../../infrastructure/services/service-context'
 import { createIdempotencyKey } from '../../utils/uuid'
 import { formatEditorDate, parseNoteDraft, type NoteDraft } from './note-editor-utils'
 import { getCustomNavigationMetrics } from '../../utils/navigation'
@@ -110,7 +110,7 @@ Page({
 
     saveIdempotencyKey ??= createIdempotencyKey()
     try {
-      await getPapersApi().create(
+      await getMiniprogramServices().papers.create(
         {
           content,
           hasQuestion: this.data.isQuestionActive,

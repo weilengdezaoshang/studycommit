@@ -1,5 +1,6 @@
 Component({
   properties: {
+    reserveCapsule: { type: Boolean, value: false },
     title: { type: String, value: '' },
     height: { type: Number, value: 44 },
     rightText: { type: String, value: '' },

@@ -4,6 +4,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "drawer-list-row": "/components/drawer-list-row/index",
-    "custom-navigation": "/components/custom-navigation/index"
+    "custom-navigation": "/components/custom-navigation/index",
+    "capture-entry": "/components/capture-entry/index"
   }
 }

@@ -1,0 +1,1 @@
+<button class="button {{secondary ? 'secondary' : ''}}" disabled="{{disabled || loading}}" loading="{{loading}}" hover-class="pressed" bindtap="onPress" aria-label="{{label}}"><image wx:if="{{icon}}" src="{{icon}}" mode="aspectFit" /><text>{{label}}</text><slot /></button>

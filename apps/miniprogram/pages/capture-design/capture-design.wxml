@@ -1,0 +1,1 @@
+<view class="page"><text>示例状态用于检查布局，不执行真实识别和保存。点击编辑正文可检查键盘避让。</text><notebook-button wx:for="{{scenarios}}" wx:key="id" label="{{item.title}}" data-id="{{item.id}}" bind:press="open" /></view>

@@ -1,6 +1,4 @@
-import { loginWechatMiniprogram } from '../../services/auth-api'
-import { waitForMiniprogramAuth } from '../../services/auth-bootstrap'
-import { getAccessToken } from '../../services/auth-session'
+import { getMiniprogramServices } from '../../infrastructure/services/service-context'
 import { ROUTES } from '../../constants/routes'
 
 let submitting = false
@@ -12,8 +10,8 @@ Page({
   },
 
   async onShow() {
-    await waitForMiniprogramAuth()
-    if (getAccessToken()) {
+    await getMiniprogramServices().auth.ensureSession()
+    if (getMiniprogramServices().auth.isAuthenticated()) {
       wx.reLaunch({ url: ROUTES.HOME })
       return
     }
@@ -46,7 +44,7 @@ Page({
       return
     }
     try {
-      await loginWechatMiniprogram(code)
+      await getMiniprogramServices().auth.login(code)
       wx.reLaunch({ url: ROUTES.HOME })
     } catch {
       submitting = false

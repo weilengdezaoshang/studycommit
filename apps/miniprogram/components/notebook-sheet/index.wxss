@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+.sheet {
+  position: relative;
+  overflow: hidden;
+  padding: var(--nb-space-md);
+  border: 1px solid var(--sc-action);
+  border-radius: var(--nb-radius-md) var(--nb-radius-sm) var(--nb-radius-lg) var(--nb-radius-sm);
+  background: var(--sc-paper);
+}
+.fold {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  width: 22px;
+  height: 22px;
+  transform: rotate(45deg);
+  border-left: 1px solid var(--sc-action);
+  background: var(--sc-canvas);
+  pointer-events: none;
+}

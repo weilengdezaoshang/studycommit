@@ -5,7 +5,8 @@
   "scripts": {
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "node scripts/check-project.mjs"
+    "check": "node scripts/check-project.mjs",
+    "build:capture-ui": "node ../../scripts/generate-notebook-tokens.mjs && node ../../scripts/build-miniprogram-capture.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

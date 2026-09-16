@@ -1,5 +1,11 @@
 {
-  "pages": ["pages/home/home", "pages/login/login", "pages/note-editor/note-editor"],
+  "pages": [
+    "pages/home/home",
+    "pages/login/login",
+    "pages/note-editor/note-editor",
+    "pages/capture/capture",
+    "pages/capture-design/capture-design"
+  ],
   "window": {
     "navigationBarTitleText": "StudyCommit",
     "navigationBarBackgroundColor": "#fffefc",

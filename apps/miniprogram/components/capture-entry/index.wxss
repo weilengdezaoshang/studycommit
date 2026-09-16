@@ -1,0 +1,43 @@
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--sc-scrim);
+  z-index: 40;
+}
+.anchor {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom) + 24px);
+  right: 24px;
+  z-index: 41;
+}
+.circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 50% 45% 50% 48%;
+  border: 1.5px solid var(--sc-action);
+  background: var(--sc-action-surface);
+  color: var(--sc-ink);
+  font-size: 32px;
+}
+.circle image {
+  width: 28px;
+  height: 28px;
+}
+.action {
+  position: absolute;
+}
+.text {
+  bottom: 208px;
+  right: 12px;
+}
+.ocr {
+  bottom: 142px;
+  right: 92px;
+}
+.image {
+  bottom: 64px;
+  right: 150px;
+}

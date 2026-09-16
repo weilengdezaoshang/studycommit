@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "notebook-sheet": "/components/notebook-sheet/index",
+    "notebook-button": "/components/notebook-button/index"
+  }
+}

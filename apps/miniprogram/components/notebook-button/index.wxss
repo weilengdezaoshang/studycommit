@@ -1,0 +1,40 @@
+:host {
+  display: block;
+}
+.button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nb-space-sm);
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: var(--nb-space-sm) var(--nb-space-md);
+  border: 1.5px solid var(--sc-action);
+  border-radius: var(--nb-radius-md) var(--nb-radius-sm) var(--nb-radius-lg) var(--nb-radius-sm);
+  background: var(--sc-action-surface);
+  color: var(--sc-ink);
+  font-size: var(--nb-body);
+  line-height: 1.5;
+}
+.button::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid var(--sc-line-strong);
+  border-radius: inherit;
+  pointer-events: none;
+}
+.button image {
+  width: 24px;
+  height: 24px;
+}
+.secondary {
+  background: var(--sc-paper);
+}
+.button[disabled] {
+  opacity: var(--nb-disabled);
+}
+.pressed {
+  opacity: var(--nb-pressed);
+}

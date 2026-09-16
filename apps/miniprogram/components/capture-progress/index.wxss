@@ -1,0 +1,68 @@
+.hero {
+  padding-top: var(--nb-space-md);
+  margin-bottom: var(--nb-space-lg);
+}
+.heading {
+  font-size: 28px;
+  line-height: 1.4;
+  color: var(--sc-ink);
+  font-family: NotebookHand, cursive;
+}
+.underline {
+  height: 5px;
+  width: 88%;
+  border-radius: 99px;
+  background: var(--sc-action-surface-strong);
+  transform: rotate(-1deg);
+  margin: 4px 0 24px;
+}
+.hint {
+  display: block;
+  font-size: 14px;
+  color: var(--sc-muted);
+  margin-top: 8px;
+}
+.task {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 0;
+}
+.divider {
+  border-top: 1px solid var(--sc-line);
+}
+.photo {
+  width: 72px;
+  height: 80px;
+  border-radius: 8px;
+}
+.status {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sc-action);
+  border-radius: 50%;
+  background: var(--sc-action-surface);
+  color: var(--sc-action);
+  font-size: 24px;
+}
+.copy {
+  flex: 1;
+  min-width: 0;
+  color: var(--sc-ink);
+}
+.track {
+  height: 16px;
+  border: 1px solid var(--sc-action);
+  border-radius: 99px;
+  overflow: hidden;
+  margin: 12px 0 8px;
+}
+.bar {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--sc-action-surface-strong);
+}

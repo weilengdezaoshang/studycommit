@@ -1,4 +1,4 @@
-<view class="navigation" style="height: {{height}}px;">
+<view class="navigation {{reserveCapsule ? 'reserve-capsule' : ''}}" style="height: {{height}}px;">
   <button class="navigation-back" hover-class="none" aria-label="{{backLabel}}" bindtap="onBack">
     <image src="{{leadingIcon}}" mode="aspectFit" />
   </button>

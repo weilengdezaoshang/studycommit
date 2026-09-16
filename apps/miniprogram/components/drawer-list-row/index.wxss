@@ -21,7 +21,10 @@
 
 .row-content {
   display: grid;
-  grid-template-columns: var(--drawer-icon-column, 48rpx) minmax(0, 1fr) var(--drawer-value-column, 80rpx);
+  grid-template-columns: var(--drawer-icon-column, 48rpx) minmax(0, 1fr) var(
+      --drawer-value-column,
+      80rpx
+    );
   align-items: center;
   width: 100%;
   min-height: 76rpx;

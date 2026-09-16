@@ -2,6 +2,7 @@
   "description": "StudyCommit 原生微信小程序",
   "compileType": "miniprogram",
   "miniprogramRoot": "./",
+  "cloudfunctionRoot": "cloudfunctions/",
   "projectname": "studycommit-miniprogram",
   "setting": {
     "es6": true,

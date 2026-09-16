@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "custom-navigation": "/components/custom-navigation/index",
+    "notebook-button": "/components/notebook-button/index",
+    "notebook-sheet": "/components/notebook-sheet/index",
+    "capture-image-strip": "/components/capture-image-strip/index",
+    "capture-progress": "/components/capture-progress/index"
+  }
+}

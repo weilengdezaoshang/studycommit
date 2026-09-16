@@ -29,9 +29,9 @@
     <block wx:for="{{timelinePapers}}" wx:key="id">
       <view class="timeline-entry">
         <view class="timeline-rail"><view class="timeline-dot"></view><text>{{item.timeLabel}}</text></view>
-        <view class="paper-card {{item.templateClass}}" data-id="{{item.id}}" bindtap="openPaper" hover-class="paper-card-pressed" hover-start-time="0" hover-stay-time="80" aria-label="{{item.content}}{{item.hasQuestion && !item.isQuestionResolved ? '，仍有未解决的问题' : ''}}">
+        <view class="paper-card {{item.templateClass}}" data-id="{{item.id}}" bindtap="openPaper" hover-class="paper-card-pressed" hover-start-time="0" hover-stay-time="80" aria-label="{{item.displayContent}}{{item.hasQuestion && !item.isQuestionResolved ? '，仍有未解决的问题' : ''}}">
           <view wx:if="{{item.hasQuestion && !item.isQuestionResolved}}" class="question-fold" aria-label="仍有未解决的问题"></view>
-          <text class="paper-content">{{item.content}}</text>
+          <text class="paper-content">{{item.displayContent}}</text>
           <view class="paper-meta"><text class="paper-label">{{item.topicLabel}}</text></view>
         </view>
       </view>
@@ -42,7 +42,8 @@
     <button class="secondary-button" bindtap="startWriting">写下第一张</button>
   </view>
 
-  <button class="fab" aria-label="记下一张纸页" bindtap="startWriting"><image class="plus-icon" src="/assets/icons/plus.svg" mode="aspectFit" /></button>
+  <capture-entry wx:if="{{captureUiEnabled && !isDrawerOpen && !isDetailOpen && !isSearchOpen}}" bind:select="createFromCapture" />
+  <button wx:if="{{!captureUiEnabled}}" class="fab" aria-label="记下一张纸页" bindtap="startWriting"><image class="plus-icon" src="/assets/icons/plus.svg" mode="aspectFit" /></button>
 
   <view wx:if="{{isDrawerOpen}}" class="scrim" catchtap="closeDrawer"></view>
   <view wx:if="{{isDrawerOpen}}" class="drawer drawer-open" style="padding-top: calc({{statusBarHeight}}px + 32rpx);" aria-label="个人学习抽屉">
@@ -146,11 +147,12 @@
 
   <view wx:if="{{isDetailOpen && selectedPaper}}" class="detail-panel" style="padding-top: {{statusBarHeight}}px;" role="dialog" aria-modal="true" aria-label="纸页详情">
     <custom-navigation title="纸页" height="{{navigationBarHeight}}" right-text="整理" back-label="关闭纸页详情" bindback="closePaper" bindrightaction="openDetailManage" />
-    <view class="detail-paper {{selectedPaper.templateClass}} {{selectedPaper.photoPath ? 'has-photo' : ''}}">
+    <view class="detail-paper {{selectedPaper.templateClass}} {{selectedPaper.photoPath || selectedPaper.photoPaths.length ? 'has-photo' : ''}}">
       <view class="detail-meta"><text class="detail-time">{{selectedPaper.dateLabel}} · {{selectedPaper.timeLabel}}</text><text wx:if="{{selectedPaper.hasQuestion}}" class="detail-state">{{selectedPaper.isQuestionResolved ? '已解决' : '还在思考'}}</text></view>
       <text class="detail-topic">{{selectedPaper.topicLabel}}</text>
-      <text class="detail-content">{{selectedPaper.content}}</text>
-      <image wx:if="{{selectedPaper.photoPath}}" class="detail-photo" src="{{selectedPaper.photoPath}}" mode="aspectFill" />
+      <text class="detail-content">{{selectedPaper.displayContent}}</text>
+      <image wx:if="{{selectedPaper.photoPath}}" class="detail-photo" src="{{selectedPaper.photoPath}}" mode="aspectFill" data-current="{{selectedPaper.photoPath}}" bindtap="viewPaperImage" />
+      <image wx:for="{{selectedPaper.photoPaths}}" wx:key="*this" class="detail-photo" src="{{item}}" mode="aspectFill" data-current="{{item}}" bindtap="viewPaperImage" />
     </view>
     <view wx:if="{{selectedPaper.hasQuestion && !selectedPaper.isQuestionResolved}}" class="detail-actions">
       <button class="understand-button" bindtap="openAgent">继续弄懂</button>

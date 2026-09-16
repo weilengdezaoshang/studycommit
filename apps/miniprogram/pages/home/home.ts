@@ -1,9 +1,8 @@
 import { MONITOR_EVENTS } from '../../constants/events'
 import { ROUTES } from '../../constants/routes'
-import { ensureFreshSession, getAccessToken } from '../../services/auth-session'
-import { waitForMiniprogramAuth } from '../../services/auth-bootstrap'
+import { getMiniprogramServices } from '../../infrastructure/services/service-context'
 import { monitor } from '../../services/monitor-adapter'
-import { getPapersApi, TOPIC_NAME_LIMIT, type TopicSummary } from '../../services/papers-api'
+import { TOPIC_NAME_LIMIT, type TopicSummary } from '../../infrastructure/services/papers-service'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
 import {
   formatDisplayCount,
@@ -34,6 +33,8 @@ type PaperViewModel = Paper & {
   hasQuestion: boolean
   isQuestionResolved: boolean
   photoPath: string
+  photoPaths: string[]
+  displayContent: string
   templateClass: 'template-dot' | 'template-rule' | 'template-grid' | 'template-plain'
 }
 
@@ -98,6 +99,7 @@ const SEED_PAPER_TEMPLATE_CLASS = {
 
 Page({
   data: {
+    captureUiEnabled: false,
     statusBarHeight: 0,
     navigationBarHeight: 44,
     papers: [] as PaperViewModel[],
@@ -164,9 +166,10 @@ Page({
   },
 
   async ensureAuthThenLoad() {
-    await waitForMiniprogramAuth()
-    await ensureFreshSession()
-    if (!getAccessToken()) {
+    const auth = getMiniprogramServices().auth
+    await auth.ensureSession()
+    await auth.ensureFresh().catch(() => undefined)
+    if (!auth.isAuthenticated()) {
       this.redirectToLogin()
       return
     }
@@ -174,9 +177,17 @@ Page({
   },
 
   async onLoad() {
+    try {
+      this.setData({
+        captureUiEnabled: wx.getAccountInfoSync().miniProgram.envVersion === 'develop',
+      })
+    } catch {
+      /* 非开发环境沿用现有入口 */
+    }
+
     this.setData(getCustomNavigationMetrics())
     // 只等待鉴权就绪;未登录的跳转统一由 onShow 处理,避免双重 redirectTo
-    await waitForMiniprogramAuth()
+    await getMiniprogramServices().auth.ensureSession()
   },
 
   redirectToLogin() {
@@ -210,7 +221,7 @@ Page({
     const currentLoad = ++loadSequence
     this.setData({ isLoading: true, isLoadError: false, loadErrorMessage: '' })
     try {
-      const api = getPapersApi()
+      const api = getMiniprogramServices().papers
       const [paperPage, topics] = await Promise.all([api.list({ limit: 100 }), api.listTopics()])
       if (currentLoad !== loadSequence) {
         return
@@ -237,6 +248,16 @@ Page({
 
   retryLoad() {
     void this.loadHome()
+  },
+
+  createFromCapture(event: { detail: { mode: string } }) {
+    if (event.detail.mode === 'text') {
+      this.startWriting()
+    } else {
+      wx.navigateTo({
+        url: '/pages/capture/capture?mode=' + (event.detail.mode === 'image' ? 'image' : 'ocr'),
+      })
+    }
   },
 
   startWriting() {
@@ -372,6 +393,17 @@ Page({
 
   closePaper() {
     this.setData({ isDetailOpen: false, isDetailManageOpen: false, selectedPaper: null })
+  },
+
+  viewPaperImage(event: PageEvent) {
+    const current = String(event.currentTarget.dataset.current ?? '')
+    const paper = this.data.selectedPaper
+    const urls = paper?.photoPath
+      ? [paper.photoPath, ...paper.photoPaths]
+      : (paper?.photoPaths ?? [])
+    if (current && urls.length) {
+      wx.previewImage({ current, urls })
+    }
   },
 
   openDetailManage() {
@@ -544,7 +576,7 @@ Page({
       return
     }
     try {
-      await getPapersApi().resolveQuestion({
+      await getMiniprogramServices().papers.resolveQuestion({
         id: selectedPaper.id,
         version: selectedPaper.version,
       })
@@ -571,7 +603,7 @@ Page({
     this.setData({ isCreatingTopic: true })
     monitor.track(MONITOR_EVENTS.HOME_TOPIC_CREATE, { source: 'quick', name })
     try {
-      const api = getPapersApi()
+      const api = getMiniprogramServices().papers
       await api.createTopic({ name })
       const topics = await api.listTopics()
       this.setData({ newTopicName: '', isTopicFormOpen: false })
@@ -608,7 +640,7 @@ Page({
     this.setData({ isCreatingTopic: true })
     monitor.track(MONITOR_EVENTS.HOME_TOPIC_CREATE)
     try {
-      const api = getPapersApi()
+      const api = getMiniprogramServices().papers
       await api.createTopic({ name })
       const topics = await api.listTopics()
       this.setData({ newTopicName: '', isTopicFormOpen: false })
@@ -636,7 +668,7 @@ Page({
     this.setData({ organizingId: String(id) })
     monitor.track(MONITOR_EVENTS.HOME_ORGANIZE_CLICK)
     try {
-      await getPapersApi().organize({
+      await getMiniprogramServices().papers.organize({
         id: String(id),
         version: Number(version),
         topicId: destinationTopicId,
@@ -715,13 +747,27 @@ Page({
     })
   },
 
-  openPaperById(id: string) {
+  async openPaperById(id: string) {
     const paper = this.data.papers.find((item) => item.id === id)
     if (!paper) {
       return
     }
     monitor.track(MONITOR_EVENTS.HOME_DETAIL_OPEN, { paperId: id })
     this.setData({ selectedPaper: paper, isDetailOpen: true })
+    try {
+      const detail = await getMiniprogramServices().papers.get(id)
+      const photoPaths = await Promise.all(
+        (detail.assets ?? []).map((asset) =>
+          getMiniprogramServices().uploads.accessAsset(asset.id),
+        ),
+      )
+      const current = this.data.selectedPaper
+      if (current?.id === id) {
+        this.setData({ selectedPaper: { ...current, ...detail, photoPaths } })
+      }
+    } catch {
+      // 已展示正文，附件短链读取失败时保留详情并允许下次重新打开重试
+    }
   },
 })
 
@@ -740,6 +786,8 @@ function toPaperViewModel(
       (paper.topicId ? '已归入主题' : '待整理'),
     isInbox: paper.status === 'inbox',
     photoPath: '',
+    photoPaths: [],
+    displayContent: paper.content || `图片记录 · ${paper.assets?.length ?? 0} 张`,
     templateClass:
       SEED_PAPER_TEMPLATE_CLASS[paper.id as keyof typeof SEED_PAPER_TEMPLATE_CLASS] ??
       'template-plain',
@@ -806,7 +854,7 @@ function buildSearchResults(
       type: 'paper' as const,
       id: paper.id,
       title: paper.topicLabel,
-      detail: `${paper.dateLabel} · ${paper.content}`,
+      detail: `${paper.dateLabel} · ${paper.content || `图片记录 · ${paper.assets?.length ?? 0} 张`}`,
       dateKey: paper.dateKey,
     }))
   return [...topicResults, ...paperResults].slice(0, 20)

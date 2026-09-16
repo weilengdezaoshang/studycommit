@@ -2,8 +2,8 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const apiMocks = vi.hoisted(() => ({ create: vi.fn() }))
 
-vi.mock('../../services/papers-api', () => ({
-  getPapersApi: () => apiMocks,
+vi.mock('../../infrastructure/services/service-context', () => ({
+  getMiniprogramServices: () => ({ papers: apiMocks }),
 }))
 
 type PageDefinition = {

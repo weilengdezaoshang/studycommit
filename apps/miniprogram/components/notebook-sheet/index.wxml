@@ -1,0 +1,1 @@
+<view class="sheet"><slot /><view class="fold" /></view>

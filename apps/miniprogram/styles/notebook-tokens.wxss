@@ -1,0 +1,12 @@
+/* 由 scripts/generate-notebook-tokens.mjs 生成，请修改公共 design-tokens。 */
+page {
+  --nb-space-sm: 8px;
+  --nb-space-md: 16px;
+  --nb-space-lg: 24px;
+  --nb-radius-sm: 8px;
+  --nb-radius-md: 12px;
+  --nb-radius-lg: 20px;
+  --nb-body: 16px;
+  --nb-disabled: 0.48;
+  --nb-pressed: 0.72;
+}
