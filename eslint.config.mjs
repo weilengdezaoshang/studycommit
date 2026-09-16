@@ -20,6 +20,7 @@ export default tseslint.config(
       'apps/desktop/test-results/**',
       'apps/desktop/playwright-report/**',
       'apps/api/drizzle/**',
+      'apps/miniprogram/shared/**',
       'docs/prototypes/**',
       'docs/prd/**',
       'tools/**',
@@ -53,6 +54,12 @@ export default tseslint.config(
         getCurrentPages: 'readonly',
         wx: 'readonly',
       },
+    },
+  },
+  {
+    files: ['apps/miniprogram/cloudfunctions/**/*.js'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   {

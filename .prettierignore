@@ -10,6 +10,9 @@ apps/mobile/ios
 apps/desktop/test-results
 apps/desktop/playwright-report
 apps/api/drizzle
+apps/miniprogram/shared
 docs/prototypes
 *.html
 **/.xgrok
+
+apps/mobile/src/components/rich-editor-bundle.ts
