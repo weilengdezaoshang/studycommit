@@ -64,7 +64,6 @@ export default function PricingPage() {
   const [budgetOpen, setBudgetOpen] = useState(false)
   const [publishOpen, setPublishOpen] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
-  const [initialModel, setInitialModel] = useState('')
   const pendingPrice = useRef<{
     value: Pick<AiPrice, 'action' | 'priceCredits' | 'configSnapshot'>
     knownIds: Set<string>
@@ -72,24 +71,25 @@ export default function PricingPage() {
   const [priceForm, setPriceForm] = useState({
     priceCredits: null as number | null,
     estimatedCostPerRun: '',
+    model: '',
     maxInputTokens: activePrice?.configSnapshot.maxInputTokens ?? 20000,
     maxOutputTokens: activePrice?.configSnapshot.maxOutputTokens ?? 4000,
   })
 
   const switchImpact = useMemo(() => {
     if (!pendingSwitch) {
-return null
-}
+      return null
+    }
     if (pendingSwitch.key === 'aiEnabled' && pendingSwitch.value) {
       if (configUnknown) {
-return '配置状态未知，不能开启。'
-}
+        return '配置状态未知，不能开启。'
+      }
       if (!activePrice) {
-return '尚未发布价格，禁止开启计费。'
-}
+        return '尚未发布价格，禁止开启计费。'
+      }
       if (!config?.dailyCostBudget) {
-return '未设置每日成本预算，禁止开启计费。'
-}
+        return '未设置每日成本预算，禁止开启计费。'
+      }
     }
     if (pendingSwitch.key === 'aiEnabled') {
       return pendingSwitch.value
@@ -118,8 +118,8 @@ return '未设置每日成本预算，禁止开启计费。'
     reason: string,
   ) => {
     if (mutationsDisabled || !write.canSubmit) {
-return
-}
+      return
+    }
     pendingPrice.current = null
     const expectedVersion = write.expectedVersion()
     if (expectedVersion === null) {
@@ -147,8 +147,8 @@ return
       return
     }
     if (result.status === 'unknown' || result.status === 'rate_limited') {
-return
-}
+      return
+    }
     if (result.status !== 'failed' || result.error.code !== 'WRITE_LOCKED') {
       void message.error(result.error.message)
     }
@@ -156,8 +156,8 @@ return
 
   const publish = async (reason: string) => {
     if (mutationsDisabled || !write.canSubmit) {
-return
-}
+      return
+    }
     if (
       priceForm.priceCredits === null ||
       !Number.isInteger(priceForm.priceCredits) ||
@@ -187,7 +187,7 @@ return
       void message.error('最大输出 tokens 须为 1 到 1000000 的整数')
       return
     }
-    const model = (activePrice?.configSnapshot.model ?? initialModel).trim()
+    const model = priceForm.model.trim()
     if (!model || model.length > 120) {
       void message.error('请填写已批准的模型标识（1–120 字）')
       return
@@ -213,8 +213,8 @@ return
       return
     }
     if (result.status === 'unknown' || result.status === 'rate_limited') {
-return
-}
+      return
+    }
     if (result.status !== 'failed' || result.error.code !== 'WRITE_LOCKED') {
       void message.error(result.error.message)
     }
@@ -235,18 +235,18 @@ return
             (item) => !pending.knownIds.has(item.id) && matchesPrice(item, pending.value),
           )
         ) {
-return 'unresolved'
-}
+          return 'unresolved'
+        }
         queryClient.setQueryData(['admin', 'ai-prices'], latest)
       } else if (pendingPatch.current) {
         const latest = await adminApi.getAiConfig()
         if (!matchesConfigPatch(latest, pendingPatch.current)) {
-return 'unresolved'
-}
+          return 'unresolved'
+        }
         queryClient.setQueryData(['admin', 'ai-config'], latest)
       } else {
-return 'unresolved'
-}
+        return 'unresolved'
+      }
       return 'confirmed'
     }, '尚未查询到与本次提交一致的结果，请稍后再查或核对审计日志，不要重复提交。')
     if (outcome === 'confirmed') {
@@ -417,6 +417,7 @@ return 'unresolved'
                   maxInputTokens: activePrice?.configSnapshot.maxInputTokens ?? prev.maxInputTokens,
                   maxOutputTokens:
                     activePrice?.configSnapshot.maxOutputTokens ?? prev.maxOutputTokens,
+                  model: activePrice?.configSnapshot.model ?? prev.model,
                 }))
                 setPublishOpen(true)
                 write.openModal()
@@ -484,8 +485,8 @@ return 'unresolved'
         }
         onSubmit={(reason) => {
           if (!pendingSwitch || switchBlocked) {
-return
-}
+            return
+          }
           const patch =
             pendingSwitch.key === 'paper_explain'
               ? {
@@ -504,8 +505,8 @@ return
         onCancel={() => {
           write.closeModal()
           if (!write.unknown && !write.conflict) {
-setPendingSwitch(null)
-}
+            setPendingSwitch(null)
+          }
         }}
       />
       <ReasonActionModal
@@ -541,8 +542,8 @@ setPendingSwitch(null)
         onCancel={() => {
           write.closeModal()
           if (!write.unknown && !write.conflict) {
-setBudgetOpen(false)
-}
+            setBudgetOpen(false)
+          }
         }}
       />
       <ReasonActionModal
@@ -560,9 +561,24 @@ setBudgetOpen(false)
             <Alert
               type="warning"
               showIcon
-              message="发布后立即对新请求生效，已受理请求保留原价格。"
+              message="发布后立即对新请求生效。已受理请求继续使用原价格和模型快照。"
+              description={
+                activePrice
+                  ? `当前生效：模型 ${activePrice.configSnapshot.model}，${activePrice.priceCredits} 积分。新版本：模型 ${priceForm.model.trim() || '未填写'}，${priceForm.priceCredits ?? '未填写'} 积分。`
+                  : '当前尚无生效价格，本次发布将作为第一版计费模型与价格。'
+              }
               style={{ marginBottom: spacing.md }}
             />
+            {activePrice &&
+            priceForm.model.trim() &&
+            priceForm.model.trim() !== activePrice.configSnapshot.model ? (
+              <Alert
+                type="info"
+                showIcon
+                message={`计费模型将从 ${activePrice.configSnapshot.model} 更换为 ${priceForm.model.trim()}。修改服务商默认模型不会改写已发布的价格版本。`}
+                style={{ marginBottom: spacing.md }}
+              />
+            ) : null}
             {priceForm.priceCredits === 0 ? (
               <Alert
                 type="error"
@@ -612,14 +628,19 @@ setBudgetOpen(false)
                   }
                 />
               </Form.Item>
-              <Form.Item htmlFor="price-model" label="使用模型">
+              <Form.Item
+                htmlFor="price-model"
+                label="使用模型"
+                extra="默认填入当前计费模型，发布新版本时可更换。已受理请求不受影响。"
+              >
                 <Input
                   id="price-model"
-                  value={activePrice?.configSnapshot.model ?? initialModel}
-                  disabled={Boolean(activePrice)}
+                  value={priceForm.model}
                   maxLength={120}
                   placeholder="输入平台已批准的模型标识"
-                  onChange={(event) => setInitialModel(event.target.value)}
+                  onChange={(event) =>
+                    setPriceForm((prev) => ({ ...prev, model: event.target.value }))
+                  }
                 />
               </Form.Item>
               <Form.Item htmlFor="price-input-tokens" label="最大输入 tokens">
@@ -654,8 +675,8 @@ setBudgetOpen(false)
         onCancel={() => {
           write.closeModal()
           if (!write.unknown) {
-setPublishOpen(false)
-}
+            setPublishOpen(false)
+          }
         }}
       />
     </AdminPage>
