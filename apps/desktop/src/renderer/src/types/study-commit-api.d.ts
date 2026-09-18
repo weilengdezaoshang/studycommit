@@ -1,3 +1,4 @@
+import type { PaperKnowledge, PaperKnowledgeCommand } from '@studycommit/rpc-contracts/papers'
 import type {
   ActiveStudySessionResponse,
   CompleteStudySessionInput,
@@ -79,13 +80,22 @@ export interface StudyCommitTopicsApi {
 }
 
 export interface StudyCommitPapersApi {
+  get: (id: string) => Promise<IpcResult<Paper>>
+  knowledge: (id: string) => Promise<IpcResult<PaperKnowledge>>
+  updateKnowledge: (input: PaperKnowledgeCommand) => Promise<IpcResult<PaperKnowledge>>
   list: (input?: ListPapersInput) => Promise<IpcResult<PaperPage>>
-  create: (input: CreatePaperInput) => Promise<IpcResult<Paper>>
+  create: (
+    input: CreatePaperInput,
+    options?: { idempotencyKey?: string },
+  ) => Promise<IpcResult<Paper>>
   update: (input: UpdatePaperInput) => Promise<IpcResult<Paper>>
   organize: (input: OrganizePaperInput) => Promise<IpcResult<Paper>>
   moveToInbox: (input: PaperCommandInput) => Promise<IpcResult<Paper>>
   remove: (input: PaperCommandInput) => Promise<IpcResult<DeletePaperOutput>>
   question: (input: UpdatePaperQuestionInput) => Promise<IpcResult<Paper>>
+  assetAccess: (
+    assetId: string,
+  ) => Promise<IpcResult<{ assetId: string; url: string; expiresAt: string }>>
   restore: (input: PaperCommandInput) => Promise<IpcResult<Paper>>
 }
 
@@ -96,27 +106,38 @@ export interface StudyCommitLearningLogsApi {
 }
 
 export interface StudyCommitAiApi {
-  explainPaper: (input: {
-    paperId?: string
-    content: string
-    questionText?: string | null
-    directive?: 'initial' | 'plainer' | 'alternative'
-    previousViewType?: 'causal_chain' | 'contrast' | 'checklist' | 'definition_counterexample'
-    round?: number
-  }) => Promise<
+  quote: () => Promise<
     IpcResult<{
-      view:
-        | { type: 'causal_chain'; steps: { title: string; detail: string }[] }
-        | { type: 'contrast'; items: { aspect: string; a: string; b: string }[] }
-        | { type: 'checklist'; steps: { action: string; reason: string }[] }
-        | { type: 'definition_counterexample'; definition: string; counterexample: string }
-      example: string
-      plainLevel: number
-      model: string
-      promptVersion: string
-      runId: string
+      action: 'paper_explain'
+      priceCredits: number
+      priceVersion: number
+      balance: { available: number; reserved: number }
     }>
   >
+  startRun: (payload: {
+    input: {
+      paperId?: string
+      content: string
+      questionText?: string | null
+      directive?: 'initial' | 'plainer' | 'alternative'
+      previousViewType?: 'causal_chain' | 'contrast' | 'checklist' | 'definition_counterexample'
+      round?: number
+    }
+    expectedPrice: { priceCredits: number; priceVersion: number }
+    idempotencyKey: string
+  }) => Promise<
+    IpcResult<{
+      runId: string
+      runPhase: 'queued' | 'running' | 'reconciling' | 'completed' | 'failed' | 'expired'
+      priceCredits: number
+      priceVersion: number
+      reservedCredits: number
+      deadlineAt: string
+    }>
+  >
+  getRun: (payload: {
+    runId: string
+  }) => Promise<IpcResult<import('@studycommit/rpc-contracts/ai').AiGetRunOutput>>
   confirmPaperExplain: (input: { runId: string }) => Promise<IpcResult<{ confirmed: true }>>
 }
 

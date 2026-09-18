@@ -7,6 +7,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "typecheck": "tsc --noEmit",
+    "check:screen-permissions": "electron scripts/check-screen-permissions.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "pnpm build && playwright test e2e/app-shell.e2e.ts",
@@ -19,6 +20,10 @@
     "@studycommit/design-tokens": "workspace:*",
     "@studycommit/rpc-contracts": "workspace:*",
     "@tanstack/react-virtual": "^3.14.11",
+    "@tiptap/markdown": "3.31.3",
+    "@tiptap/pm": "^3.31.3",
+    "@tiptap/react": "^3.31.3",
+    "@tiptap/starter-kit": "^3.31.3",
     "animejs": "^4.5.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -26,7 +31,8 @@
     "roughjs": "^4.6.6",
     "svg2roughjs": "^3.2.3",
     "tesseract.js": "^7.0.0",
-    "three": "^0.185.1"
+    "three": "^0.185.1",
+    "@studycommit/puzzle-ui": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -44,5 +50,8 @@
     "typescript": "^5.9.0",
     "vite": "^7.3.6",
     "vitest": "^4.1.10"
+  },
+  "optionalDependencies": {
+    "node-mac-permissions": "2.5.0"
   }
 }

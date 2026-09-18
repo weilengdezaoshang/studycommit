@@ -49,14 +49,22 @@ export const topicPreloadApi = {
 }
 
 export const paperPreloadApi = {
+  get: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.get, input),
+  knowledge: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.knowledge, input),
+  updateKnowledge: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.updateKnowledge, input),
   list: (input?: unknown) => ipcRenderer.invoke(paperIpcChannels.list, input),
-  create: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.create, input),
+  create: (input: unknown, options?: { idempotencyKey?: string }) =>
+    ipcRenderer.invoke(paperIpcChannels.create, {
+      ...(typeof input === 'object' && input ? input : {}),
+      ...(options?.idempotencyKey ? { idempotencyKey: options.idempotencyKey } : {}),
+    }),
   update: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.update, input),
   organize: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.organize, input),
   moveToInbox: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.moveToInbox, input),
   remove: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.remove, input),
   question: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.question, input),
   restore: (input: unknown) => ipcRenderer.invoke(paperIpcChannels.restore, input),
+  assetAccess: (assetId: string) => ipcRenderer.invoke(paperIpcChannels.assetAccess, assetId),
 }
 
 export const learningLogPreloadApi = {
@@ -67,7 +75,9 @@ export const learningLogPreloadApi = {
 }
 
 export const aiPreloadApi = {
-  explainPaper: (input: unknown) => ipcRenderer.invoke(aiIpcChannels.explainPaper, input),
+  quote: () => ipcRenderer.invoke(aiIpcChannels.quote),
+  startRun: (payload: unknown) => ipcRenderer.invoke(aiIpcChannels.startRun, payload),
+  getRun: (payload: unknown) => ipcRenderer.invoke(aiIpcChannels.getRun, payload),
   confirmPaperExplain: (input: unknown) =>
     ipcRenderer.invoke(aiIpcChannels.confirmPaperExplain, input),
 }

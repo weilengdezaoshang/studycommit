@@ -16,6 +16,7 @@ import { registerAuthIpc } from './auth-ipc'
 import { registerLearningLogIpc } from './learning-log-ipc'
 import { registerPaperIpc } from './paper-ipc'
 import { registerStudySessionIpc } from './study-session-ipc'
+import { STUDY_SESSIONS_ENABLED } from '../../shared/feature-flags'
 import { registerTopicIpc } from './topic-ipc'
 import type { TrustedIpcSenderOptions } from './validate-ipc-sender'
 
@@ -42,18 +43,21 @@ export function registerDesktopIpc(
 ): () => void {
   const host = new IpcHost(options)
   registerStudySessionIpc(host, services.studySessions, {
+    enabled: STUDY_SESSIONS_ENABLED,
     offlineQueue: options.offlineQueue,
   })
-  void options.offlineQueue?.drain(async (job) => {
-    const { kind: _kind, ...input } = job
-    await services.studySessions.createFragment(input)
-    return true
-  })
+  if (STUDY_SESSIONS_ENABLED) {
+    void options.offlineQueue?.drain(async (job) => {
+      const { kind: _kind, ...input } = job
+      await services.studySessions.createFragment(input)
+      return true
+    })
+  }
   registerTopicIpc(host, services.topics)
   registerLearningLogIpc(host, services.learningLogs)
-  registerPaperIpc(host, services.papers)
+  registerPaperIpc(host, services.papers, services.uploads)
   registerAuthIpc(host, services.auth, options.capture ? registerCaptureShortcut : undefined)
-  registerAiIpc(host, services.ai)
+  const disposeAi = registerAiIpc(host, services.ai)
   registerReviewIpc(host, services.reviews)
   registerSearchIpc(host, services.search)
   if (options.capture) {
@@ -63,6 +67,7 @@ export function registerDesktopIpc(
     registerCaptureIpc(host, options.capture.deps)
   }
   return () => {
+    disposeAi()
     host.dispose()
     globalShortcut.unregister(CAPTURE_SHORTCUT)
   }

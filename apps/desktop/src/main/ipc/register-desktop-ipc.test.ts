@@ -81,7 +81,9 @@ describe('registerDesktopIpc', () => {
       update: vi.fn(),
     },
     ai: {
-      explainPaper: vi.fn(),
+      quote: vi.fn(),
+      explainRun: vi.fn(),
+      getRun: vi.fn(),
       confirmPaperExplain: vi.fn(),
     },
     auth: {
@@ -95,7 +97,7 @@ describe('registerDesktopIpc', () => {
     vi.clearAllMocks()
   })
 
-  it('registers every desktop channel and disposes them together', async () => {
+  it('注册全部通道并拦截未开放的陪学功能且统一释放通道', async () => {
     services.studySessions.getActive.mockResolvedValue({
       session: null,
       serverNow: runningStudySessionFixture.startedAt,
@@ -114,6 +116,7 @@ describe('registerDesktopIpc', () => {
         ...Object.values(authIpcChannels),
         ...Object.values(learningLogIpcChannels),
         ...Object.values(paperIpcChannels),
+        // 计费通道:旧同步/流式入口已移除,仅注册报价/受理/查询/确认。
         ...Object.values(aiIpcChannels),
         ...Object.values(reviewIpcChannels),
         ...Object.values(searchIpcChannels),
@@ -122,9 +125,9 @@ describe('registerDesktopIpc', () => {
 
     const active = await handlers.get(studySessionIpcChannels.getActive)?.(trustedEvent())
     const topics = await handlers.get(topicIpcChannels.listActive)?.(trustedEvent())
-    expect(active).toEqual({
-      ok: true,
-      data: { session: null, serverNow: runningStudySessionFixture.startedAt },
+    expect(active).toMatchObject({
+      ok: false,
+      error: { code: 'FORBIDDEN', message: '陪学功能暂未开放' },
     })
     expect(topics).toEqual({ ok: true, data: activeTopicPageFixture })
 
