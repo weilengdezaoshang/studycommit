@@ -82,6 +82,7 @@ describe('平台服务商配置', () => {
         protocol: 'openai',
         model: 'gpt-test',
         apiKey: 'sk-not-real',
+        operationId: randomUUID(),
         reason: '越权写入',
       },
       headers: { authorization: `Bearer ${token}` },
@@ -106,6 +107,7 @@ describe('平台服务商配置', () => {
         baseUrl: 'http://127.0.0.1:9/v1',
         model: 'gpt-test',
         apiKey: 'sk-e2e-not-real-key',
+        operationId: randomUUID(),
         reason: 'e2e 首次配置平台服务商',
       },
       headers: { authorization: `Bearer ${token}` },
@@ -131,6 +133,7 @@ describe('平台服务商配置', () => {
         protocol: 'openai',
         baseUrl: 'http://127.0.0.1:9/v1',
         model: 'gpt-test-2',
+        operationId: randomUUID(),
         reason: 'e2e 留空保留原密钥',
       },
       headers: { authorization: `Bearer ${token}` },
@@ -147,6 +150,7 @@ describe('平台服务商配置', () => {
         protocol: 'openai',
         baseUrl: 'http://127.0.0.1:9/v1',
         model: 'stale',
+        operationId: randomUUID(),
         reason: 'e2e 冲突写入',
       },
       headers: { authorization: `Bearer ${token}` },
@@ -189,7 +193,11 @@ describe('平台服务商配置', () => {
     const disabled = await app.inject({
       method: 'POST',
       url: '/api/admin/ai/provider/disable',
-      payload: { expectedVersion: current.json().version, reason: 'e2e 停用服务商' },
+      payload: {
+        expectedVersion: current.json().version,
+        operationId: randomUUID(),
+        reason: 'e2e 停用服务商',
+      },
       headers: { authorization: `Bearer ${token}` },
     })
     expect(disabled.statusCode).toBe(200)
@@ -257,5 +265,58 @@ describe('平台服务商配置', () => {
     expect(reserved.rows[0].n).toBe(0)
     delete process.env.AI_API_KEY
     delete process.env.AI_MODEL
+  })
+
+  it('同一操作标识重复请求不重复写入,不同内容复用则拒绝', async () => {
+    const token = await adminToken()
+    const current = await app.inject({
+      method: 'GET',
+      url: '/api/admin/ai/provider',
+      headers: { authorization: `Bearer ${token}` },
+    })
+    const operationId = randomUUID()
+    const payload = {
+      expectedVersion: current.json().version,
+      protocol: 'openai' as const,
+      baseUrl: 'http://127.0.0.1:9/v1',
+      model: 'gpt-op-id',
+      apiKey: 'sk-e2e-op-not-real',
+      operationId,
+      reason: 'e2e 操作标识幂等',
+    }
+    const first = await app.inject({
+      method: 'PUT',
+      url: '/api/admin/ai/provider',
+      payload,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect([200, 409]).toContain(first.statusCode)
+    if (first.statusCode === 409) {
+      return
+    }
+    const replay = await app.inject({
+      method: 'PUT',
+      url: '/api/admin/ai/provider',
+      payload,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(replay.statusCode).toBe(200)
+    expect(replay.json().version).toBe(first.json().version)
+    const reused = await app.inject({
+      method: 'PUT',
+      url: '/api/admin/ai/provider',
+      payload: { ...payload, model: 'other-model' },
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(reused.statusCode).toBe(409)
+    expect(reused.json().error?.code ?? reused.json().code).toBe('AI_PROVIDER_OPERATION_CONFLICT')
+    const found = await app.inject({
+      method: 'GET',
+      url: `/api/admin/ai/provider/operations/${operationId}`,
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(found.statusCode).toBe(200)
+    expect(found.json().operationId).toBe(operationId)
+    expect(JSON.stringify(found.json())).not.toContain('sk-e2e-op-not-real')
   })
 })

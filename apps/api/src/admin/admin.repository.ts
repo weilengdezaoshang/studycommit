@@ -58,8 +58,8 @@ export class AdminRepository {
       .from(campaigns)
       .where(eq(campaigns.id, campaignId))
     if (!campaign) {
-return null
-}
+      return null
+    }
     const versions = await this.database.db
       .select()
       .from(campaignVersions)
@@ -123,8 +123,8 @@ return null
       .leftJoin(creditAccounts, eq(creditAccounts.userId, users.id))
       .where(eq(users.id, userId))
     if (!user) {
-return null
-}
+      return null
+    }
     const grants = await this.database.db
       .select()
       .from(creditGrants)
@@ -200,6 +200,18 @@ return null
         ? encodeCursor(page[page.length - 1].run.createdAt, page[page.length - 1].run.id)
         : null,
     }
+  }
+
+  async findRunById(runId: string) {
+    const [row] = await this.database.db
+      .select({
+        run: agentRuns,
+        reservation: creditReservations,
+      })
+      .from(agentRuns)
+      .leftJoin(creditReservations, eq(creditReservations.runId, agentRuns.id))
+      .where(eq(agentRuns.id, runId))
+    return row ?? null
   }
 
   async listAuditLogs(input: {

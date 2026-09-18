@@ -5,12 +5,14 @@ import {
   adminAuditLogs,
   aiPriceVersions,
   aiProviderConfig,
+  aiProviderOperations,
   aiServiceConfig,
 } from '../database/schema'
 
 export type AiServiceConfigRow = typeof aiServiceConfig.$inferSelect
 export type AiPriceVersionRow = typeof aiPriceVersions.$inferSelect
 export type AiProviderConfigRow = typeof aiProviderConfig.$inferSelect
+export type AiProviderOperationRow = typeof aiProviderOperations.$inferSelect
 
 export interface ServiceConfigSnapshot {
   aiEnabled: boolean
@@ -38,8 +40,8 @@ export class AiConfigRepository {
       .from(aiServiceConfig)
       .where(eq(aiServiceConfig.id, 1))
     if (!row) {
-return null
-}
+      return null
+    }
     return {
       aiEnabled: row.aiEnabled,
       featureFlags: row.featureFlags,
@@ -172,6 +174,7 @@ return null
       model: string
       apiKeyCiphertext: string
       apiKeyHint: string
+      lastOperationId: string
       updatedBy: string
     },
   ): Promise<AiProviderConfigRow> {
@@ -188,6 +191,7 @@ return null
         lastTestStatus: 'unverified',
         lastTestedAt: null,
         lastTestedVersion: null,
+        lastOperationId: input.lastOperationId,
         version: 1,
         updatedBy: input.updatedBy,
       })
@@ -208,6 +212,7 @@ return null
       lastTestStatus?: AiProviderConfigRow['lastTestStatus']
       lastTestedAt?: Date | null
       lastTestedVersion?: number | null
+      lastOperationId?: string | null
       updatedBy?: string
       bumpVersion?: boolean
     },
@@ -228,6 +233,7 @@ return null
         ...(patch.lastTestedVersion !== undefined
           ? { lastTestedVersion: patch.lastTestedVersion }
           : {}),
+        ...(patch.lastOperationId !== undefined ? { lastOperationId: patch.lastOperationId } : {}),
         ...(patch.updatedBy !== undefined ? { updatedBy: patch.updatedBy } : {}),
         ...(patch.bumpVersion === false ? {} : { version: sql`${aiProviderConfig.version} + 1` }),
         updatedAt: new Date(),
@@ -235,6 +241,54 @@ return null
       .where(and(eq(aiProviderConfig.id, 1), eq(aiProviderConfig.version, expectedVersion)))
       .returning()
     return row ?? null
+  }
+
+  async findProviderOperation(operationId: string): Promise<AiProviderOperationRow | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(aiProviderOperations)
+      .where(eq(aiProviderOperations.operationId, operationId))
+    return row ?? null
+  }
+
+  async findProviderOperationInTx(
+    tx: Parameters<Parameters<DatabaseService['db']['transaction']>[0]>[0],
+    operationId: string,
+  ): Promise<AiProviderOperationRow | null> {
+    const [row] = await tx
+      .select()
+      .from(aiProviderOperations)
+      .where(eq(aiProviderOperations.operationId, operationId))
+    return row ?? null
+  }
+
+  async insertProviderOperationInTx(
+    tx: Parameters<Parameters<DatabaseService['db']['transaction']>[0]>[0],
+    input: {
+      operationId: string
+      kind: 'save' | 'disable'
+      protocol: AiProviderConfigRow['protocol'] | null
+      baseUrl: string | null
+      model: string | null
+      keyChanged: boolean
+      versionAfter: number
+      actorUserId: string
+    },
+  ): Promise<AiProviderOperationRow> {
+    const [row] = await tx
+      .insert(aiProviderOperations)
+      .values({
+        operationId: input.operationId,
+        kind: input.kind,
+        protocol: input.protocol,
+        baseUrl: input.baseUrl,
+        model: input.model,
+        keyChanged: input.keyChanged,
+        versionAfter: input.versionAfter,
+        actorUserId: input.actorUserId,
+      })
+      .returning()
+    return row
   }
 
   async insertAuditLogInTx(

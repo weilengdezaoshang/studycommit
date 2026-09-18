@@ -952,6 +952,7 @@ export const aiProviderConfig = pgTable(
     >(),
     lastTestedAt: timestamp('last_tested_at', { withTimezone: true }),
     lastTestedVersion: integer('last_tested_version'),
+    lastOperationId: uuid('last_operation_id'),
     version: integer('version').notNull().default(1),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
     updatedBy: uuid('updated_by'),
@@ -967,6 +968,24 @@ export const aiProviderConfig = pgTable(
       'ai_provider_config_test_status_valid',
       sql`${table.lastTestStatus} IS NULL OR ${table.lastTestStatus} IN ('success', 'failed', 'unverified')`,
     ),
+  ],
+)
+
+export const aiProviderOperations = pgTable(
+  'ai_provider_operations',
+  {
+    operationId: uuid('operation_id').primaryKey(),
+    kind: varchar('kind', { length: 20 }).$type<'save' | 'disable'>().notNull(),
+    protocol: varchar('protocol', { length: 20 }).$type<'openai' | 'anthropic' | 'gemini' | null>(),
+    baseUrl: varchar('base_url', { length: 500 }),
+    model: varchar('model', { length: 120 }),
+    keyChanged: boolean('key_changed').notNull(),
+    versionAfter: integer('version_after').notNull(),
+    actorUserId: uuid('actor_user_id').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check('ai_provider_operations_kind_valid', sql`${table.kind} IN ('save', 'disable')`),
   ],
 )
 

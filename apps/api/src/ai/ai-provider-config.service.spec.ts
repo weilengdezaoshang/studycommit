@@ -25,11 +25,15 @@ function row(overrides: Record<string, unknown> = {}) {
     lastTestedAt: new Date('2026-09-18T00:00:00.000Z'),
     lastTestedVersion: 2,
     version: 2,
+    lastOperationId: null,
     updatedAt: new Date('2026-09-18T00:00:00.000Z'),
     updatedBy: actor.actorUserId,
     ...overrides,
   }
 }
+
+const OP_SAVE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+const OP_OTHER = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 
 describe('AiProviderConfigService', () => {
   const repository = {
@@ -40,18 +44,21 @@ describe('AiProviderConfigService', () => {
     insertProviderConfigInTx: vi.fn(),
     updateProviderConfigInTx: vi.fn(),
     insertAuditLogInTx: vi.fn(),
+    findProviderOperation: vi.fn(),
+    findProviderOperationInTx: vi.fn(),
+    insertProviderOperationInTx: vi.fn(),
   }
   const config = {
     get: vi.fn((key: string) => {
       if (key === 'AI_PROVIDER_ENCRYPTION_KEY') {
-return ENCRYPTION_KEY
-}
+        return ENCRYPTION_KEY
+      }
       if (key === 'NODE_ENV') {
-return 'test'
-}
+        return 'test'
+      }
       if (key === 'AI_TIMEOUT_MS') {
-return 15_000
-}
+        return 15_000
+      }
       return undefined
     }),
   }
@@ -62,17 +69,19 @@ return 15_000
     vi.clearAllMocks()
     redis.incrWithTtl.mockResolvedValue(1)
     repository.findActivePrice.mockResolvedValue(null)
+    repository.findProviderOperation.mockResolvedValue(null)
+    repository.findProviderOperationInTx.mockResolvedValue(null)
     repository.transaction.mockImplementation(async (work: (tx: unknown) => unknown) => work({}))
     config.get.mockImplementation((key: string) => {
       if (key === 'AI_PROVIDER_ENCRYPTION_KEY') {
-return ENCRYPTION_KEY
-}
+        return ENCRYPTION_KEY
+      }
       if (key === 'NODE_ENV') {
-return 'test'
-}
+        return 'test'
+      }
       if (key === 'AI_TIMEOUT_MS') {
-return 15_000
-}
+        return 15_000
+      }
       return undefined
     })
     service = new AiProviderConfigService(repository as never, config as never, redis as never)
@@ -82,17 +91,17 @@ return 15_000
     repository.findProviderConfig.mockResolvedValue(null)
     config.get.mockImplementation((key: string) => {
       if (key === 'AI_API_KEY') {
-return 'sk-env-not-real'
-}
+        return 'sk-env-not-real'
+      }
       if (key === 'AI_MODEL') {
-return 'env-model'
-}
+        return 'env-model'
+      }
       if (key === 'AI_PROTOCOL') {
-return 'openai'
-}
+        return 'openai'
+      }
       if (key === 'AI_TIMEOUT_MS') {
-return 15_000
-}
+        return 15_000
+      }
       return undefined
     })
     const envSnapshot = await service.resolveRuntime()
@@ -107,17 +116,17 @@ return 15_000
     repository.findProviderConfig.mockResolvedValue(row())
     config.get.mockImplementation((key: string) => {
       if (key === 'AI_PROVIDER_ENCRYPTION_KEY') {
-return ENCRYPTION_KEY
-}
+        return ENCRYPTION_KEY
+      }
       if (key === 'AI_API_KEY') {
-return 'sk-env-not-real'
-}
+        return 'sk-env-not-real'
+      }
       if (key === 'AI_MODEL') {
-return 'env-model'
-}
+        return 'env-model'
+      }
       if (key === 'AI_TIMEOUT_MS') {
-return 15_000
-}
+        return 15_000
+      }
       return undefined
     })
     const snapshot = await service.resolveRuntime()
@@ -152,6 +161,7 @@ return 15_000
       expectedVersion: 2,
       protocol: 'openai',
       model: 'gpt-test',
+      operationId: OP_SAVE,
       actor,
     })
     expect(repository.updateProviderConfigInTx.mock.calls[0][2].apiKeyCiphertext).toBe(
@@ -163,6 +173,7 @@ return 15_000
       protocol: 'openai',
       model: 'gpt-test',
       apiKey: 'sk-replaced-not-real',
+      operationId: OP_OTHER,
       actor,
     })
     const nextCipher = repository.updateProviderConfigInTx.mock.calls[1][2]
@@ -177,7 +188,13 @@ return 15_000
   it('版本冲突时抛出 409 且不覆盖', async () => {
     repository.lockProviderConfigInTx.mockResolvedValue(row({ version: 4 }))
     await expect(
-      service.update({ expectedVersion: 2, protocol: 'openai', model: 'gpt-test', actor }),
+      service.update({
+        expectedVersion: 2,
+        protocol: 'openai',
+        model: 'gpt-test',
+        operationId: OP_SAVE,
+        actor,
+      }),
     ).rejects.toBeInstanceOf(ConflictException)
     expect(repository.updateProviderConfigInTx).not.toHaveBeenCalled()
   })
@@ -193,6 +210,7 @@ return 15_000
         protocol: 'openai',
         model: 'gpt-test',
         apiKey: 'sk-new-not-real',
+        operationId: OP_SAVE,
         actor,
       }),
     ).rejects.toBeInstanceOf(ConflictException)
@@ -208,6 +226,7 @@ return 15_000
         protocol: 'openai',
         model: 'gpt-test',
         apiKey: 'sk-new-not-real',
+        operationId: OP_SAVE,
         actor,
       }),
     ).rejects.toMatchObject({ response: { code: 'AI_PROVIDER_ENCRYPTION_KEY_MISSING' } })
@@ -248,6 +267,86 @@ return 15_000
       actorUserId: actor.actorUserId,
     })
     expect(unsafe.code).toBe('unsafe_url')
+  })
+
+  it('仅更换 Key 且写入未成功时查询不到本次操作', async () => {
+    repository.lockProviderConfigInTx.mockResolvedValue(row({ version: 3 }))
+    await expect(
+      service.update({
+        expectedVersion: 2,
+        protocol: 'openai',
+        model: 'gpt-test',
+        apiKey: 'sk-replaced-not-real',
+        operationId: OP_SAVE,
+        actor,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException)
+    expect(repository.insertProviderOperationInTx).not.toHaveBeenCalled()
+    repository.findProviderOperation.mockResolvedValue(null)
+    await expect(service.getOperation(OP_SAVE)).resolves.toBeNull()
+  })
+
+  it('写入成功但响应丢失后仍可通过操作标识确认,被覆盖时标记非当前', async () => {
+    const saved = row({ version: 3, lastOperationId: OP_SAVE, model: 'gpt-test' })
+    repository.findProviderOperation.mockResolvedValue({
+      operationId: OP_SAVE,
+      kind: 'save',
+      protocol: 'openai',
+      baseUrl: saved.baseUrl,
+      model: 'gpt-test',
+      keyChanged: true,
+      versionAfter: 3,
+      createdAt: new Date('2026-09-18T00:00:00.000Z'),
+    })
+    repository.findProviderConfig.mockResolvedValue(saved)
+    const current = await service.getOperation(OP_SAVE)
+    expect(current?.isCurrent).toBe(true)
+    expect(JSON.stringify(current)).not.toContain('sk-')
+    repository.findProviderConfig.mockResolvedValue(
+      row({ version: 4, lastOperationId: OP_OTHER, model: 'gpt-test' }),
+    )
+    const overwritten = await service.getOperation(OP_SAVE)
+    expect(overwritten?.isCurrent).toBe(false)
+    expect(overwritten?.versionAfter).toBe(3)
+    expect(overwritten?.currentVersion).toBe(4)
+  })
+
+  it('同一操作标识重复提交不重复写入,不同内容复用则拒绝', async () => {
+    const existingOp = {
+      operationId: OP_SAVE,
+      kind: 'save' as const,
+      protocol: 'openai' as const,
+      baseUrl: 'https://api.openai.com/v1',
+      model: 'gpt-test',
+      keyChanged: true,
+      versionAfter: 3,
+      createdAt: new Date(),
+    }
+    repository.findProviderOperationInTx.mockResolvedValue(existingOp)
+    repository.lockProviderConfigInTx.mockResolvedValue(
+      row({ version: 3, lastOperationId: OP_SAVE }),
+    )
+    await service.update({
+      expectedVersion: 2,
+      protocol: 'openai',
+      model: 'gpt-test',
+      apiKey: 'sk-replaced-not-real',
+      operationId: OP_SAVE,
+      actor,
+    })
+    expect(repository.updateProviderConfigInTx).not.toHaveBeenCalled()
+    expect(repository.insertProviderOperationInTx).not.toHaveBeenCalled()
+
+    await expect(
+      service.update({
+        expectedVersion: 2,
+        protocol: 'openai',
+        model: 'other-model',
+        apiKey: 'sk-replaced-not-real',
+        operationId: OP_SAVE,
+        actor,
+      }),
+    ).rejects.toMatchObject({ response: { code: 'AI_PROVIDER_OPERATION_CONFLICT' } })
   })
 
   it('连接测试超过限流时返回 429', async () => {

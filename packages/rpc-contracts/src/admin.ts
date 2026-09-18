@@ -310,27 +310,29 @@ export const adminRunsInputSchema = z.object({
   limit: z.number().int().min(1).max(100).default(50),
   cursor: z.string().max(200).nullable().optional(),
 })
+export const adminRunRowSchema = z.object({
+  runId: z.uuid(),
+  userId: z.uuid(),
+  kind: z.enum(['companion_followup', 'paper_explain']),
+  status: z.enum(['pending', 'completed', 'failed']),
+  /** 冻结状态:仅计费运行存在。 */
+  reservation: z
+    .object({
+      reservationId: z.uuid(),
+      status: z.enum(['active', 'settled', 'released', 'expired']),
+      amount: z.number().int().min(1),
+      deadlineAt: z.iso.datetime({ offset: true }),
+    })
+    .nullable(),
+  error: z.string().nullable(),
+  createdAt: z.iso.datetime({ offset: true }),
+})
 export const adminRunsOutputSchema = z.object({
-  items: z.array(
-    z.object({
-      runId: z.uuid(),
-      userId: z.uuid(),
-      kind: z.enum(['companion_followup', 'paper_explain']),
-      status: z.enum(['pending', 'completed', 'failed']),
-      /** 冻结状态:仅计费运行存在。 */
-      reservation: z
-        .object({
-          reservationId: z.uuid(),
-          status: z.enum(['active', 'settled', 'released', 'expired']),
-          amount: z.number().int().min(1),
-          deadlineAt: z.iso.datetime({ offset: true }),
-        })
-        .nullable(),
-      error: z.string().nullable(),
-      createdAt: z.iso.datetime({ offset: true }),
-    }),
-  ),
+  items: z.array(adminRunRowSchema),
   nextCursor: z.string().nullable(),
+})
+export const adminGetRunInputSchema = z.object({
+  runId: z.uuid(),
 })
 
 export const adminAuditLogsInputSchema = z.object({
@@ -440,6 +442,7 @@ export const adminAiProviderConfigSchema = z.object({
   envFallbackActive: z.boolean(),
   /** 尚未落库为 0,首次保存后从 1 递增。 */
   version: z.number().int().min(0),
+  lastOperationId: z.uuid().nullable(),
   updatedAt: z.iso.datetime({ offset: true }).nullable(),
 })
 export type AdminAiProviderConfig = z.infer<typeof adminAiProviderConfigSchema>
@@ -451,13 +454,33 @@ export const adminAiUpdateProviderInputSchema = z.object({
   model: z.string().trim().min(1).max(120),
   /** 留空表示保持原密钥;首次保存必须提供。 */
   apiKey: z.string().max(4096).optional(),
+  operationId: z.uuid(),
   reason: adminReasonSchema,
 })
 
 export const adminAiDisableProviderInputSchema = z.object({
   expectedVersion: adminExpectedVersionSchema,
+  operationId: z.uuid(),
   reason: adminReasonSchema,
 })
+
+export const adminAiProviderOperationInputSchema = z.object({
+  operationId: z.uuid(),
+})
+
+export const adminAiProviderOperationSchema = z.object({
+  operationId: z.uuid(),
+  kind: z.enum(['save', 'disable']),
+  protocol: adminAiProviderProtocolSchema.nullable(),
+  baseUrl: z.string().nullable(),
+  model: z.string().nullable(),
+  keyChanged: z.boolean(),
+  versionAfter: z.number().int().min(1),
+  currentVersion: z.number().int().min(0),
+  isCurrent: z.boolean(),
+  createdAt: z.iso.datetime({ offset: true }),
+})
+export type AdminAiProviderOperation = z.infer<typeof adminAiProviderOperationSchema>
 
 export const adminAiTestProviderInputSchema = z.object({
   protocol: adminAiProviderProtocolSchema,
@@ -499,6 +522,14 @@ export const adminAiContract = {
     .route({ method: 'POST', path: '/admin/ai/provider/test', summary: '测试平台服务商连接' })
     .input(adminAiTestProviderInputSchema)
     .output(adminAiTestProviderOutputSchema),
+  getProviderOperation: oc
+    .route({
+      method: 'GET',
+      path: '/admin/ai/provider/operations/{operationId}',
+      summary: '查询服务商配置操作是否已落库',
+    })
+    .input(adminAiProviderOperationInputSchema)
+    .output(adminAiProviderOperationSchema),
   listPrices: oc
     .route({ method: 'GET', path: '/admin/ai/prices', summary: 'AI 价格版本列表' })
     .output(adminAiListPricesOutputSchema),
@@ -510,6 +541,10 @@ export const adminAiContract = {
     .route({ method: 'GET', path: '/admin/ai/runs', summary: '运行与冻结对账列表' })
     .input(adminRunsInputSchema)
     .output(adminRunsOutputSchema),
+  getRun: oc
+    .route({ method: 'GET', path: '/admin/ai/runs/{runId}', summary: '运行详情' })
+    .input(adminGetRunInputSchema)
+    .output(adminRunRowSchema),
 }
 
 export const adminCreditsContract = {

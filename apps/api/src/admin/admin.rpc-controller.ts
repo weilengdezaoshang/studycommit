@@ -1,4 +1,4 @@
-import { Controller, Inject, Req, UseGuards } from '@nestjs/common'
+import { Controller, Inject, NotFoundException, Req, UseGuards } from '@nestjs/common'
 import { Implement, implement } from '@orpc/nest'
 import { adminContract } from '@studycommit/rpc-contracts/admin'
 import type {
@@ -349,6 +349,7 @@ export class AdminRpcController {
                 baseUrl: input.baseUrl,
                 model: input.model,
                 apiKey: input.apiKey,
+                operationId: input.operationId,
                 actor: actor(input.reason.trim()),
               })
             }),
@@ -360,6 +361,7 @@ export class AdminRpcController {
               this.adminAccess.assertValidReason(input.reason)
               return this.aiProviderConfig.disable({
                 expectedVersion: input.expectedVersion,
+                operationId: input.operationId,
                 actor: actor(input.reason.trim()),
               })
             }),
@@ -375,6 +377,20 @@ export class AdminRpcController {
               actorUserId: identity.userId,
             })
           }),
+        ),
+        getProviderOperation: implement(adminContract.ai.getProviderOperation).handler(
+          ({ input }) =>
+            handleOrpc(async () => {
+              this.adminAccess.requireRole(identity, ADMIN_OPERATION_ROLE.manageProviderConfig)
+              const row = await this.aiProviderConfig.getOperation(input.operationId)
+              if (!row) {
+                throw new NotFoundException({
+                  code: 'AI_PROVIDER_OPERATION_NOT_FOUND',
+                  message: '未查询到该服务商配置操作',
+                })
+              }
+              return row
+            }),
         ),
         listPrices: implement(adminContract.ai.listPrices).handler(() =>
           handleOrpc(async () => {
@@ -443,6 +459,35 @@ export class AdminRpcController {
                 createdAt: run.createdAt.toISOString(),
               })),
               nextCursor: page.nextCursor,
+            }
+          }),
+        ),
+        getRun: implement(adminContract.ai.getRun).handler(({ input }) =>
+          handleOrpc(async () => {
+            this.adminAccess.requireRole(identity, ADMIN_OPERATION_ROLE.readAll)
+            const row = await this.repository.findRunById(input.runId)
+            if (!row) {
+              throw new NotFoundException({
+                code: 'AI_RUN_NOT_FOUND',
+                message: '运行记录不存在',
+              })
+            }
+            const { run, reservation } = row
+            return {
+              runId: run.id,
+              userId: run.userId,
+              kind: run.kind,
+              status: run.status,
+              reservation: reservation
+                ? {
+                    reservationId: reservation.id,
+                    status: reservation.status,
+                    amount: reservation.amount,
+                    deadlineAt: reservation.deadlineAt.toISOString(),
+                  }
+                : null,
+              error: run.error,
+              createdAt: run.createdAt.toISOString(),
             }
           }),
         ),

@@ -21,6 +21,7 @@ import {
   type AiProviderOptions,
 } from './ai-provider'
 import { probeProviderConnection } from './provider-connection'
+import { createProviderFetch } from './provider-http'
 import { assertProviderBaseUrl, defaultBaseUrl, parseTrustedBaseUrls } from './provider-endpoint'
 import {
   decryptSecret,
@@ -52,9 +53,9 @@ export const AI_PROVIDER_CONFIG_ERROR = {
     code: 'AI_PROVIDER_NOT_CONFIGURED',
     message: '尚未保存服务商配置,无法停用',
   },
-  unavailable: {
-    code: 'AI_PROVIDER_UNAVAILABLE',
-    message: 'AI 服务商未配置或已停用',
+  operationConflict: {
+    code: 'AI_PROVIDER_OPERATION_CONFLICT',
+    message: '操作标识已用于不同配置,请勿复用',
   },
 } as const
 
@@ -79,17 +80,17 @@ function publicSnapshot(row: AiProviderConfigRow): Record<string, unknown> {
 
 function displayStatus(row: AiProviderConfigRow | null): AdminAiProviderConfig['displayStatus'] {
   if (!row) {
-return 'unconfigured'
-}
+    return 'unconfigured'
+  }
   if (row.status === 'disabled') {
-return 'disabled'
-}
+    return 'disabled'
+  }
   if (!row.apiKeyCiphertext) {
-return 'unconfigured'
-}
+    return 'unconfigured'
+  }
   if (row.lastTestedVersion === row.version && row.lastTestStatus === 'success') {
-return 'connected'
-}
+    return 'connected'
+  }
   if (row.lastTestedVersion === row.version && row.lastTestStatus === 'failed') {
     return 'connection_failed'
   }
@@ -98,8 +99,8 @@ return 'connected'
 
 function normalizeApiKey(value: string | undefined): string | null {
   if (value === undefined) {
-return null
-}
+    return null
+  }
   const trimmed = value.trim()
   return trimmed.length === 0 ? null : trimmed
 }
@@ -128,12 +129,12 @@ export class AiProviderConfigService {
     const row = await this.repository.findProviderConfig()
     if (row) {
       if (row.status !== 'active' || !row.apiKeyCiphertext) {
-return null
-}
+        return null
+      }
       const key = parseEncryptionKey(this.config.get('AI_PROVIDER_ENCRYPTION_KEY'))
       if (!key) {
-return null
-}
+        return null
+      }
       let apiKey: string
       try {
         apiKey = decryptSecret(row.apiKeyCiphertext, key)
@@ -154,8 +155,8 @@ return null
     }
     const fromEnv = createAiProviderFromEnv(this.config)
     if (!fromEnv) {
-return null
-}
+      return null
+    }
     return {
       source: 'env',
       protocol: fromEnv.protocol,
@@ -170,11 +171,33 @@ return null
   }
 
   createProvider(snapshot: RuntimeProviderSnapshot, modelOverride?: string): AiProvider {
+    const trusted = parseTrustedBaseUrls(this.config.get('AI_PROVIDER_TRUSTED_BASE_URLS'))
     return createAiProviderFromOptions(snapshot.protocol, {
       ...snapshot.options,
       model:
         modelOverride && modelOverride.trim().length > 0 ? modelOverride : snapshot.options.model,
+      fetchImpl: snapshot.options.fetchImpl ?? createProviderFetch(trusted),
     })
+  }
+
+  async getOperation(operationId: string) {
+    const row = await this.repository.findProviderOperation(operationId)
+    if (!row) {
+      return null
+    }
+    const current = await this.repository.findProviderConfig()
+    return {
+      operationId: row.operationId,
+      kind: row.kind,
+      protocol: row.protocol,
+      baseUrl: row.baseUrl,
+      model: row.model,
+      keyChanged: row.keyChanged,
+      versionAfter: row.versionAfter,
+      currentVersion: current?.version ?? 0,
+      isCurrent: current?.lastOperationId === row.operationId,
+      createdAt: row.createdAt.toISOString(),
+    }
   }
 
   async update(input: {
@@ -183,12 +206,13 @@ return null
     baseUrl?: string
     model: string
     apiKey?: string
+    operationId: string
     actor: AdminActor
   }): Promise<AdminAiProviderConfig> {
     const incomingKey = normalizeApiKey(input.apiKey)
     if (incomingKey) {
-assertApiKeyShape(incomingKey)
-}
+      assertApiKeyShape(incomingKey)
+    }
     const trusted = parseTrustedBaseUrls(this.config.get('AI_PROVIDER_TRUSTED_BASE_URLS'))
     const baseUrl = await assertProviderBaseUrl(
       input.baseUrl && input.baseUrl.trim().length > 0
@@ -197,7 +221,22 @@ assertApiKeyShape(incomingKey)
       trusted,
     )
     const billed = await this.repository.findActivePrice('paper_explain')
+    const keyChanged = incomingKey !== null
     return this.repository.transaction(async (tx) => {
+      const existingOp = await this.repository.findProviderOperationInTx(tx, input.operationId)
+      if (existingOp) {
+        const same =
+          existingOp.kind === 'save' &&
+          existingOp.protocol === input.protocol &&
+          existingOp.baseUrl === baseUrl &&
+          existingOp.model === input.model.trim() &&
+          existingOp.keyChanged === keyChanged
+        if (!same) {
+          throw new ConflictException(AI_PROVIDER_CONFIG_ERROR.operationConflict)
+        }
+        const current = await this.repository.lockProviderConfigInTx(tx)
+        return this.toView(current, billed?.configSnapshot.model ?? null)
+      }
       const before = await this.repository.lockProviderConfigInTx(tx)
       const currentVersion = before?.version ?? 0
       if (currentVersion !== input.expectedVersion) {
@@ -226,6 +265,7 @@ assertApiKeyShape(incomingKey)
           model: input.model.trim(),
           apiKeyCiphertext: ciphertext,
           apiKeyHint: hint,
+          lastOperationId: input.operationId,
           updatedBy: input.actor.actorUserId,
         })
       } else {
@@ -239,6 +279,7 @@ assertApiKeyShape(incomingKey)
           lastTestStatus: 'unverified',
           lastTestedAt: null,
           lastTestedVersion: null,
+          lastOperationId: input.operationId,
           updatedBy: input.actor.actorUserId,
         })
         if (!updated) {
@@ -246,6 +287,16 @@ assertApiKeyShape(incomingKey)
         }
         saved = updated
       }
+      await this.repository.insertProviderOperationInTx(tx, {
+        operationId: input.operationId,
+        kind: 'save',
+        protocol: saved.protocol,
+        baseUrl: saved.baseUrl,
+        model: saved.model,
+        keyChanged,
+        versionAfter: saved.version,
+        actorUserId: input.actor.actorUserId,
+      })
       await this.repository.insertAuditLogInTx(tx, {
         actorUserId: input.actor.actorUserId,
         action: 'ai.update_provider',
@@ -262,10 +313,19 @@ assertApiKeyShape(incomingKey)
 
   async disable(input: {
     expectedVersion: number
+    operationId: string
     actor: AdminActor
   }): Promise<AdminAiProviderConfig> {
     const billed = await this.repository.findActivePrice('paper_explain')
     return this.repository.transaction(async (tx) => {
+      const existingOp = await this.repository.findProviderOperationInTx(tx, input.operationId)
+      if (existingOp) {
+        if (existingOp.kind !== 'disable') {
+          throw new ConflictException(AI_PROVIDER_CONFIG_ERROR.operationConflict)
+        }
+        const current = await this.repository.lockProviderConfigInTx(tx)
+        return this.toView(current, billed?.configSnapshot.model ?? null)
+      }
       const before = await this.repository.lockProviderConfigInTx(tx)
       if (!before) {
         throw new BadRequestException(AI_PROVIDER_CONFIG_ERROR.notConfigured)
@@ -278,11 +338,22 @@ assertApiKeyShape(incomingKey)
         lastTestStatus: 'unverified',
         lastTestedAt: null,
         lastTestedVersion: null,
+        lastOperationId: input.operationId,
         updatedBy: input.actor.actorUserId,
       })
       if (!saved) {
         throw new ConflictException(AI_PROVIDER_CONFIG_ERROR.versionConflict)
       }
+      await this.repository.insertProviderOperationInTx(tx, {
+        operationId: input.operationId,
+        kind: 'disable',
+        protocol: saved.protocol,
+        baseUrl: saved.baseUrl,
+        model: saved.model,
+        keyChanged: false,
+        versionAfter: saved.version,
+        actorUserId: input.actor.actorUserId,
+      })
       await this.repository.insertAuditLogInTx(tx, {
         actorUserId: input.actor.actorUserId,
         action: 'ai.disable_provider',
@@ -308,8 +379,8 @@ assertApiKeyShape(incomingKey)
     await this.assertTestRateLimit(input.actorUserId)
     const incomingKey = normalizeApiKey(input.apiKey)
     if (incomingKey) {
-assertApiKeyShape(incomingKey)
-}
+      assertApiKeyShape(incomingKey)
+    }
     const trusted = parseTrustedBaseUrls(this.config.get('AI_PROVIDER_TRUSTED_BASE_URLS'))
     let baseUrl: string
     try {
@@ -353,6 +424,7 @@ assertApiKeyShape(incomingKey)
       apiKey,
       timeoutMs: TEST_TIMEOUT_MS,
       fetchImpl: input.fetchImpl,
+      trustedOrigins: trusted,
     })
     const matchesSaved =
       Boolean(row) &&
@@ -366,8 +438,8 @@ assertApiKeyShape(incomingKey)
       const updated = await this.repository.transaction(async (tx) => {
         const current = await this.repository.lockProviderConfigInTx(tx)
         if (!current || current.version !== row.version) {
-return null
-}
+          return null
+        }
         return this.repository.updateProviderConfigInTx(tx, current.version, {
           lastTestStatus: probed.ok ? 'success' : 'failed',
           lastTestedAt: new Date(),
@@ -404,8 +476,8 @@ return null
 
   private envFallbackActive(row: AiProviderConfigRow | null): boolean {
     if (row) {
-return false
-}
+      return false
+    }
     return Boolean(this.config.get('AI_API_KEY') && this.config.get('AI_MODEL'))
   }
 
@@ -426,6 +498,7 @@ return false
         billedModel,
         envFallbackActive: this.envFallbackActive(null),
         version: 0,
+        lastOperationId: null,
         updatedAt: null,
       }
     }
@@ -442,6 +515,7 @@ return false
       billedModel,
       envFallbackActive: false,
       version: row.version,
+      lastOperationId: row.lastOperationId,
       updatedAt: row.updatedAt.toISOString(),
     }
   }
