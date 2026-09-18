@@ -2,7 +2,7 @@ import { spacing } from '@studycommit/design-tokens'
 import { Alert, App, Button, Card, Form, Input, Select, Table, Typography } from 'antd'
 import { useAccess } from '@umijs/max'
 import { useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useRef } from 'react'
 import {
   ADMIN_ROLES,
   ROLE_DESCRIPTION,
@@ -14,8 +14,9 @@ import { AdminPage } from '@/components/AdminPage'
 import { CopyId } from '@/components/CopyId'
 import { ErrorPanel } from '@/components/PageState'
 import { ReasonActionModal } from '@/components/ReasonActionModal'
+import { useWriteAction } from '@/hooks/use-write-action'
 import { adminApi } from '@/services/admin-api'
-import { runCommand } from '@/services/command'
+import { queryClient } from '@/services/query-client'
 import type { RoleRow } from '@/services/types'
 import { formatDateTime } from '@/utils/format'
 import ForbiddenPage from '../403'
@@ -30,11 +31,9 @@ export default function RolesPage() {
     queryFn: () => adminApi.listRoles(),
     enabled: access.canManageRoles,
   })
-  const [open, setOpen] = useState(false)
+  const write = useWriteAction()
   const [form] = Form.useForm<{ userId: string; role: AdminRole }>()
-  const [busy, setBusy] = useState(false)
-  const [unknownText, setUnknownText] = useState<string | null>(null)
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null)
+  const pendingGrant = useRef<{ userId: string; role: AdminRole } | null>(null)
   const role = Form.useWatch('role', form) as AdminRole | undefined
 
   if (!access.canManageRoles) {
@@ -42,30 +41,53 @@ export default function RolesPage() {
   }
 
   const grant = async (reason: string) => {
+    if (!write.canSubmit) {
+      return
+    }
     try {
       const values = await form.validateFields()
-      setBusy(true)
-      setPendingUserId(values.userId.trim())
-      const result = await runCommand(() =>
-        adminApi.grantRole({ userId: values.userId.trim(), role: values.role, reason }),
+      const snapshot = { userId: values.userId.trim(), role: values.role }
+      pendingGrant.current = snapshot
+      const result = await write.run(() =>
+        adminApi.grantRole({ userId: snapshot.userId, role: snapshot.role, reason }),
       )
-      setBusy(false)
       if (result.status === 'ok') {
         void message.success('已授予角色')
-        setOpen(false)
-        setUnknownText(null)
         form.resetFields()
         void query.refetch()
         return
       }
-      if (result.status === 'unknown') {
-        setUnknownText('授权结果待确认。请先查询角色列表，不要重复提交。')
+      if (result.status === 'unknown' || result.status === 'rate_limited') {
         return
       }
       void message.error(result.error.message)
     } catch {
-      setBusy(false)
       void message.warning('请先填写完整的用户 ID 与角色')
+    }
+  }
+
+  const queryUnknown = async () => {
+    const pending = pendingGrant.current
+    const outcome = await write.queryUnknown(async () => {
+      if (!pending) {
+        return 'unresolved'
+      }
+      const latest = await adminApi.listRoles()
+      queryClient.setQueryData(['admin', 'roles'], latest)
+      const row = latest.items.find((item) => item.userId === pending.userId)
+      if (!row) {
+        return 'unresolved'
+      }
+      if (row.role !== pending.role) {
+        throw new Error(
+          `该用户当前角色为 ${ROLE_LABEL[row.role]}（${row.role}），与本次提交的 ${ROLE_LABEL[pending.role]} 不一致，不能据此判定本次授权成功。请在审计日志中核对该用户。`,
+        )
+      }
+      return 'confirmed'
+    }, '角色列表尚未出现与本次提交一致的用户和角色，不能据此判定失败。请稍后再查或核对该用户的审计日志，不要重复提交。')
+    if (outcome === 'confirmed') {
+      form.resetFields()
+      void message.success('已确认本次授权：目标用户已具备提交的角色')
     }
   }
 
@@ -74,11 +96,31 @@ export default function RolesPage() {
       title="管理权限"
       description="授予管理角色。授权后立即生效。"
       extra={
-        <Button type="primary" onClick={() => setOpen(true)} disabled={Boolean(unknownText)}>
+        <Button
+          type="primary"
+          disabled={write.writesLocked}
+          onClick={() => {
+            write.openModal()
+          }}
+        >
           授予角色
         </Button>
       }
     >
+      {write.unknown ? (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: spacing.md }}
+          message="操作结果待确认"
+          description={write.unknown}
+          action={
+            <Button onClick={() => void queryUnknown()} loading={write.busy}>
+              查询结果
+            </Button>
+          }
+        />
+      ) : null}
       <Card className="admin-ledger-panel" title="角色定义" style={{ marginBottom: spacing.md }}>
         <Table
           rowKey="role"
@@ -128,12 +170,15 @@ export default function RolesPage() {
         />
       </Card>
       <ReasonActionModal
-        open={open}
+        open={write.open}
         title="授予管理角色"
         confirmText="确认授权"
         reasonLabel="授权原因"
-        busy={busy}
-        unknownText={unknownText}
+        busy={write.busy}
+        unknownText={write.unknown}
+        rateLimitedText={
+          write.rateLimited ? `请 ${Math.ceil(write.remainingMs / 1000)} 秒后再试。` : null
+        }
         impact={
           <div>
             <Form form={form} layout="vertical">
@@ -146,7 +191,10 @@ export default function RolesPage() {
                   { pattern: UUID_PATTERN, message: '必须是完整 UUID' },
                 ]}
               >
-                <Input placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+                <Input
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  disabled={write.busy || Boolean(write.unknown)}
+                />
               </Form.Item>
               <Form.Item
                 name="role"
@@ -154,6 +202,7 @@ export default function RolesPage() {
                 rules={[{ required: true, message: '请选择角色' }]}
               >
                 <Select
+                  disabled={write.busy || Boolean(write.unknown)}
                   options={ADMIN_ROLES.map((item) => ({
                     value: item,
                     label: `${item}（${ROLE_LABEL[item]}）`,
@@ -162,7 +211,7 @@ export default function RolesPage() {
               </Form.Item>
             </Form>
             <Typography.Paragraph type="secondary">
-              授权立即生效，请确认权限影响后再提交。
+              授权立即生效，请确认权限影响后再提交。不能降级最后一名超级管理员。
             </Typography.Paragraph>
             {role ? (
               <Alert type="info" showIcon message="权限影响" description={grantImpact(role)} />
@@ -170,29 +219,9 @@ export default function RolesPage() {
           </div>
         }
         onSubmit={(reason) => void grant(reason)}
-        onQueryResult={() => {
-          setBusy(true)
-          void query
-            .refetch()
-            .then((result) => {
-              const found = result.data?.items.some((item) => item.userId === pendingUserId)
-              if (found) {
-                setUnknownText(null)
-                setOpen(false)
-                void message.success('已在角色列表中确认该授权')
-                return
-              }
-              setUnknownText(
-                '角色列表中尚未看到该用户，不能据此判定失败。请稍后再查，不要重复提交。',
-              )
-            })
-            .finally(() => setBusy(false))
-        }}
+        onQueryResult={() => void queryUnknown()}
         onCancel={() => {
-          if (busy) {
-return
-}
-          setOpen(false)
+          write.closeModal()
         }}
       />
     </AdminPage>
