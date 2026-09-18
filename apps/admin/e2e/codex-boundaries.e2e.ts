@@ -18,34 +18,34 @@ async function prepare(page: Page, options: { draft?: boolean; failure?: number 
     const path = new URL(route.request().url()).pathname
     const method = route.request().method()
     if (path.endsWith('/account/login')) {
-return route.fulfill({ json: loginResponse })
-}
+      return route.fulfill({ json: loginResponse })
+    }
     if (path.endsWith('/access/me')) {
-return route.fulfill({ json: meSuperAdmin })
-}
+      return route.fulfill({ json: meSuperAdmin })
+    }
     if (path.endsWith('/overview')) {
-return route.fulfill({ json: overview })
-}
+      return route.fulfill({ json: overview })
+    }
     if (path === '/api/admin/campaigns') {
-return route.fulfill({ json: { ...campaignList, items: [detail] } })
-}
+      return route.fulfill({ json: { ...campaignList, items: [detail] } })
+    }
     if (path === `/api/admin/campaigns/${IDS.campaign}`) {
-return route.fulfill({ json: detail })
-}
+      return route.fulfill({ json: detail })
+    }
     if (path.endsWith('/claims')) {
-return route.fulfill({ json: { items: [], nextCursor: null } })
-}
+      return route.fulfill({ json: { items: [], nextCursor: null } })
+    }
     if (method !== 'GET') {
       submitted = route.request().postDataJSON()
       if (options.failure) {
-return route.fulfill({
+        return route.fulfill({
           status: options.failure,
           json: {
             code: options.failure === 409 ? 'CAMPAIGN_VERSION_CONFLICT' : 'GATEWAY_TIMEOUT',
             message: '测试异常',
           },
         })
-}
+      }
       return route.fulfill({ json: detail })
     }
     return route.fulfill({ status: 404, json: { code: 'NOT_FOUND' } })
@@ -66,9 +66,16 @@ test('真实编辑表单保留未展示的内部名称和领取资格', async ({
   await page.getByLabel('操作理由', { exact: true }).fill('仅调整公开标题')
   await page.getByRole('button', { name: '保存草稿', exact: true }).click()
   await expect.poll(() => state.submitted()).toBeTruthy()
-  expect(state.submitted()!.config.name).toBe('内部运营标识')
-  expect(state.submitted()!.config.eligibility.providers).toEqual(['phone'])
-  expect(state.submitted()!.config.copy.title).toBe('更新公开标题')
+  const submitted = state.submitted() as {
+    config: {
+      name: string
+      eligibility: { providers: string[] | null }
+      copy: { title: string }
+    }
+  }
+  expect(submitted.config.name).toBe('内部运营标识')
+  expect(submitted.config.eligibility.providers).toEqual(['phone'])
+  expect(submitted.config.copy.title).toBe('更新公开标题')
 })
 
 test('编辑发生版本冲突后保留输入并锁定保存', async ({ page }) => {

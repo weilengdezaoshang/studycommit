@@ -89,6 +89,10 @@ async function mockApi(page: Page, role: 'super_admin' | 'viewer' = 'super_admin
       await route.fulfill({ json: runsPage })
       return
     }
+    if (path === `/api/admin/ai/runs/${IDS.run}`) {
+      await route.fulfill({ json: runsPage.items[0] })
+      return
+    }
     if (path === '/api/admin/credits/users' && !url.pathname.includes(IDS.user)) {
       if (!url.searchParams.get('query')) {
         await route.fulfill({

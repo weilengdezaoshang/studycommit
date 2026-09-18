@@ -1,5 +1,5 @@
 import { Alert, Button, Card, Descriptions, Form, Input, Select, Space, Typography } from 'antd'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AdminPage } from '@/components/AdminPage'
 import { CopyId } from '@/components/CopyId'
 import { CursorTable } from '@/components/CursorTable'
@@ -8,6 +8,7 @@ import { ReadOnlyDetailDrawer } from '@/components/ReadOnlyDetailDrawer'
 import { ReservationStatusTag, RunStatusTag } from '@/components/StatusTag'
 import { useCursorList } from '@/hooks/use-cursor-list'
 import { adminApi } from '@/services/admin-api'
+import { isForbidden, isUnauthorized } from '@/services/api-client'
 import type { RunRow, RunStatus } from '@/services/types'
 import { formatCredits, formatDateTime } from '@/utils/format'
 
@@ -18,13 +19,89 @@ export default function RunsPage() {
   const [runId, setRunId] = useState<string | null>(null)
   const [runIdInput, setRunIdInput] = useState('')
   const invalidRunId = Boolean(runIdInput.trim()) && !UUID_PATTERN.test(runIdInput.trim())
-  const [selected, setSelected] = useState<RunRow | null>(null)
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
+  const [detail, setDetail] = useState<RunRow | null>(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [detailStale, setDetailStale] = useState(false)
+  const detailSeq = useRef(0)
+  const detailAbort = useRef<AbortController | null>(null)
+  const detailRef = useRef<RunRow | null>(null)
+  detailRef.current = detail
   const filters = useMemo(() => ({ status, runId }), [status, runId])
   const list = useCursorList({
     filters,
     fetchPage: ({ cursor, limit, status: filterStatus, runId: filterRunId }) =>
       adminApi.listRuns({ status: filterStatus, runId: filterRunId, cursor, limit }),
   })
+
+  const loadDetail = async (targetRunId: string, isRefresh = false) => {
+    const seq = ++detailSeq.current
+    detailAbort.current?.abort()
+    const controller = new AbortController()
+    detailAbort.current = controller
+    if (!isRefresh) {
+      setDetail(null)
+      setDetailError(null)
+      setDetailStale(false)
+    }
+    setDetailLoading(true)
+    try {
+      const row = await adminApi.getRun(targetRunId, { signal: controller.signal })
+      if (seq !== detailSeq.current) {
+        return
+      }
+      setDetail(row)
+      setDetailError(null)
+      setDetailStale(false)
+    } catch (error) {
+      if (seq !== detailSeq.current) {
+        return
+      }
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
+      if (isUnauthorized(error) || isForbidden(error)) {
+        setDetail(null)
+        setDetailError(null)
+        setDetailStale(false)
+        setSelectedRunId(null)
+        return
+      }
+      const text = error instanceof Error ? error.message : '读取运行详情失败'
+      if (isRefresh && detailRef.current) {
+        setDetailStale(true)
+        setDetailError(text)
+      } else {
+        setDetail(null)
+        setDetailStale(false)
+        setDetailError(text)
+      }
+    } finally {
+      if (seq === detailSeq.current) {
+        setDetailLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedRunId) {
+      detailSeq.current += 1
+      detailAbort.current?.abort()
+      setDetail(null)
+      setDetailError(null)
+      setDetailLoading(false)
+      setDetailStale(false)
+      return
+    }
+    void loadDetail(selectedRunId, false)
+    return () => {
+      detailAbort.current?.abort()
+    }
+  }, [selectedRunId])
 
   return (
     <AdminPage title="运行对账" description="查看运行状态与冻结记录，便于核对异常。">
@@ -43,8 +120,8 @@ export default function RunsPage() {
               onChange={(event) => {
                 setRunIdInput(event.target.value)
                 if (!event.target.value) {
-setRunId(null)
-}
+                  setRunId(null)
+                }
               }}
               onPressEnter={() => {
                 const value = runIdInput.trim()
@@ -53,8 +130,8 @@ setRunId(null)
                   return
                 }
                 if (!UUID_PATTERN.test(value)) {
-return
-}
+                  return
+                }
                 setRunId(value)
               }}
             />
@@ -79,8 +156,8 @@ return
             onClick={() => {
               const value = runIdInput.trim()
               if (value && !UUID_PATTERN.test(value)) {
-return
-}
+                return
+              }
               setRunId(value || null)
             }}
           >
@@ -97,7 +174,10 @@ return
           onPrev={list.goPrev}
           onNext={list.goNext}
           emptyText="没有符合条件的运行"
-          onRow={(row) => ({ onClick: () => setSelected(row), style: { cursor: 'pointer' } })}
+          onRow={(row) => ({
+            onClick: () => setSelectedRunId(row.runId),
+            style: { cursor: 'pointer' },
+          })}
           columns={[
             {
               title: '运行 ID',
@@ -139,11 +219,49 @@ return
       </Card>
       <ReadOnlyDetailDrawer
         title="运行详情"
-        open={Boolean(selected)}
-        onClose={() => setSelected(null)}
-        extra={selected ? <Button onClick={() => list.reload()}>刷新状态</Button> : null}
+        open={Boolean(selectedRunId)}
+        onClose={() => setSelectedRunId(null)}
       >
-        {selected ? <RunDetail run={selected} /> : null}
+        {selectedRunId ? (
+          <Button
+            style={{ marginBottom: 16 }}
+            onClick={() => void loadDetail(selectedRunId, true)}
+            loading={detailLoading}
+          >
+            刷新状态
+          </Button>
+        ) : null}
+        {detailLoading && !detail ? (
+          <Typography.Text type="secondary">正在加载运行详情…</Typography.Text>
+        ) : null}
+        {detailError && !detail ? (
+          <ErrorPanel
+            error={new Error(detailError)}
+            onRetry={() => selectedRunId && void loadDetail(selectedRunId, false)}
+          />
+        ) : null}
+        {detail ? (
+          <>
+            {detailStale && detailError ? (
+              <Alert
+                type="warning"
+                showIcon
+                message="刷新失败，正在展示上次成功加载的数据"
+                description={detailError}
+                style={{ marginBottom: 16 }}
+                action={
+                  <Button
+                    size="small"
+                    onClick={() => selectedRunId && void loadDetail(selectedRunId, true)}
+                  >
+                    重试
+                  </Button>
+                }
+              />
+            ) : null}
+            <RunDetail run={detail} />
+          </>
+        ) : null}
       </ReadOnlyDetailDrawer>
     </AdminPage>
   )
