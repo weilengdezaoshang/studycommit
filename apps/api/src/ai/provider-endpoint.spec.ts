@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { assertProviderBaseUrl, parseTrustedBaseUrls } from './provider-endpoint'
+import {
+  assertConnectedIp,
+  assertProviderBaseUrl,
+  ipUnsafe,
+  parseTrustedBaseUrls,
+  pickSafeConnectAddress,
+} from './provider-endpoint'
 
 describe('provider-endpoint', () => {
   it('接受公网 HTTPS 地址', async () => {
@@ -35,6 +41,44 @@ describe('provider-endpoint', () => {
     await expect(
       assertProviderBaseUrl('https://user:pass@api.openai.com/v1', []),
     ).rejects.toMatchObject({ response: { code: 'AI_PROVIDER_URL_UNSAFE' } })
+  })
+
+  it('拒绝 IPv6 回环、链路本地、唯一本地与云元数据地址', () => {
+    expect(ipUnsafe('::1')).toBe(true)
+    expect(ipUnsafe('fe80::1')).toBe(true)
+    expect(ipUnsafe('fc00::1')).toBe(true)
+    expect(ipUnsafe('fd00:ec2::254')).toBe(true)
+    expect(ipUnsafe('2001:4860:4860::8888')).toBe(false)
+    expect(() => assertConnectedIp('api.example', '169.254.169.254', [])).toThrow()
+    expect(() => assertConnectedIp('api.example', '::ffff:10.0.0.1', [])).toThrow()
+    expect(() =>
+      assertConnectedIp('127.0.0.1', '127.0.0.1', ['http://127.0.0.1:11434']),
+    ).not.toThrow()
+  })
+
+  it('连接时 DNS 变为内网地址则拒绝', () => {
+    expect(() =>
+      pickSafeConnectAddress('api.openai.com', [{ address: '169.254.169.254', family: 4 }], []),
+    ).toThrow()
+    expect(
+      pickSafeConnectAddress('api.openai.com', [{ address: '1.1.1.1', family: 4 }], []).address,
+    ).toBe('1.1.1.1')
+  })
+
+  it('实际连接 IP 变成云元数据或私网时拒绝,即使主机名看起来安全', () => {
+    expect(() => assertConnectedIp('api.openai.com', '169.254.169.254', [])).toThrow()
+    expect(() => assertConnectedIp('api.openai.com', '10.0.0.8', [])).toThrow()
+    expect(() => assertConnectedIp('api.openai.com', '192.168.1.1', [])).toThrow()
+    expect(() => assertConnectedIp('api.openai.com', '::ffff:127.0.0.1', [])).toThrow()
+    expect(() => assertConnectedIp('api.openai.com', 'fd00:ec2::254', [])).toThrow()
+    expect(() => assertConnectedIp('api.openai.com', '1.1.1.1', [])).not.toThrow()
+  })
+
+  it('IPv6 回环仅在服务端显式配置为可信代理时允许', () => {
+    expect(() => assertConnectedIp('::1', '::1', [])).toThrow()
+    expect(() => assertConnectedIp('::1', '::1', ['http://[::1]:11434'])).not.toThrow()
+    expect(() => assertConnectedIp('fe80::1', 'fe80::1', [])).toThrow()
+    expect(() => assertConnectedIp('fe80::1', 'fe80::1', ['http://[fe80::1]/'])).not.toThrow()
   })
 
   it('仅允许服务端显式配置的本地代理', async () => {

@@ -1,5 +1,5 @@
 import { AI_PROTOCOL_DEFAULT_BASE_URL, type AiProtocol } from './ai-provider'
-import { providerRequestInit } from './provider-http'
+import { createProviderFetch, providerRequestInit } from './provider-http'
 
 export type ProviderProbeCode = 'connected' | 'auth_failed' | 'timeout' | 'rate_limited' | 'failed'
 
@@ -16,6 +16,7 @@ export interface ProviderProbeInput {
   apiKey: string
   timeoutMs?: number
   fetchImpl?: typeof fetch
+  trustedOrigins?: string[]
 }
 
 const MESSAGES: Record<ProviderProbeCode, string> = {
@@ -28,14 +29,14 @@ const MESSAGES: Record<ProviderProbeCode, string> = {
 
 function classifyStatus(status: number): ProviderProbeCode {
   if (status === 401 || status === 403) {
-return 'auth_failed'
-}
+    return 'auth_failed'
+  }
   if (status === 429) {
-return 'rate_limited'
-}
+    return 'rate_limited'
+  }
   if (status >= 200 && status < 300) {
-return 'connected'
-}
+    return 'connected'
+  }
   return 'failed'
 }
 
@@ -103,7 +104,8 @@ export async function probeProviderConnection(
     input.apiKey,
   )
   try {
-    const response = await (input.fetchImpl ?? fetch)(
+    const fetchImpl = input.fetchImpl ?? createProviderFetch(input.trustedOrigins ?? [])
+    const response = await fetchImpl(
       request.url,
       providerRequestInit({
         method: 'POST',

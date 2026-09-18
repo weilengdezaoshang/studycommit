@@ -20,8 +20,8 @@ export type LookupFn = (hostname: string) => Promise<Array<{ address: string }>>
 
 export function parseTrustedBaseUrls(raw: string | undefined | null): string[] {
   if (!raw) {
-return []
-}
+    return []
+  }
   return raw
     .split(',')
     .map((item) => item.trim())
@@ -35,12 +35,12 @@ function originOf(url: URL): string {
 function isBlockedHostname(hostname: string): boolean {
   const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
   if (BLOCKED_HOSTS.has(host)) {
-return true
-}
+    return true
+  }
   return host.endsWith('.local') || host.endsWith('.localhost') || host.endsWith('.internal')
 }
 
-function ipv4Unsafe(ip: string): boolean {
+export function ipv4Unsafe(ip: string): boolean {
   const parts = ip.split('.').map((part) => Number(part))
   if (
     parts.length !== 4 ||
@@ -50,47 +50,106 @@ function ipv4Unsafe(ip: string): boolean {
   }
   const [a, b] = parts
   if (a === 0 || a === 10 || a === 127) {
-return true
-}
+    return true
+  }
   if (a === 169 && b === 254) {
-return true
-}
+    return true
+  }
   if (a === 172 && b >= 16 && b <= 31) {
-return true
-}
+    return true
+  }
   if (a === 192 && b === 168) {
-return true
-}
+    return true
+  }
   if (a === 100 && b >= 64 && b <= 127) {
-return true
-}
+    return true
+  }
   if (a === 192 && b === 0) {
-return true
-}
+    return true
+  }
   if (a === 198 && (b === 18 || b === 51)) {
-return true
-}
+    return true
+  }
   if (a >= 224) {
-return true
-}
+    return true
+  }
   return false
 }
 
-function ipUnsafe(address: string): boolean {
-  const ip = address.toLowerCase()
+export function ipUnsafe(address: string): boolean {
+  const ip = address.replace(/^\[|\]$/g, '').toLowerCase()
   if (ip.startsWith('::ffff:')) {
-return ipv4Unsafe(ip.slice('::ffff:'.length))
-}
+    return ipv4Unsafe(ip.slice('::ffff:'.length))
+  }
   if (isIP(ip) === 4) {
-return ipv4Unsafe(ip)
-}
-  if (ip === '::1' || ip === '::') {
-return true
-}
-  if (ip.startsWith('fc') || ip.startsWith('fd') || ip.startsWith('fe80')) {
-return true
-}
+    return ipv4Unsafe(ip)
+  }
+  if (isIP(ip) !== 6) {
+    return true
+  }
+  if (ip === '::1' || ip === '::' || ip === '0:0:0:0:0:0:0:1' || ip === '0:0:0:0:0:0:0:0') {
+    return true
+  }
+  const compact = ip.replace(/:0+/g, ':')
+  if (
+    compact.startsWith('fc') ||
+    compact.startsWith('fd') ||
+    compact.startsWith('fe8') ||
+    compact.startsWith('fe9') ||
+    compact.startsWith('fea') ||
+    compact.startsWith('feb') ||
+    compact.startsWith('ff')
+  ) {
+    return true
+  }
+  const first = ip.split(':')[0] ?? ''
+  const n = Number.parseInt(first, 16)
+  if (
+    Number.isFinite(n) &&
+    ((n & 0xfe00) === 0xfc00 || (n & 0xffc0) === 0xfe80 || (n & 0xff00) === 0xff00)
+  ) {
+    return true
+  }
   return false
+}
+
+export function hostnameIsTrusted(hostname: string, trustedOrigins: string[]): boolean {
+  const host = hostname.replace(/^\[|\]$/g, '').toLowerCase()
+  return trustedOrigins.some((item) => {
+    try {
+      return new URL(item).hostname.replace(/^\[|\]$/g, '').toLowerCase() === host
+    } catch {
+      return false
+    }
+  })
+}
+
+/** 校验实际 TCP 对端 IP:在连接建立后检查,而不是只在请求前做一次 DNS。 */
+export function assertConnectedIp(hostname: string, ip: string, trustedOrigins: string[]): void {
+  if (!ip) {
+    throw new BadRequestException(AI_PROVIDER_ENDPOINT_ERROR.unsafe)
+  }
+  if (hostnameIsTrusted(hostname, trustedOrigins)) {
+    return
+  }
+  if (ipUnsafe(ip)) {
+    throw new BadRequestException(AI_PROVIDER_ENDPOINT_ERROR.unsafe)
+  }
+}
+
+export function pickSafeConnectAddress(
+  hostname: string,
+  addresses: Array<{ address: string; family?: number }>,
+  trustedOrigins: string[],
+): { address: string; family: number } {
+  const trusted = hostnameIsTrusted(hostname, trustedOrigins)
+  const candidates = trusted ? addresses : addresses.filter((item) => !ipUnsafe(item.address))
+  const first = candidates[0]
+  if (!first) {
+    throw new BadRequestException(AI_PROVIDER_ENDPOINT_ERROR.unsafe)
+  }
+  const family = first.family === 6 || isIP(first.address) === 6 ? 6 : 4
+  return { address: first.address, family }
 }
 
 async function defaultLookup(hostname: string): Promise<Array<{ address: string }>> {
