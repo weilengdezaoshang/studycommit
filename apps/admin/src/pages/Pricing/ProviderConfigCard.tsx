@@ -21,9 +21,8 @@ import { ProviderStatusTag } from '@/components/StatusTag'
 import { useWriteAction } from '@/hooks/use-write-action'
 import { adminApi } from '@/services/admin-api'
 import { queryClient } from '@/services/query-client'
-import { isServerError } from '@/services/api-client'
+import { AdminApiError, isNotFound, isServerError } from '@/services/api-client'
 import type { AiProviderConfig, AiProviderProtocol, AiProviderTestResult } from '@/services/types'
-import { matchesProviderConfig } from '@/utils/confirmed-state'
 import { formatDateTime } from '@/utils/format'
 
 const PROTOCOL_OPTIONS: Array<{ value: AiProviderProtocol; label: string }> = [
@@ -40,6 +39,26 @@ const STATUS_HELP: Record<AiProviderConfig['displayStatus'], string> = {
   disabled: '已停用。新请求不会回退到环境变量。',
 }
 
+type ProviderForm = {
+  protocol: AiProviderProtocol
+  baseUrl: string
+  model: string
+  apiKey: string
+}
+
+type PendingProviderOp = { kind: 'save' | 'disable'; operationId: string }
+
+type DraftTestView = AiProviderTestResult & { snapshot: ProviderForm }
+
+function sameForm(a: ProviderForm, b: ProviderForm): boolean {
+  return (
+    a.protocol === b.protocol &&
+    a.baseUrl === b.baseUrl &&
+    a.model === b.model &&
+    a.apiKey === b.apiKey
+  )
+}
+
 export function ProviderConfigCard() {
   const access = useAccess()
   const { message } = App.useApp()
@@ -53,19 +72,33 @@ export function ProviderConfigCard() {
   const [formOpen, setFormOpen] = useState(false)
   const [disableOpen, setDisableOpen] = useState(false)
   const [testing, setTesting] = useState(false)
-  const [draftTest, setDraftTest] = useState<AiProviderTestResult | null>(null)
-  const [form, setForm] = useState({
-    protocol: 'openai' as AiProviderProtocol,
+  const [draftTest, setDraftTest] = useState<DraftTestView | null>(null)
+  const [form, setForm] = useState<ProviderForm>({
+    protocol: 'openai',
     baseUrl: '',
     model: '',
     apiKey: '',
   })
-  const pending = useRef<'save' | 'disable' | null>(null)
+  const formInitialized = useRef(false)
+  const pendingOp = useRef<PendingProviderOp | null>(null)
+  const lastOpCurrent = useRef<boolean | null>(null)
+  const testSeq = useRef(0)
+  const testAbort = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (!formOpen || !config) {
-return
-}
+    if (!formOpen) {
+      formInitialized.current = false
+      testSeq.current += 1
+      testAbort.current?.abort()
+      testAbort.current = null
+      setDraftTest(null)
+      setTesting(false)
+      return
+    }
+    if (!config || formInitialized.current) {
+      return
+    }
+    formInitialized.current = true
     setForm({
       protocol: config.protocol ?? 'openai',
       baseUrl: config.baseUrl ?? '',
@@ -74,6 +107,14 @@ return
     })
     setDraftTest(null)
   }, [config, formOpen])
+
+  useEffect(
+    () => () => {
+      testSeq.current += 1
+      testAbort.current?.abort()
+    },
+    [],
+  )
 
   if (!access.canManageProvider) {
     return (
@@ -85,24 +126,39 @@ return
 
   const mutationsDisabled = write.writesLocked || query.isLoading || Boolean(write.conflict)
   const readFailed = Boolean(query.error)
+  const fieldsLocked = write.busy || Boolean(write.unknown)
+
+  const updateForm = (patch: Partial<ProviderForm>) => {
+    testSeq.current += 1
+    setDraftTest(null)
+    setForm((prev) => ({ ...prev, ...patch }))
+  }
 
   const submitSave = async (reason: string) => {
     if (!write.canSubmit) {
-return
-}
+      return
+    }
     const expectedVersion = write.expectedVersion()
     if (expectedVersion === null) {
       void message.error('配置版本未知，无法提交')
       return
     }
-    pending.current = 'save'
+    const snapshot: ProviderForm = {
+      protocol: form.protocol,
+      baseUrl: form.baseUrl.trim(),
+      model: form.model.trim(),
+      apiKey: form.apiKey.trim(),
+    }
+    const operationId = crypto.randomUUID()
+    pendingOp.current = { kind: 'save', operationId }
     const result = await write.run(() =>
       adminApi.updateAiProvider({
         expectedVersion,
-        protocol: form.protocol,
-        baseUrl: form.baseUrl.trim() || undefined,
-        model: form.model.trim(),
-        apiKey: form.apiKey.trim() || undefined,
+        protocol: snapshot.protocol,
+        baseUrl: snapshot.baseUrl || undefined,
+        model: snapshot.model,
+        apiKey: snapshot.apiKey || undefined,
+        operationId,
         reason,
       }),
     )
@@ -119,8 +175,8 @@ return
       return
     }
     if (result.status === 'unknown' || result.status === 'rate_limited') {
-return
-}
+      return
+    }
     if (result.status !== 'failed' || result.error.code !== 'WRITE_LOCKED') {
       void message.error(result.error.message)
     }
@@ -128,15 +184,18 @@ return
 
   const submitDisable = async (reason: string) => {
     if (!write.canSubmit) {
-return
-}
+      return
+    }
     const expectedVersion = write.expectedVersion()
     if (expectedVersion === null) {
       void message.error('配置版本未知，无法提交')
       return
     }
-    pending.current = 'disable'
-    const result = await write.run(() => adminApi.disableAiProvider({ expectedVersion, reason }))
+    const operationId = crypto.randomUUID()
+    pendingOp.current = { kind: 'disable', operationId }
+    const result = await write.run(() =>
+      adminApi.disableAiProvider({ expectedVersion, operationId, reason }),
+    )
     if (result.status === 'ok') {
       void message.success('已停用服务商配置')
       setDisableOpen(false)
@@ -149,17 +208,17 @@ return
       return
     }
     if (result.status === 'unknown' || result.status === 'rate_limited') {
-return
-}
+      return
+    }
     if (result.status !== 'failed' || result.error.code !== 'WRITE_LOCKED') {
       void message.error(result.error.message)
     }
   }
 
   const testConnection = async () => {
-    if (testing || write.busy) {
-return
-}
+    if (write.busy || write.unknown) {
+      return
+    }
     if (!form.model.trim()) {
       void message.warning('请先填写模型')
       return
@@ -168,53 +227,88 @@ return
       void message.warning('请先填写 API Key')
       return
     }
+    const snapshot: ProviderForm = {
+      protocol: form.protocol,
+      baseUrl: form.baseUrl.trim(),
+      model: form.model.trim(),
+      apiKey: form.apiKey.trim(),
+    }
+    const seq = ++testSeq.current
+    testAbort.current?.abort()
+    const controller = new AbortController()
+    testAbort.current = controller
     setTesting(true)
+    setDraftTest(null)
     try {
-      const result = await adminApi.testAiProvider({
-        protocol: form.protocol,
-        baseUrl: form.baseUrl.trim() || undefined,
-        model: form.model.trim(),
-        apiKey: form.apiKey.trim() || undefined,
-      })
-      setDraftTest(result)
+      const result = await adminApi.testAiProvider(
+        {
+          protocol: snapshot.protocol,
+          baseUrl: snapshot.baseUrl || undefined,
+          model: snapshot.model,
+          apiKey: snapshot.apiKey || undefined,
+        },
+        { signal: controller.signal },
+      )
+      if (seq !== testSeq.current || controller.signal.aborted) {
+        return
+      }
+      if (!sameForm(snapshot, form)) {
+        return
+      }
+      setDraftTest({ ...result, snapshot })
       if (result.persisted) {
-void query.refetch()
-}
+        void query.refetch()
+      }
     } catch (error) {
+      if (seq !== testSeq.current || controller.signal.aborted) {
+        return
+      }
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return
+      }
+      if (error instanceof Error && error.name === 'AbortError') {
+        return
+      }
       void message.error(error instanceof Error ? error.message : '连接测试失败')
     } finally {
-      setTesting(false)
+      if (seq === testSeq.current) {
+        setTesting(false)
+      }
     }
   }
 
   const queryUnknown = async () => {
+    const pending = pendingOp.current
     const outcome = await write.queryUnknown(async () => {
-      const latest = await adminApi.getAiProvider()
-      if (pending.current === 'disable') {
-        if (latest.displayStatus !== 'disabled') {
-return 'unresolved'
-}
-      } else if (pending.current === 'save') {
-        if (
-          !matchesProviderConfig(latest, {
-            protocol: form.protocol,
-            baseUrl: form.baseUrl.trim() || latest.baseUrl,
-            model: form.model.trim(),
-            displayStatus: latest.displayStatus === 'disabled' ? 'disabled' : latest.displayStatus,
-          })
-        ) {
+      if (!pending) {
+        return 'unresolved'
+      }
+      try {
+        const operation = await adminApi.getAiProviderOperation(pending.operationId)
+        if (operation.kind !== pending.kind) {
           return 'unresolved'
         }
-      } else {
-return 'unresolved'
-}
-      queryClient.setQueryData(['admin', 'ai-provider'], latest)
-      return 'confirmed'
-    }, '尚未查询到与本次提交一致的结果，请稍后再查或核对审计日志，不要重复提交。')
+        lastOpCurrent.current = operation.isCurrent
+        const latest = await adminApi.getAiProvider().catch(() => null)
+        if (latest) {
+          queryClient.setQueryData(['admin', 'ai-provider'], latest)
+        }
+        return 'confirmed'
+      } catch (error) {
+        if (isNotFound(error) || (error instanceof AdminApiError && error.status === 404)) {
+          return 'unresolved'
+        }
+        throw error
+      }
+    }, '尚未查询到本次保存的操作记录，请稍后再查或核对审计日志，不要重复提交。')
     if (outcome === 'confirmed') {
       setFormOpen(false)
       setDisableOpen(false)
-      void message.info('当前数据已符合本次提交目标')
+      if (lastOpCurrent.current === false) {
+        void message.info('本次保存已成功，但当前配置已被后续操作覆盖。请查看最新配置。')
+        return
+      }
+      void message.success('本次保存已成功')
     }
   }
 
@@ -229,6 +323,8 @@ return 'unresolved'
       void message.error(error instanceof Error ? error.message : '读取失败')
     }
   }
+
+  const testedMatchesForm = draftTest ? sameForm(draftTest.snapshot, form) : false
 
   return (
     <Card
@@ -370,10 +466,8 @@ return 'unresolved'
                   id="provider-protocol"
                   value={form.protocol}
                   options={PROTOCOL_OPTIONS}
-                  onChange={(value) => {
-                    setForm((prev) => ({ ...prev, protocol: value }))
-                    setDraftTest(null)
-                  }}
+                  disabled={fieldsLocked}
+                  onChange={(value) => updateForm({ protocol: value })}
                 />
               </Form.Item>
               <Form.Item
@@ -385,10 +479,8 @@ return 'unresolved'
                   id="provider-base-url"
                   value={form.baseUrl}
                   placeholder="https://api.openai.com/v1"
-                  onChange={(event) => {
-                    setForm((prev) => ({ ...prev, baseUrl: event.target.value }))
-                    setDraftTest(null)
-                  }}
+                  disabled={fieldsLocked}
+                  onChange={(event) => updateForm({ baseUrl: event.target.value })}
                 />
               </Form.Item>
               <Form.Item htmlFor="provider-model" label="模型" required>
@@ -396,10 +488,8 @@ return 'unresolved'
                   id="provider-model"
                   value={form.model}
                   maxLength={120}
-                  onChange={(event) => {
-                    setForm((prev) => ({ ...prev, model: event.target.value }))
-                    setDraftTest(null)
-                  }}
+                  disabled={fieldsLocked}
+                  onChange={(event) => updateForm({ model: event.target.value })}
                 />
               </Form.Item>
               <Form.Item
@@ -415,28 +505,34 @@ return 'unresolved'
                   id="provider-api-key"
                   value={form.apiKey}
                   placeholder={config?.hasApiKey ? '已配置，留空保持原值' : '不会在浏览器中持久化'}
-                  onChange={(event) => {
-                    setForm((prev) => ({ ...prev, apiKey: event.target.value }))
-                    setDraftTest(null)
-                  }}
+                  disabled={fieldsLocked}
+                  onChange={(event) => updateForm({ apiKey: event.target.value })}
                   autoComplete="new-password"
                 />
               </Form.Item>
             </Form>
             <Space align="center" wrap>
-              <Button onClick={() => void testConnection()} loading={testing} disabled={write.busy}>
-                测试连接
+              <Button
+                onClick={() => void testConnection()}
+                disabled={write.busy || Boolean(write.unknown)}
+              >
+                {testing ? '测试中…' : '测试连接'}
               </Button>
               <Typography.Text type="secondary">
                 测试可能产生少量服务商费用，且不会保存或开启 AI 服务。
               </Typography.Text>
             </Space>
-            {draftTest ? (
+            {draftTest && testedMatchesForm ? (
               <Alert
                 style={{ marginTop: spacing.md }}
                 type={draftTest.ok ? 'success' : 'error'}
                 showIcon
                 message={draftTest.message}
+                description={
+                  draftTest.ok
+                    ? `仅表示当前表单（${draftTest.snapshot.protocol} / ${draftTest.snapshot.model}）可达，不是已保存配置的验证结果。`
+                    : undefined
+                }
               />
             ) : null}
           </div>
@@ -447,8 +543,8 @@ return 'unresolved'
         onCancel={() => {
           write.closeModal()
           if (!write.unknown && !write.conflict) {
-setFormOpen(false)
-}
+            setFormOpen(false)
+          }
         }}
       />
       <ReasonActionModal
@@ -479,8 +575,8 @@ setFormOpen(false)
         onCancel={() => {
           write.closeModal()
           if (!write.unknown && !write.conflict) {
-setDisableOpen(false)
-}
+            setDisableOpen(false)
+          }
         }}
       />
     </Card>

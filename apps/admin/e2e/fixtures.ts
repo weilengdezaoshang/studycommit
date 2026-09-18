@@ -220,6 +220,7 @@ export const aiProvider = {
   billedModel: 'active-model',
   envFallbackActive: false,
   version: 2,
+  lastOperationId: null,
   updatedAt: '2026-09-18T10:32:00+08:00',
 }
 

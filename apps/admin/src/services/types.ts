@@ -141,7 +141,21 @@ export interface AiProviderConfig {
   billedModel: string | null
   envFallbackActive: boolean
   version: number
+  lastOperationId?: string | null
   updatedAt: string | null
+}
+
+export interface AiProviderOperation {
+  operationId: string
+  kind: 'save' | 'disable'
+  protocol: AiProviderProtocol | null
+  baseUrl: string | null
+  model: string | null
+  keyChanged: boolean
+  versionAfter: number
+  currentVersion: number
+  isCurrent: boolean
+  createdAt: string
 }
 
 export interface AiProviderTestResult {

@@ -6,6 +6,7 @@ import type {
   AccountLoginOutput,
   AiPrice,
   AiProviderConfig,
+  AiProviderOperation,
   AiProviderTestResult,
   AiServiceConfig,
   AuditLog,
@@ -127,6 +128,9 @@ export const adminApi = {
       })}`,
     )
   },
+  getRun(runId: string, init?: { signal?: AbortSignal }) {
+    return client.get<RunRow>(`/api/admin/ai/runs/${runId}`, init)
+  },
   searchCreditUsers(params: { query: string; limit?: number }) {
     return client.get<{ items: CreditUser[] }>(
       `/api/admin/credits/users${toQuery({ query: params.query })}`,
@@ -175,20 +179,27 @@ export const adminApi = {
     baseUrl?: string
     model: string
     apiKey?: string
+    operationId: string
     reason: string
   }) {
     return client.put<AiProviderConfig>('/api/admin/ai/provider', body)
   },
-  disableAiProvider(body: { expectedVersion: number; reason: string }) {
+  disableAiProvider(body: { expectedVersion: number; operationId: string; reason: string }) {
     return client.post<AiProviderConfig>('/api/admin/ai/provider/disable', body)
   },
-  testAiProvider(body: {
-    protocol: NonNullable<AiProviderConfig['protocol']>
-    baseUrl?: string
-    model: string
-    apiKey?: string
-  }) {
-    return client.post<AiProviderTestResult>('/api/admin/ai/provider/test', body)
+  testAiProvider(
+    body: {
+      protocol: NonNullable<AiProviderConfig['protocol']>
+      baseUrl?: string
+      model: string
+      apiKey?: string
+    },
+    init?: { signal?: AbortSignal },
+  ) {
+    return client.post<AiProviderTestResult>('/api/admin/ai/provider/test', body, init)
+  },
+  getAiProviderOperation(operationId: string) {
+    return client.get<AiProviderOperation>(`/api/admin/ai/provider/operations/${operationId}`)
   },
   listPrices() {
     return client.get<{ items: AiPrice[] }>('/api/admin/ai/prices')

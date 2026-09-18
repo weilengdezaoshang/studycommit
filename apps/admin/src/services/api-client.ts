@@ -33,16 +33,16 @@ export type AdminClientOptions = {
 
 function parseRetryAfter(header: string | null): number | null {
   if (!header) {
-return null
-}
+    return null
+  }
   const seconds = Number(header)
   if (Number.isFinite(seconds) && seconds >= 0) {
-return Math.round(seconds * 1000)
-}
+    return Math.round(seconds * 1000)
+  }
   const date = Date.parse(header)
   if (Number.isNaN(date)) {
-return null
-}
+    return null
+  }
   return Math.max(0, date - Date.now())
 }
 
@@ -58,13 +58,23 @@ function readErrorPayload(payload: Record<string, unknown>, status: number) {
 export class AdminClient {
   constructor(private readonly options: AdminClientOptions) {}
 
-  async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  async request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    init?: { signal?: AbortSignal },
+  ): Promise<T> {
     const token = this.options.getToken()
     let response: Response
+    const timeout = AbortSignal.timeout(30_000)
+    const signal =
+      init?.signal && typeof AbortSignal.any === 'function'
+        ? AbortSignal.any([init.signal, timeout])
+        : (init?.signal ?? timeout)
     try {
       response = await fetch(`${this.options.baseUrl}${path}`, {
         method,
-        signal: AbortSignal.timeout(30_000),
+        signal,
         headers: {
           'content-type': 'application/json',
           ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -110,12 +120,12 @@ export class AdminClient {
     return payload as T
   }
 
-  get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path)
+  get<T>(path: string, init?: { signal?: AbortSignal }): Promise<T> {
+    return this.request<T>('GET', path, undefined, init)
   }
 
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('POST', path, body)
+  post<T>(path: string, body?: unknown, init?: { signal?: AbortSignal }): Promise<T> {
+    return this.request<T>('POST', path, body, init)
   }
 
   put<T>(path: string, body?: unknown): Promise<T> {
@@ -149,6 +159,10 @@ export function isForbidden(error: unknown): boolean {
 
 export function isUnauthorized(error: unknown): boolean {
   return error instanceof AdminApiError && error.status === 401
+}
+
+export function isNotFound(error: unknown): boolean {
+  return error instanceof AdminApiError && error.status === 404
 }
 
 export function isServerError(error: unknown): boolean {
