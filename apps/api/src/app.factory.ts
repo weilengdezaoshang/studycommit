@@ -33,10 +33,14 @@ function mergeComponents(
   }
 }
 
-export async function createApp(): Promise<NestFastifyApplication> {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
-    bufferLogs: true,
-  })
+export async function createApp(options?: {
+  overrides?: Array<{ provide: string | symbol; useValue: unknown }>
+}): Promise<NestFastifyApplication> {
+  const app = options?.overrides?.length
+    ? await createAppWithOverrides(options.overrides)
+    : await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
+        bufferLogs: true,
+      })
   app.useLogger(app.get(Logger))
   app.setGlobalPrefix(API_PREFIX)
   app.enableCors({ origin: process.env.NODE_ENV === 'production' ? false : true })
@@ -62,4 +66,18 @@ export async function createApp(): Promise<NestFastifyApplication> {
   await app.init()
   await app.getHttpAdapter().getInstance().ready()
   return app
+}
+
+async function createAppWithOverrides(
+  overrides: Array<{ provide: string | symbol; useValue: unknown }>,
+): Promise<NestFastifyApplication> {
+  const { Test } = await import('@nestjs/testing')
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+  for (const override of overrides) {
+    moduleRef.overrideProvider(override.provide).useValue(override.useValue)
+  }
+  const compiled = await moduleRef.compile()
+  return compiled.createNestApplication<NestFastifyApplication>(new FastifyAdapter(), {
+    bufferLogs: true,
+  })
 }

@@ -29,4 +29,9 @@ describe('validateEnv', () => {
     expect(() => validateEnv({ ...valid, NODE_ENV: 'production', AUTH_WECHAT_STUB: '1' })).toThrow(
       'AUTH_WECHAT_STUB',
     ))
+
+  it('加密主密钥格式不合法时拒绝启动', () =>
+    expect(() => validateEnv({ ...valid, AI_PROVIDER_ENCRYPTION_KEY: 'short' })).toThrow(
+      'AI_PROVIDER_ENCRYPTION_KEY',
+    ))
 })

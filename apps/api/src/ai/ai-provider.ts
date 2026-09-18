@@ -1,5 +1,7 @@
 import { ConfigService } from '@nestjs/config'
 import type { AppEnv } from '../config/env'
+import { streamProvider } from './provider-stream'
+import { providerRequestInit } from './provider-http'
 
 /** 供应商抽象:上层只依赖该端口,协议差异由各适配器消化。 */
 export const AI_PROVIDER_TOKEN = 'AI_PROVIDER'
@@ -7,6 +9,7 @@ export const AI_PROVIDER_TOKEN = 'AI_PROVIDER'
 export type AiProtocol = 'openai' | 'anthropic' | 'gemini'
 
 export interface AiCompletionRequest {
+  signal?: AbortSignal
   system: string
   user: string
   temperature?: number
@@ -19,6 +22,7 @@ export interface AiCompletionResult {
 }
 
 export interface AiProvider {
+  stream?(request: AiCompletionRequest): AsyncIterable<string>
   readonly model: string
   readonly protocol: AiProtocol
   complete(request: AiCompletionRequest): Promise<AiCompletionResult>
@@ -38,7 +42,7 @@ export class AiOutputInvalidError extends Error {
   }
 }
 
-interface AiProviderOptions {
+export interface AiProviderOptions {
   baseUrl: string
   apiKey: string
   model: string
@@ -79,6 +83,9 @@ function requireText(text: unknown): string {
 
 /** OpenAI 兼容协议:GLM/Qwen/DeepSeek/OpenAI 均可复用。 */
 export class OpenAiCompatibleProvider implements AiProvider {
+  stream(request: AiCompletionRequest) {
+    return streamProvider(this.protocol, this.options, request)
+  }
   readonly protocol = 'openai' as const
 
   constructor(private readonly options: AiProviderOptions) {}
@@ -93,7 +100,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
       (signal) =>
         (this.options.fetchImpl ?? fetch)(
           `${this.options.baseUrl.replace(/\/$/, '')}/chat/completions`,
-          {
+          providerRequestInit({
             method: 'POST',
             headers: {
               'content-type': 'application/json',
@@ -108,7 +115,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
               ],
             }),
             signal,
-          },
+          }),
         ),
       request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as { choices?: Array<{ message?: { content?: string } }> }
@@ -120,6 +127,9 @@ export class OpenAiCompatibleProvider implements AiProvider {
 
 /** Anthropic Messages 协议:Claude 系列。 */
 export class AnthropicProvider implements AiProvider {
+  stream(request: AiCompletionRequest) {
+    return streamProvider(this.protocol, this.options, request)
+  }
   readonly protocol = 'anthropic' as const
 
   constructor(private readonly options: AiProviderOptions) {}
@@ -134,7 +144,7 @@ export class AnthropicProvider implements AiProvider {
       (signal) =>
         (this.options.fetchImpl ?? fetch)(
           `${this.options.baseUrl.replace(/\/$/, '')}/v1/messages`,
-          {
+          providerRequestInit({
             method: 'POST',
             headers: {
               'content-type': 'application/json',
@@ -149,7 +159,7 @@ export class AnthropicProvider implements AiProvider {
               messages: [{ role: 'user', content: request.user }],
             }),
             signal,
-          },
+          }),
         ),
       request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as { content?: Array<{ type?: string; text?: string }> }
@@ -164,6 +174,9 @@ export class AnthropicProvider implements AiProvider {
 
 /** Google Gemini generateContent 协议。 */
 export class GeminiProvider implements AiProvider {
+  stream(request: AiCompletionRequest) {
+    return streamProvider(this.protocol, this.options, request)
+  }
   readonly protocol = 'gemini' as const
 
   constructor(private readonly options: AiProviderOptions) {}
@@ -178,7 +191,7 @@ export class GeminiProvider implements AiProvider {
       (signal) =>
         (this.options.fetchImpl ?? fetch)(
           `${this.options.baseUrl.replace(/\/$/, '')}/v1beta/models/${this.options.model}:generateContent`,
-          {
+          providerRequestInit({
             method: 'POST',
             headers: {
               'content-type': 'application/json',
@@ -190,7 +203,7 @@ export class GeminiProvider implements AiProvider {
               generationConfig: { temperature: request.temperature ?? 0.3 },
             }),
             signal,
-          },
+          }),
         ),
       request.timeoutMs ?? this.options.timeoutMs ?? 15_000,
     )) as {
@@ -226,6 +239,13 @@ export function createAiProviderFromEnv(config: ConfigService<AppEnv>): AiProvid
     model,
     timeoutMs: config.get('AI_TIMEOUT_MS') ?? 15_000,
   }
+  return createAiProviderFromOptions(protocol, options)
+}
+
+export function createAiProviderFromOptions(
+  protocol: AiProtocol,
+  options: AiProviderOptions,
+): AiProvider {
   switch (protocol) {
     case 'anthropic':
       return new AnthropicProvider(options)

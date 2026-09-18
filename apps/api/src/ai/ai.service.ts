@@ -6,25 +6,18 @@ import {
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common'
-import { ConfigService } from '@nestjs/config'
 import {
   paperExplainInputSchema,
   paperExplainOutputSchema,
   type PaperExplainInput,
   type PaperExplainOutput,
 } from '@studycommit/rpc-contracts/ai'
-import type { AppEnv } from '../config/env'
 import { AI_ERROR, AI_PROMPT_VERSION } from './ai.constants'
-import {
-  AI_PROVIDER_TOKEN,
-  AiOutputInvalidError,
-  AiUnavailableError,
-  createAiProviderFromEnv,
-  type AiProvider,
-} from './ai-provider'
+import { AiProviderConfigService } from './ai-provider-config.service'
+import { AI_PROVIDER_TOKEN, AiOutputInvalidError, type AiProvider } from './ai-provider'
 import { AiRepository } from './ai.repository'
 
-const PROMPT_RULES = [
+export const PROMPT_RULES = [
   '你是 StudyCommit 的学习伙伴。基于用户保存的一张"纸页"(学习记录),生成一张解释卡,帮助用户判断自己是否真的理解了它。',
   '先判断内容类型并选择表达结构:机制类用因果链(causal_chain),对比类用对照(contrast),实践经验类用检查步骤(checklist),定义类用一句话定义与反例(definition_counterexample)。',
   '因果链 2~5 步;对照 2~5 组;检查步骤 2~6 步;定义必须附一个反例。另给一个具体例子(example)。',
@@ -32,7 +25,7 @@ const PROMPT_RULES = [
   '只输出 JSON:{"view":{"type":"...","steps|items|definition...":...},"example":"...","plainLevel":1}。',
 ].join('\n')
 
-function buildUserPrompt(input: PaperExplainInput): string {
+export function buildUserPrompt(input: PaperExplainInput): string {
   const lines = [
     `纸页正文:\n${input.content}`,
     input.questionText ? `用户确认的问题:${input.questionText}` : null,
@@ -68,53 +61,75 @@ export function extractJson(text: string): unknown {
   }
 }
 
+/** AI 执行服务:供应商调用与输出解析;计费受理由 ai-billing 负责。 */
 @Injectable()
 export class AiService {
-  private provider: AiProvider | null
+  private readonly injectedProvider: AiProvider | null
 
   constructor(
     @Inject(AiRepository) private readonly repository: AiRepository,
-    @Inject(ConfigService) config: ConfigService<AppEnv>,
+    @Inject(AiProviderConfigService) private readonly providerConfig: AiProviderConfigService,
     @Optional() @Inject(AI_PROVIDER_TOKEN) provider?: AiProvider | null,
   ) {
-    // 显式传入供应商用于测试或特殊部署;否则按环境装配,未配置时保持 null 降级
-    this.provider = provider === undefined ? createAiProviderFromEnv(config) : provider
+    // 显式注入用于测试;生产按数据库配置(无配置时回退环境变量)每次请求解析。
+    this.injectedProvider = provider ?? null
   }
 
-  async generatePaperExplain(
-    userId: string,
-    rawInput: PaperExplainInput,
-  ): Promise<PaperExplainOutput> {
-    const input = paperExplainInputSchema.parse(rawInput)
-    if (!this.provider) {
+  /** 受理前检查:缺失或停用时必须在预扣积分前失败。 */
+  async isRuntimeAvailable(): Promise<boolean> {
+    if (this.injectedProvider) {
+return true
+}
+    try {
+      return (await this.providerConfig.resolveRuntime()) !== null
+    } catch {
+      return false
+    }
+  }
+
+  /** 供计费 Worker 在事务外调用:返回模型原始输出文本。 */
+  async completeExplain(
+    input: PaperExplainInput,
+    signal?: AbortSignal,
+    options?: { modelOverride?: string },
+  ): Promise<{ text: string; model: string }> {
+    paperExplainInputSchema.parse(input)
+    const provider = await this.resolveProvider(options?.modelOverride)
+    const completion = await provider.complete({
+      system: PROMPT_RULES,
+      user: buildUserPrompt(input),
+      temperature: 0.3,
+      signal,
+    })
+    return { text: completion.text, model: completion.model }
+  }
+
+  /** 解析输出为解释卡契约(携带 runId/model/promptVersion)。 */
+  parseExplainOutput(text: string, runId: string, model: string): Omit<PaperExplainOutput, never> {
+    return paperExplainOutputSchema.parse({
+      ...(extractJson(text) as Record<string, unknown>),
+      runId,
+      model,
+      promptVersion: AI_PROMPT_VERSION,
+    })
+  }
+
+  mapProviderError(error: unknown): never {
+    if (error instanceof AiOutputInvalidError) {
+      throw new BadGatewayException(AI_ERROR.outputInvalid)
+    }
+    throw error
+  }
+
+  private async resolveProvider(modelOverride?: string): Promise<AiProvider> {
+    if (this.injectedProvider) {
+return this.injectedProvider
+}
+    const snapshot = await this.providerConfig.resolveRuntime()
+    if (!snapshot) {
       throw new ServiceUnavailableException(AI_ERROR.unavailable)
     }
-    const run = await this.repository.createExplainRun(userId, input, AI_PROMPT_VERSION)
-    try {
-      const completion = await this.provider.complete({
-        system: PROMPT_RULES,
-        user: buildUserPrompt(input),
-        temperature: 0.3,
-      })
-      const output = paperExplainOutputSchema.parse({
-        ...(extractJson(completion.text) as Record<string, unknown>),
-        runId: run.id,
-        model: completion.model,
-        promptVersion: AI_PROMPT_VERSION,
-      })
-      await this.repository.completeExplainRun(run.id, output)
-      return output
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      await this.repository.failRun(run.id, message, AI_PROMPT_VERSION)
-      if (error instanceof AiUnavailableError) {
-        throw new ServiceUnavailableException(AI_ERROR.unavailable)
-      }
-      if (error instanceof AiOutputInvalidError) {
-        throw new BadGatewayException(AI_ERROR.outputInvalid)
-      }
-      throw error
-    }
+    return this.providerConfig.createProvider(snapshot, modelOverride)
   }
 
   async confirmPaperExplain(userId: string, runId: string) {

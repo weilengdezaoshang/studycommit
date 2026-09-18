@@ -57,11 +57,11 @@ describe('AI API', () => {
     expect(response.statusCode).toBe(400)
   })
 
-  it('未配置 AI 供应商时返回固定降级错误码', async () => {
+  it('旧同步生成入口被计费要求显式拒绝', async () => {
     const token = await registerAndLogin()
     const response = await followup({ content: 'React 的批处理会合并多次更新。' }, token)
-    expect(response.statusCode).toBe(503)
-    expect(response.json().code).toBe('AI_UNAVAILABLE')
+    expect(response.statusCode).toBe(410)
+    expect(response.json().code).toBe('AI_BILLING_REQUIRED')
   })
 
   const confirm = (runId: string, token: string) =>

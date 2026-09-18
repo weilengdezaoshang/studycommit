@@ -53,6 +53,8 @@ describe('createLoggingConfig', () => {
         'req.body.token',
         'req.body.accessToken',
         'req.body.refreshToken',
+        'req.body.apiKey',
+        'req.body.api_key',
         'req.body.code',
         'req.body.phone',
         'req.body.account',

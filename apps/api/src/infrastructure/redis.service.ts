@@ -50,6 +50,14 @@ export class RedisService implements OnModuleDestroy {
     return Number(result)
   }
 
+  async incrWithTtl(key: string, ttlSeconds: number): Promise<number> {
+    return this.evalNumber(
+      "local n = redis.call('INCR', KEYS[1]) if n == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end return n",
+      [key],
+      [String(ttlSeconds)],
+    )
+  }
+
   private async connect(): Promise<void> {
     if (this.client.status === 'ready') {
       return

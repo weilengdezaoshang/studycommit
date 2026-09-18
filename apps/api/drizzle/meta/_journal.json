@@ -113,6 +113,48 @@
       "when": 1788751200000,
       "tag": "0015_search_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789084800000,
+      "tag": "0016_paper_rich_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789171200000,
+      "tag": "0017_paper_knowledge",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789430400000,
+      "tag": "0018_paper_asset_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789572896282,
+      "tag": "0019_operations_credits",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789578063142,
+      "tag": "0020_ai_config_daily_budget",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789664460000,
+      "tag": "0021_ai_provider_config",
+      "breakpoints": true
     }
   ]
 }

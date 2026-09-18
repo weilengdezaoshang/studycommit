@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { parseEncryptionKey } from '../ai/provider-secret'
 
 const postgresUrl = z
   .url()
@@ -32,6 +33,15 @@ export const envSchema = z.object({
   AI_BASE_URL: z.url().optional(),
   AI_MODEL: z.string().min(1).max(120).optional(),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60_000).default(15_000),
+  /**
+   * 服务商 API Key 加密主密钥:32 字节,64 位 hex 或 base64。
+   * 不入库;缺少该值时拒绝写入密钥,不会降级为明文。
+   */
+  AI_PROVIDER_ENCRYPTION_KEY: z.string().min(1).optional(),
+  /** 逗号分隔的可信服务商源,仅用于服务端显式允许的本地代理。 */
+  AI_PROVIDER_TRUSTED_BASE_URLS: z.string().optional(),
+  /** 计费运行对账截止;测试可调短以验证超时释放路径。 */
+  AI_RUN_RESULT_DEADLINE_MS: z.coerce.number().int().min(1000).default(180_000),
   /**
    * 图片资产存储(BE-308):S3 兼容对象存储,开发环境用 MinIO 容器。
    * driver=memory 仅供测试;S3 凭据未配置时上传功能整体降级为 503。
@@ -69,6 +79,15 @@ export function validateEnv(raw: Record<string, unknown>): AppEnv {
   }
   if (result.data.NODE_ENV === 'production' && result.data.S3_DRIVER === 'memory') {
     throw new Error('Environment validation failed: S3_DRIVER=memory cannot be set in production')
+  }
+  if (result.data.AI_PROVIDER_ENCRYPTION_KEY) {
+    try {
+      parseEncryptionKey(result.data.AI_PROVIDER_ENCRYPTION_KEY)
+    } catch (error) {
+      throw new Error(
+        `Environment validation failed: ${error instanceof Error ? error.message : 'AI_PROVIDER_ENCRYPTION_KEY invalid'}`,
+      )
+    }
   }
   return result.data
 }

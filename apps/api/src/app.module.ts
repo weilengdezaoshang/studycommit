@@ -4,6 +4,7 @@ import { HealthController } from './health/health.controller'
 import { HealthService } from './health/health.service'
 import { InfrastructureModule } from './infrastructure/infrastructure.module'
 import { validateEnv } from './config/env'
+import { getEnvFiles } from './config/env-files'
 import { DatabaseModule } from './database/database.module'
 import { TopicsModule } from './topics/topics.module'
 import { LoggerModule } from 'nestjs-pino'
@@ -26,7 +27,15 @@ import { UploadsModule } from './uploads/uploads.module'
 import { ReviewsModule } from './reviews/reviews.module'
 import { SearchModule } from './search/search.module'
 import { InternalModule } from './internal/internal.module'
+import { OutboxModule } from './outbox/outbox.module'
+import { CreditsModule } from './credits/credits.module'
+import { CampaignsModule } from './campaigns/campaigns.module'
+import { AdminAccessModule } from './admin-access/admin-access.module'
+import { AdminModule } from './admin/admin.module'
+import { OperationsModule } from './operations/operations.module'
+import { AiBillingModule } from './ai-billing/ai-billing.module'
 import { ScheduleModule } from '@nestjs/schedule'
+import { ThrottlerModule } from '@nestjs/throttler'
 
 @Module({
   imports: [
@@ -36,13 +45,14 @@ import { ScheduleModule } from '@nestjs/schedule'
       plugins: [new ResponseHeadersPlugin()],
     }),
     ScheduleModule.forRoot(),
+    // HTTP 层基础限流(IP 级);业务级权威上限在受理事务内校验。
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     LoggerModule.forRoot(
       createLoggingConfig((process.env.NODE_ENV ?? 'development') as RuntimeEnvironment),
     ),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath:
-        process.env.NODE_ENV === 'test' ? ['.env.test.local', '.env.test'] : ['.env.local', '.env'],
+      envFilePath: getEnvFiles(),
       validate: validateEnv,
     }),
     DatabaseModule,
@@ -58,6 +68,13 @@ import { ScheduleModule } from '@nestjs/schedule'
     ReviewsModule,
     SearchModule,
     InternalModule,
+    OutboxModule,
+    CreditsModule,
+    CampaignsModule,
+    OperationsModule,
+    AdminAccessModule,
+    AdminModule,
+    AiBillingModule,
   ],
   controllers: [HealthController],
   providers: [HealthService],

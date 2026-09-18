@@ -34,6 +34,7 @@ describe('OpenAiCompatibleProvider', () => {
     expect(result.text).toContain('questions')
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit]
     expect(url).toBe('https://ai.example.com/v1/chat/completions')
+    expect(init.redirect).toBe('error')
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer key')
     expect(JSON.parse(String(init.body)).messages).toHaveLength(2)
   })

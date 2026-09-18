@@ -1,0 +1,2 @@
+ALTER TABLE "ai_service_config" ADD COLUMN "daily_cost_budget" numeric(14, 4);--> statement-breakpoint
+ALTER TABLE "ai_service_config" ADD CONSTRAINT "ai_service_config_budget_nonnegative" CHECK ("ai_service_config"."daily_cost_budget" IS NULL OR "ai_service_config"."daily_cost_budget" >= 0);

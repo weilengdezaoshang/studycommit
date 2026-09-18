@@ -16,6 +16,18 @@
       "types": "./src/auth.ts",
       "default": "./dist/auth.js"
     },
+    "./admin": {
+      "types": "./src/admin.ts",
+      "default": "./dist/admin.js"
+    },
+    "./campaigns": {
+      "types": "./src/campaigns.ts",
+      "default": "./dist/campaigns.js"
+    },
+    "./credits": {
+      "types": "./src/credits.ts",
+      "default": "./dist/credits.js"
+    },
     "./capture": {
       "types": "./src/capture.ts",
       "default": "./dist/capture.js"
@@ -31,6 +43,10 @@
     "./learning-records": {
       "types": "./src/learning-records.ts",
       "default": "./dist/learning-records.js"
+    },
+    "./operations": {
+      "types": "./src/operations.ts",
+      "default": "./dist/operations.js"
     },
     "./papers": {
       "types": "./src/papers.ts",
@@ -63,6 +79,10 @@
     "./search": {
       "types": "./src/search.ts",
       "default": "./dist/search.js"
+    },
+    "./rich-text": {
+      "types": "./src/rich-text.ts",
+      "default": "./dist/rich-text.js"
     }
   },
   "scripts": {

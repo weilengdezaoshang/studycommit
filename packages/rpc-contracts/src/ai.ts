@@ -1,4 +1,4 @@
-import { oc } from '@orpc/contract'
+import { oc, eventIterator } from '@orpc/contract'
 import { z } from 'zod'
 
 /**
@@ -105,7 +105,95 @@ export const confirmPaperExplainOutputSchema = z.object({ confirmed: z.literal(t
 
 export const agentRunStatusSchema = z.enum(['pending', 'completed', 'failed'])
 
+/** 计费运行的阶段视图:由运行状态与冻结状态派生,供客户端轮询展示。 */
+export const agentRunPhaseSchema = z.enum([
+  'queued',
+  'running',
+  'reconciling',
+  'completed',
+  'failed',
+  'expired',
+])
+export type AgentRunPhase = z.infer<typeof agentRunPhaseSchema>
+
+export const aiActionSchema = z.enum(['paper_explain'])
+export type AiAction = z.infer<typeof aiActionSchema>
+
+export const aiQuoteInputSchema = z.object({ action: aiActionSchema })
+export const aiQuoteOutputSchema = z.object({
+  action: aiActionSchema,
+  priceCredits: z.number().int().min(0),
+  priceVersion: z.number().int().min(1),
+  balance: z.object({
+    available: z.number().int().min(0),
+    reserved: z.number().int().min(0),
+  }),
+})
+export type AiQuoteOutput = z.infer<typeof aiQuoteOutputSchema>
+
+export const aiExpectedPriceSchema = z.object({
+  priceCredits: z.number().int().min(0),
+  priceVersion: z.number().int().min(1),
+})
+export type AiExpectedPrice = z.infer<typeof aiExpectedPriceSchema>
+
+export const aiStartRunInputSchema = z.object({
+  action: aiActionSchema,
+  /** 报价确认:与当前价格版本不一致时拒绝受理,要求重新报价。 */
+  expectedPrice: aiExpectedPriceSchema,
+  input: paperExplainInputSchema,
+})
+
+export const aiStartRunOutputSchema = z.object({
+  runId: z.uuid(),
+  runPhase: agentRunPhaseSchema,
+  priceCredits: z.number().int().min(0),
+  priceVersion: z.number().int().min(1),
+  reservedCredits: z.number().int().min(0),
+  /** 超过该时间仍无结果将进入对账并最终释放冻结。 */
+  deadlineAt: z.iso.datetime({ offset: true }),
+})
+export type AiStartRunOutput = z.infer<typeof aiStartRunOutputSchema>
+
+export const aiGetRunInputSchema = z.object({ runId: z.uuid() })
+
+export const aiRunSettlementSchema = z.object({
+  state: z.enum(['reserved', 'settled', 'released', 'expired']),
+  credits: z.number().int().min(0),
+})
+export type AiRunSettlement = z.infer<typeof aiRunSettlementSchema>
+
+export const aiGetRunOutputSchema = z.object({
+  runId: z.uuid(),
+  status: agentRunStatusSchema,
+  runPhase: agentRunPhaseSchema,
+  output: paperExplainOutputSchema.nullable(),
+  error: z.string().nullable(),
+  settlement: aiRunSettlementSchema.nullable(),
+  balance: z.object({
+    available: z.number().int().min(0),
+    reserved: z.number().int().min(0),
+  }),
+})
+export type AiGetRunOutput = z.infer<typeof aiGetRunOutputSchema>
+
+export const paperExplainEventSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('delta'), text: z.string().max(65536) }),
+  z.object({ type: z.literal('complete'), output: paperExplainOutputSchema }),
+])
+/** 桌面桥接的流请求标识，用于隔离窗口消息与取消请求。 */
+export const paperExplainRequestIdSchema = z.uuid()
+export const paperExplainStreamRequestSchema = z.object({
+  requestId: paperExplainRequestIdSchema,
+  input: paperExplainInputSchema,
+})
+export type PaperExplainEvent = z.infer<typeof paperExplainEventSchema>
+
 export const aiContract = {
+  streamPaper: oc
+    .route({ method: 'POST', path: '/ai/papers/explain/stream', summary: '流式生成解释卡' })
+    .input(paperExplainInputSchema)
+    .output(eventIterator(paperExplainEventSchema)),
   explainPaper: oc
     .route({ method: 'POST', path: '/ai/papers/explain', summary: '生成直观解释卡' })
     .input(paperExplainInputSchema)
@@ -114,6 +202,18 @@ export const aiContract = {
     .route({ method: 'POST', path: '/ai/runs/{runId}/confirm', summary: '确认解释卡候选' })
     .input(confirmPaperExplainInputSchema)
     .output(confirmPaperExplainOutputSchema),
+  quote: oc
+    .route({ method: 'GET', path: '/ai/quote', summary: '查询 Agent 计费报价' })
+    .input(aiQuoteInputSchema)
+    .output(aiQuoteOutputSchema),
+  startRun: oc
+    .route({ method: 'POST', path: '/ai/runs', summary: '受理付费 Agent 运行并冻结积分' })
+    .input(aiStartRunInputSchema)
+    .output(aiStartRunOutputSchema),
+  getRun: oc
+    .route({ method: 'GET', path: '/ai/runs/{runId}', summary: '查询运行结果与结算状态' })
+    .input(aiGetRunInputSchema)
+    .output(aiGetRunOutputSchema),
 }
 
 export type ExplainViewType = z.infer<typeof explainViewTypeSchema>
