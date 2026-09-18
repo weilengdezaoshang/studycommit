@@ -1,0 +1,37 @@
+{
+  "name": "@studycommit/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "PORT=5174 max dev",
+    "build": "max build",
+    "preview": "max preview --port 4174",
+    "typecheck": "max setup && tsc --noEmit",
+    "test:run": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/pro-components": "2.8.10",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@studycommit/design-tokens": "workspace:*",
+    "@tanstack/react-query": "^5.103.1",
+    "@umijs/max": "4.7.18",
+    "antd": "^5.29.3",
+    "dayjs": "^1.11.23",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^5.2.0",
+    "jsdom": "^30.0.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.10"
+  }
+}

@@ -37,7 +37,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:admin": "pnpm --filter @studycommit/admin dev",
+    "test:admin": "pnpm --filter @studycommit/admin test:run"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -63,5 +65,10 @@
     "*.{json,yml,yaml,css}": [
       "prettier --write"
     ]
+  },
+  "pnpm": {
+    "overrides": {
+      "@10play/tentap-editor>react-dom": "19.2.3"
+    }
   }
 }

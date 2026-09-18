@@ -6,3 +6,4 @@ packages:
 onlyBuiltDependencies:
   - electron
   - esbuild
+  - node-mac-permissions

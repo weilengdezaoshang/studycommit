@@ -1,0 +1,15 @@
+.umi
+.umi-production
+.umi-test
+src/.umi
+src/.umi-production
+src/.umi-test
+dist
+node_modules
+test-results
+playwright-report
+blob-report
+.playwright
+coverage
+.DS_Store
+*.local
