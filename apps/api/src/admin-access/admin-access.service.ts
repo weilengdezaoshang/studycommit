@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common'
-import { ADMIN_ERROR, ADMIN_ROLE_LEVEL, type AdminRole } from './admin-access.constants'
+import { ADMIN_ERROR, ADMIN_ROLE, ADMIN_ROLE_LEVEL, type AdminRole } from './admin-access.constants'
 import { AdminAccessRepository } from './admin-access.repository'
 
 /** 请求上已由 AdminGuard 注入的管理身份。 */
@@ -48,8 +48,17 @@ export class AdminAccessService {
     if (!target) {
       throw new BadRequestException(ADMIN_ERROR.userNotFound)
     }
-    const before = await this.repository.findRoleByUserId(input.targetUserId)
     return this.repository.transaction(async (tx) => {
+      await this.repository.lockRoleGrantsInTx(tx)
+      const superAdmins = await this.repository.lockSuperAdminRolesInTx(tx)
+      const before = await this.repository.lockRoleByUserIdInTx(tx, input.targetUserId)
+      if (
+        before === ADMIN_ROLE.superAdmin &&
+        input.role !== ADMIN_ROLE.superAdmin &&
+        superAdmins.length <= 1
+      ) {
+        throw new BadRequestException(ADMIN_ERROR.lastSuperAdmin)
+      }
       await this.repository.upsertRoleInTx(tx, {
         userId: input.targetUserId,
         role: input.role,

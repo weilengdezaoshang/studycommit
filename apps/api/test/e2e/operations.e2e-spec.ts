@@ -333,4 +333,93 @@ describe('运营活动与管理权限 API', () => {
     // ai.enabled 取决于套件执行顺序(计费 e2e 会开启),只验证聚合结构。
     expect(typeof overview.json().ai.enabled).toBe('boolean')
   })
+
+  it('拒绝把最后一名超级管理员降级为其他角色', async () => {
+    const token = await adminToken()
+    const supers = await pool.query(
+      `select user_id from admin_roles where role = 'super_admin' order by user_id`,
+    )
+    if (supers.rows.length !== 1) {
+      expect(supers.rows.length).toBeGreaterThan(1)
+      return
+    }
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/admin/roles',
+      payload: {
+        userId: supers.rows[0].user_id,
+        role: 'viewer',
+        reason: 'e2e 尝试降级最后一名超管',
+      },
+      headers: { authorization: `Bearer ${token}` },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error?.code ?? response.json().code).toBe('ADMIN_LAST_SUPER_ADMIN')
+    expect(String(response.json().error?.message ?? response.json().message)).toContain(
+      '不能降级最后一名超级管理员',
+    )
+    const still = await pool.query(`select role from admin_roles where user_id = $1`, [
+      supers.rows[0].user_id,
+    ])
+    expect(still.rows[0].role).toBe('super_admin')
+  })
+
+  it('两名超管并发降级后仍保留至少一名', async () => {
+    const tokenA = await adminToken()
+    const accountB = `e2e_super_b_${randomUUID().slice(0, 8)}`
+    await registerAndLogin(accountB)
+    const userA = await pool.query(
+      `select u.id from users u join auth_identities i on i.user_id = u.id where i.provider_subject = $1`,
+      [adminAccount],
+    )
+    const userB = await pool.query(
+      `select u.id from users u join auth_identities i on i.user_id = u.id where i.provider_subject = $1`,
+      [accountB],
+    )
+    const grantB = await app.inject({
+      method: 'POST',
+      url: '/api/admin/roles',
+      payload: { userId: userB.rows[0].id, role: 'super_admin', reason: 'e2e 第二名超管' },
+      headers: { authorization: `Bearer ${tokenA}` },
+    })
+    expect(grantB.statusCode).toBe(200)
+    const others = await pool.query(
+      `select user_id from admin_roles where role = 'super_admin' and user_id not in ($1, $2)`,
+      [userA.rows[0].id, userB.rows[0].id],
+    )
+    await pool.query(
+      `update admin_roles set role = 'publisher' where role = 'super_admin' and user_id not in ($1, $2)`,
+      [userA.rows[0].id, userB.rows[0].id],
+    )
+    try {
+      const tokenB = await registerAndLogin(accountB)
+      const [demoteA, demoteB] = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: '/api/admin/roles',
+          payload: { userId: userA.rows[0].id, role: 'publisher', reason: 'e2e 并发降级 A' },
+          headers: { authorization: `Bearer ${tokenB}` },
+        }),
+        app.inject({
+          method: 'POST',
+          url: '/api/admin/roles',
+          payload: { userId: userB.rows[0].id, role: 'publisher', reason: 'e2e 并发降级 B' },
+          headers: { authorization: `Bearer ${tokenA}` },
+        }),
+      ])
+      const remaining = await pool.query(
+        `select count(*)::int as count from admin_roles
+         where role = 'super_admin' and user_id in ($1, $2)`,
+        [userA.rows[0].id, userB.rows[0].id],
+      )
+      expect(remaining.rows[0].count).toBeGreaterThanOrEqual(1)
+      expect([demoteA.statusCode, demoteB.statusCode].every((code) => code === 200)).toBe(false)
+    } finally {
+      for (const row of others.rows) {
+        await pool.query(`update admin_roles set role = 'super_admin' where user_id = $1`, [
+          row.user_id,
+        ])
+      }
+    }
+  })
 })

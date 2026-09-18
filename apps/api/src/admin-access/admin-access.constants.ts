@@ -31,4 +31,8 @@ export const ADMIN_ERROR = {
   unauthenticated: { code: 'UNAUTHENTICATED', message: '缺少有效管理身份' },
   forbidden: { code: 'ADMIN_FORBIDDEN', message: '当前管理身份无权执行该操作' },
   userNotFound: { code: 'ADMIN_USER_NOT_FOUND', message: '目标用户不存在' },
+  lastSuperAdmin: {
+    code: 'ADMIN_LAST_SUPER_ADMIN',
+    message: '不能降级最后一名超级管理员',
+  },
 } as const
