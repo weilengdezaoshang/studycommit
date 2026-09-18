@@ -27,4 +27,23 @@ apps/desktop/playwright-report/
 
 # 设计产物与本地工具目录不提交
 docs/prd/
+docs/design/
+docs/prototypes/
+output/
 tools/
+ARCHITECTURE.html
+
+apps/miniprogram/release-output/
+
+# tesseract.js 会把语言模型下载到桌面端 cwd，不提交这些副本
+apps/desktop/*.traineddata
+
+# 由构建脚本生成的内联 bundle
+packages/puzzle-ui/mobile/bundle.ts
+packages/puzzle-ui/mobile/.build/
+apps/mobile/src/components/rich-editor-bundle.ts
+apps/mobile/editor-web/.build/
+
+# 本地临时诊断文件
+*.tmp.mts
+*.tsbuildinfo
