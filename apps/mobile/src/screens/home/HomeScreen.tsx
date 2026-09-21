@@ -1,7 +1,10 @@
+import { CaptureEntry } from '../../components/notebook/CaptureEntry'
+import { paperTypography } from '../../theme/paper-typography'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import {
   Alert,
+  AccessibilityInfo,
   Animated,
   Easing,
   Pressable,
@@ -13,8 +16,9 @@ import {
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
-import { paperColors, questionFoldStyle } from '../../features/papers/paper-visual'
+import { Notebook } from './Notebook'
+import { motion, lightColors, typography } from '@studycommit/design-tokens'
+import { paperColors } from '../../features/papers/paper-visual'
 import { papersActions, usePapersState } from '../../features/papers/papers-store'
 import { resetPapersStore } from '../../features/papers/papers-store'
 import { useAuthSession, clearAuthSession } from '../../infrastructure/auth/session-store'
@@ -29,7 +33,7 @@ import type { RootStackParamList } from '../../navigation/navigation.types'
 
 const WEEKDAY_LABELS = ['一', '二', '三', '四', '五', '六', '日']
 const VISIBLE_TOPIC_COUNT = 4
-const DRAWER_MAX_WIDTH = 280
+const DRAWER_MAX_WIDTH = 360
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>
 
@@ -45,6 +49,23 @@ export function HomeScreen() {
   const [wheelDraft, setWheelDraft] = useState({ year: cursor.year, month: cursor.month })
   const [drawerAnim] = useState(() => new Animated.Value(0))
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
+  const [dateFilter, setDateFilter] = useState<string | null>(null)
+  const [reducedMotion, setReducedMotion] = useState(true)
+  useEffect(() => {
+    let active = true
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then((value) => {
+        if (active) {
+          setReducedMotion(value)
+        }
+      })
+      .catch(() => undefined)
+    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion)
+    return () => {
+      active = false
+      listener.remove()
+    }
+  }, [])
 
   const vm = useMemo(
     () => buildHomeViewModel(state, selectedDateKey, cursor, selectedTopicId),
@@ -55,7 +76,7 @@ export function HomeScreen() {
     setDrawerOpen(true)
     Animated.timing(drawerAnim, {
       toValue: 1,
-      duration: 240,
+      duration: reducedMotion ? 0 : motion.durationNormal,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start()
@@ -64,11 +85,13 @@ export function HomeScreen() {
   const closeDrawer = () => {
     Animated.timing(drawerAnim, {
       toValue: 0,
-      duration: 200,
+      duration: reducedMotion ? 0 : motion.durationFast,
       easing: Easing.in(Easing.cubic),
       useNativeDriver: true,
-    }).start(() => {
-      setDrawerOpen(false)
+    }).start(({ finished }) => {
+      if (finished) {
+        setDrawerOpen(false)
+      }
     })
   }
 
@@ -77,34 +100,45 @@ export function HomeScreen() {
   /** 抽屉点箱子:筛选首页时间流;再次点同一箱子取消筛选(PRD §5.4)。 */
   const handleSelectTopic = (topicId: string) => {
     setSelectedTopicId((current) => (current === topicId ? null : topicId))
+    setDateFilter(null)
     closeDrawer()
   }
 
-  const filterLabel =
-    selectedTopicId === INBOX_TOPIC_ID
-      ? '待整理'
-      : (vm.topicRows.find((row) => row.id === selectedTopicId)?.name ?? '')
-
   return (
     <View style={[styles.page, { paddingTop: insets.top }]}>
-      <HomeHeader title={vm.monthTitle} weekSummary={vm.weekSummary} onOpenDrawer={openDrawer} />
-      {selectedTopicId ? (
-        <View style={styles.filterRow}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`清除筛选，当前为${filterLabel}`}
-            onPress={() => setSelectedTopicId(null)}
-            style={styles.filterChip}
-          >
-            <Text style={styles.filterChipText}>{filterLabel}</Text>
-            <Ionicons name="close" size={12} color={paperColors.paper} />
-          </Pressable>
-        </View>
-      ) : null}
-      <WeekStrip days={vm.weekDays} onSelect={(dateKey) => setSelectedDateKey(dateKey)} />
-      <Timeline vm={vm} onOpenPaper={openPaper} />
-      <Fab onPress={() => navigation.navigate('NoteEditor')} />
+      <HomeHeader onOpenDrawer={openDrawer} />
+      <Notebook
+        showCreate={!__DEV__}
+        vm={vm}
+        date={dateFilter}
+        topicId={selectedTopicId}
+        bottom={insets.bottom}
+        onClear={() => {
+          setDateFilter(null)
+          setSelectedTopicId(null)
+        }}
+        onCreate={() => navigation.navigate('NoteEditor')}
+        onOpen={openPaper}
+        onExplain={(paperId) => navigation.navigate('Agent', { paperId })}
+      />
 
+      {__DEV__ && (
+        <CaptureEntry
+          onSelect={(mode) =>
+            mode === 'text'
+              ? navigation.navigate('NoteEditor')
+              : navigation.navigate('Capture', { mode })
+          }
+        />
+      )}
+      {__DEV__ && (
+        <Pressable
+          accessibilityLabel="图片页面设计预览"
+          onPress={() => navigation.navigate('CaptureDesign')}
+        >
+          <Text style={{ color: paperColors.muted, textAlign: 'center' }}>图片页面设计预览</Text>
+        </Pressable>
+      )}
       {drawerOpen && (
         <Pressable style={styles.scrim} onPress={closeDrawer} accessibilityLabel="关闭学习抽屉">
           <View />
@@ -155,6 +189,7 @@ export function HomeScreen() {
       )}
       {drawerOpen && (
         <Animated.View
+          accessibilityViewIsModal
           style={[
             styles.drawer,
             {
@@ -170,57 +205,106 @@ export function HomeScreen() {
             },
           ]}
         >
-          <DrawerProfile
-            onSearch={() => {
-              closeDrawer()
-              navigation.navigate('Search')
-            }}
-            onClose={closeDrawer}
-          />
-          <MonthNav
-            label={vm.monthNavLabel}
-            onPrev={() => setCursor(shiftDateKeyCursor(cursor, -1))}
-            onNext={() => setCursor(shiftDateKeyCursor(cursor, 1))}
-            onOpenReview={() => {
-              closeDrawer()
-              navigation.navigate('Review')
-            }}
-          />
-          <CalendarGrid
-            weeks={vm.monthWeeks}
-            onSelectDate={(dateKey) => {
-              setSelectedDateKey(dateKey)
-              closeDrawer()
-            }}
-          />
-          <Legend />
-          <TopicSection
-            vm={vm}
-            selectedTopicId={selectedTopicId}
-            onSelectTopic={handleSelectTopic}
-            onCreateTopic={() => {
-              void papersActions
-                .createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
-                .then((topic) => {
+          <DrawerProfile onClose={closeDrawer} />
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <DrawerRow
+              icon="book-outline"
+              label="记录本"
+              count={0}
+              selected={!selectedTopicId && !dateFilter}
+              onPress={() => {
+                setDateFilter(null)
+                setSelectedTopicId(null)
+                closeDrawer()
+              }}
+            />
+            <DrawerRow
+              icon="search-outline"
+              label="搜索"
+              count={0}
+              selected={false}
+              onPress={() => {
+                closeDrawer()
+                navigation.navigate('Search')
+              }}
+            />
+            <AttentionSection
+              vm={vm}
+              selectedTopicId={selectedTopicId}
+              onSelectTopic={handleSelectTopic}
+              onOpenProblems={() => {
+                closeDrawer()
+                navigation.navigate('Problems')
+              }}
+            />
+            <TopicSection
+              vm={vm}
+              selectedTopicId={selectedTopicId}
+              onSelectTopic={handleSelectTopic}
+              onCreateTopic={() => {
+                void papersActions
+                  .createTopic(`未命名的知识 ${vm.topicRows.length + 1}`)
+                  .then((topic) => {
+                    closeDrawer()
+                    navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
+                  })
+                  .catch(() => undefined)
+              }}
+              onViewAll={() => {
+                closeDrawer()
+                navigation.navigate('Topics')
+              }}
+            />
+
+            <View style={styles.calendarSection}>
+              <MonthNav
+                label={vm.monthNavLabel}
+                onPrev={() => setCursor(shiftDateKeyCursor(cursor, -1))}
+                onNext={() => setCursor(shiftDateKeyCursor(cursor, 1))}
+                onOpenMonth={() => {
+                  setWheelDraft({ year: cursor.year, month: cursor.month })
+                  setWheelOpen(true)
+                }}
+              />
+              <CalendarGrid
+                weeks={vm.monthWeeks}
+                onSelectDate={(dateKey) => {
+                  setSelectedDateKey(dateKey)
+                  setDateFilter(dateKey)
                   closeDrawer()
-                  navigation.navigate('Collection', { mode: 'box', topicId: topic.id })
-                })
-                .catch(() => undefined)
-            }}
-            onViewAll={() => {
-              closeDrawer()
-              navigation.navigate('Topics')
-            }}
-          />
-          <AttentionSection
-            vm={vm}
-            selectedTopicId={selectedTopicId}
-            onSelectTopic={handleSelectTopic}
-            onOpenProblems={() => {
-              closeDrawer()
-              navigation.navigate('Problems')
-            }}
-          />
+                }}
+              />
+              <View style={styles.monthSummary}>
+                <Text style={styles.monthSummaryText}>
+                  本月 {vm.monthWeeks.flat().reduce((total, day) => total + day.count, 0)} 条记录 ·{' '}
+                  {vm.monthWeeks.flat().filter((day) => day.count > 0).length} 天留下想法
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setDateFilter(selectedDateKey)
+                    closeDrawer()
+                  }}
+                  style={styles.summaryAction}
+                >
+                  <Text style={styles.monthSummaryText}>
+                    {Number(selectedDateKey.slice(5, 7))}月{Number(selectedDateKey.slice(8))}日
+                  </Text>
+                  <Text style={styles.monthSummaryText}>查看记录 →</Text>
+                </Pressable>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  closeDrawer()
+                  navigation.navigate('Review')
+                }}
+                style={styles.summaryAction}
+              >
+                <Text style={styles.monthSummaryText}>查看月度装订 →</Text>
+              </Pressable>
+            </View>
+          </ScrollView>
         </Animated.View>
       )}
     </View>
@@ -239,21 +323,13 @@ function toDateKeyFromDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-function HomeHeader({
-  title,
-  weekSummary,
-  onOpenDrawer,
-}: {
-  title: string
-  weekSummary: string
-  onOpenDrawer: () => void
-}) {
+function HomeHeader({ onOpenDrawer }: { onOpenDrawer: () => void }) {
   return (
     <View style={styles.header}>
       <IconButton name="menu" label="打开学习抽屉" onPress={onOpenDrawer} />
       <View style={styles.headerCenter}>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <Text style={styles.headerSummary}>本周纸页 · {weekSummary}</Text>
+        <Ionicons name="book-outline" size={24} color={paperColors.ink} />
+        <Text style={styles.headerTitle}>StudyCommit</Text>
       </View>
       <View style={styles.headerSpacer} />
     </View>
@@ -285,98 +361,6 @@ function IconButton({
     >
       <Ionicons name={name} size={iconSize} color={color} />
     </Pressable>
-  )
-}
-
-function WeekStrip({
-  days,
-  onSelect,
-}: {
-  days: HomeViewModel['weekDays']
-  onSelect: (dateKey: string) => void
-}) {
-  return (
-    <View style={styles.weekStrip}>
-      {days.map((day, index) => (
-        <Pressable
-          key={day.dateKey}
-          accessibilityLabel={`${day.dateKey},${day.count} 张纸页`}
-          accessibilityRole="button"
-          onPress={() => onSelect(day.dateKey)}
-          style={[styles.weekDay, day.isSelected && styles.weekDaySelected]}
-        >
-          <Text style={styles.weekDayLabel}>{day.isToday ? '今天' : WEEKDAY_LABELS[index]}</Text>
-          <View style={styles.paperVisual}>
-            {day.count === 0 ? (
-              <View style={styles.paperDot} />
-            ) : (
-              day.stack.map((layer) => (
-                <View
-                  key={layer}
-                  style={[
-                    styles.paperSheet,
-                    { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
-                  ]}
-                />
-              ))
-            )}
-            {day.hasMore && (
-              <View style={styles.stackMore}>
-                <Text style={styles.stackMoreText}>3+</Text>
-              </View>
-            )}
-          </View>
-        </Pressable>
-      ))}
-    </View>
-  )
-}
-
-function Timeline({ vm, onOpenPaper }: { vm: HomeViewModel; onOpenPaper: (id: string) => void }) {
-  if (vm.papersOfDate.length === 0) {
-    return (
-      <View style={styles.emptyDay}>
-        <PaperEmptyIllustration />
-        <Text style={styles.emptyTitle}>这天还没有纸页</Text>
-        <Text style={styles.emptyCopy}>空白只是留白，不是中断。</Text>
-      </View>
-    )
-  }
-  return (
-    <ScrollView
-      contentContainerStyle={[styles.timeline, styles.timelineBody]}
-      showsVerticalScrollIndicator={false}
-    >
-      {vm.papersOfDate.length > 0 && <View style={styles.timelineRailLine} />}
-      {vm.papersOfDate.map((entry) => (
-        <View key={entry.paper.id} style={styles.timelineEntry}>
-          <View style={styles.timelineMarker}>
-            <View style={styles.timelineDot} />
-          </View>
-          <View style={styles.timelineMain}>
-            <Text style={styles.timelineTime}>{entry.timeLabel}</Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`${entry.paper.content}${entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved ? ',仍有未解决的问题' : ''}`}
-              onPress={() => onOpenPaper(entry.paper.id)}
-              style={({ pressed }) => [
-                styles.paperCard,
-                { borderLeftColor: entry.topicColor },
-                pressed && styles.paperCardPressed,
-              ]}
-            >
-              {entry.paper.extra.hasQuestion && !entry.paper.extra.isQuestionResolved && (
-                <View style={questionFoldStyle.fold} aria-label="仍有未解决的问题" />
-              )}
-              <Text style={styles.paperContent}>{entry.paper.content}</Text>
-              <View style={styles.paperMeta}>
-                <Text style={styles.paperLabel}>{entry.topicName}</Text>
-              </View>
-            </Pressable>
-          </View>
-        </View>
-      ))}
-    </ScrollView>
   )
 }
 
@@ -442,20 +426,7 @@ function WheelColumn({
   )
 }
 
-function Fab({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityLabel="记下一张纸页"
-      accessibilityRole="button"
-      onPress={onPress}
-      style={styles.fab}
-    >
-      <Ionicons name="add" size={28} color={paperColors.action} />
-    </Pressable>
-  )
-}
-
-function DrawerProfile({ onSearch, onClose }: { onSearch: () => void; onClose: () => void }) {
+function DrawerProfile({ onClose }: { onClose: () => void }) {
   const session = useAuthSession()
   const nickname = session?.user.nickname?.trim() || '我的学习'
   const avatarText = nickname.slice(0, 2)
@@ -480,17 +451,13 @@ function DrawerProfile({ onSearch, onClose }: { onSearch: () => void; onClose: (
       <View style={styles.avatar}>
         <Text style={styles.avatarText}>{avatarText}</Text>
       </View>
-      <Text style={styles.profileName} numberOfLines={1} ellipsizeMode="tail">
-        {nickname}
-      </Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.profileName} numberOfLines={1}>
+          {nickname}
+        </Text>
+        <Text style={styles.monthSummaryText}>{session ? '已登录' : '本地记录'}</Text>
+      </View>
       <View style={styles.drawerActions}>
-        <IconButton
-          name="search"
-          label="搜索记录、疑问或主题"
-          onPress={onSearch}
-          iconSize={16}
-          buttonSize={32}
-        />
         <IconButton
           name="log-out-outline"
           label="退出登录"
@@ -514,12 +481,12 @@ function MonthNav({
   label,
   onPrev,
   onNext,
-  onOpenReview,
+  onOpenMonth,
 }: {
   label: string
   onPrev: () => void
   onNext: () => void
-  onOpenReview: () => void
+  onOpenMonth: () => void
 }) {
   return (
     <View style={styles.monthNav}>
@@ -528,23 +495,25 @@ function MonthNav({
         label="上一个月"
         onPress={onPrev}
         iconSize={14}
-        buttonSize={16}
+        buttonSize={44}
         color={paperColors.mutedSoft}
       />
-      <Text style={styles.monthLabel}>{label}</Text>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="选择年月"
+        onPress={onOpenMonth}
+        style={{ flex: 1, minHeight: 44, justifyContent: 'center' }}
+      >
+        <Text style={styles.monthLabel}>{label}</Text>
+      </Pressable>
       <IconButton
         name="chevron-forward"
         label="下一个月"
         onPress={onNext}
         iconSize={14}
-        buttonSize={16}
+        buttonSize={44}
         color={paperColors.mutedSoft}
       />
-      <View style={styles.monthNavSpacer} />
-      <Pressable accessibilityRole="button" onPress={onOpenReview} style={styles.reviewLink}>
-        <Text style={styles.reviewLinkText}>查看装订</Text>
-        <Ionicons name="chevron-forward" size={11} color={paperColors.mutedFaint} />
-      </Pressable>
     </View>
   )
 }
@@ -578,70 +547,26 @@ function CalendarGrid({
                 onPress={() => onSelectDate(cell.dateKey)}
                 style={[styles.calendarCell, cell.isSelected && styles.calendarCellSelected]}
               >
-                {cell.count > 0 ? (
-                  <View style={styles.calendarPaperVisual}>
-                    {Array.from({ length: Math.min(cell.count, 3) }, (_, layer) => {
-                      const base = 2.5 - (Math.min(cell.count, 3) - 1)
-                      return (
-                        <View
-                          key={layer}
-                          style={[
-                            styles.calendarPaper,
-                            {
-                              transform: [
-                                { translateX: base + layer * 2 },
-                                { translateY: base + layer * 2 },
-                              ],
-                            },
-                          ]}
-                        />
-                      )
-                    })}
-                  </View>
-                ) : (
-                  <View style={styles.paperDot} />
+                <Text style={{ color: cell.isSelected ? paperColors.action : paperColors.ink }}>
+                  {Number(cell.dateKey.slice(8))}
+                </Text>
+                {cell.count > 0 && (
+                  <View
+                    style={{
+                      height: 3,
+                      width: cell.count === 1 ? 8 : cell.count < 5 ? 16 : 24,
+                      backgroundColor: paperColors.lineStrong,
+                      marginTop: 3,
+                    }}
+                  />
                 )}
               </Pressable>
             ),
           )}
         </View>
       ))}
-      <View style={styles.legend}>
-        <Text style={styles.legendText}>少</Text>
-        <View style={styles.legendDot} />
-        <View style={styles.calendarPaperVisual}>
-          <View style={styles.calendarPaper} />
-        </View>
-        <View style={styles.calendarPaperVisual}>
-          {[0, 1].map((layer) => (
-            <View
-              key={layer}
-              style={[
-                styles.calendarPaper,
-                { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
-              ]}
-            />
-          ))}
-        </View>
-        <View style={styles.calendarPaperVisual}>
-          {[0, 1, 2].map((layer) => (
-            <View
-              key={layer}
-              style={[
-                styles.calendarPaper,
-                { transform: [{ translateX: -layer * 2 }, { translateY: layer * 2 }] },
-              ]}
-            />
-          ))}
-        </View>
-        <Text style={styles.legendText}>多</Text>
-      </View>
     </View>
   )
-}
-
-function Legend() {
-  return null
 }
 
 function TopicSection({
@@ -662,7 +587,7 @@ function TopicSection({
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeading}>
-        <Text style={styles.sectionTitle}>我的箱子</Text>
+        <Text style={styles.sectionTitle}>我的主题</Text>
         <Pressable
           accessibilityLabel="新建箱子并打开"
           accessibilityRole="button"
@@ -675,7 +600,7 @@ function TopicSection({
       {visible.map((row) => (
         <DrawerRow
           key={row.id}
-          icon="archive-outline"
+          icon="pricetag-outline"
           label={row.name}
           count={row.count}
           selected={selectedTopicId === row.id}
@@ -703,20 +628,17 @@ function AttentionSection({
   onOpenProblems: () => void
 }) {
   return (
-    <View style={styles.section}>
-      <View style={styles.sectionHeading}>
-        <Text style={styles.sectionTitle}>需要留意</Text>
-      </View>
+    <View>
       <DrawerRow
         icon="file-tray-outline"
-        label="待整理的纸页"
+        label="待整理"
         count={vm.inboxCount}
         selected={selectedTopicId === INBOX_TOPIC_ID}
         onPress={() => onSelectTopic(INBOX_TOPIC_ID)}
       />
       <DrawerRow
         icon="bulb-outline"
-        label="还在思考的问题"
+        label="还在思考"
         count={vm.problemCount}
         selected={false}
         onPress={onOpenProblems}
@@ -741,7 +663,7 @@ function DrawerRow({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label},${count}`}
+      accessibilityLabel={count > 0 ? `${label},${count}` : label}
       onPress={onPress}
       style={({ pressed }) => [
         styles.drawerRow,
@@ -749,152 +671,44 @@ function DrawerRow({
         pressed && styles.drawerRowPressed,
       ]}
     >
-      <Ionicons name={icon} size={16} color={paperColors.muted} />
+      <Ionicons name={icon} size={24} color={paperColors.action} />
       <Text style={styles.drawerRowLabel}>{label}</Text>
-      <View style={styles.countPill}>
-        <Text style={styles.countPillText}>{count > 99 ? '99+' : count}</Text>
-      </View>
+      {count > 0 && (
+        <View style={styles.countPill}>
+          <Text style={styles.countPillText}>{count > 99 ? '99+' : count}</Text>
+        </View>
+      )}
+      <Ionicons name="chevron-forward" size={18} color={paperColors.ink} />
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: paperColors.paper },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, marginTop: 4 },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-  headerTitle: { color: paperColors.ink, fontSize: 18, fontWeight: '600' },
-  headerSummary: { color: paperColors.muted, fontSize: 12 },
-  headerSpacer: { width: 44 },
-  filterRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-    flexDirection: 'row',
-  },
-  filterChip: {
+  page: { flex: 1, backgroundColor: paperColors.selectedSurface },
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    minHeight: 28,
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    backgroundColor: paperColors.action,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: paperColors.paper,
+    borderBottomWidth: 1,
+    borderBottomColor: paperColors.line,
   },
-  filterChipText: { color: paperColors.paper, fontSize: 12, fontWeight: '500' },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerTitle: { color: paperColors.ink, fontSize: 18, lineHeight: 26, ...paperTypography.heading },
+  headerSpacer: { width: 44 },
   iconButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
-  },
-  weekStrip: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    marginTop: 8,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: paperColors.line,
-    paddingBottom: 10,
-  },
-  weekDay: { flex: 1, alignItems: 'center', paddingTop: 6, paddingBottom: 6, borderRadius: 10 },
-  weekDaySelected: { backgroundColor: paperColors.selectedSurface },
-  weekDayLabel: { color: paperColors.muted, fontSize: 11, fontWeight: '500' },
-  paperVisual: {
-    width: 30,
-    height: 28,
-    marginTop: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paperSheet: {
-    position: 'absolute',
-    width: 16,
-    height: 20,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: paperColors.lineStrong,
-    backgroundColor: paperColors.paper,
-  },
-  paperDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: paperColors.mutedFaint },
-  stackMore: {
-    position: 'absolute',
-    top: -4,
-    right: 0,
-    minWidth: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: paperColors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  stackMoreText: { color: paperColors.paper, fontSize: 8, lineHeight: 14 },
-  timelineScroll: { flex: 1 },
-  timeline: { paddingTop: 6, paddingHorizontal: 16, paddingBottom: 24 },
-  timelineBody: { position: 'relative' },
-  timelineRailLine: {
-    position: 'absolute',
-    left: 21,
-    top: 8,
-    bottom: 22,
-    width: 2,
-    backgroundColor: paperColors.timeline,
-  },
-  timelineEntry: { flexDirection: 'row', marginBottom: 20 },
-  timelineMarker: { width: 12, alignItems: 'center' },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: paperColors.action,
-    backgroundColor: paperColors.paper,
-    marginTop: 2,
-  },
-  timelineMain: { flex: 1, paddingLeft: 8 },
-  timelineTime: { color: paperColors.muted, fontSize: 12, marginBottom: 6 },
-  paperCard: {
-    minHeight: 66,
-    backgroundColor: paperColors.surfaceSoft,
-    borderColor: paperColors.line,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 8,
-    padding: 12,
-    paddingLeft: 14,
-    overflow: 'hidden',
-  },
-  cardTag: { position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, borderRadius: 2 },
-  paperCardPressed: { backgroundColor: paperColors.selectedSurface },
-  paperContent: { color: paperColors.ink, fontSize: 14, lineHeight: 21, paddingRight: 4 },
-  paperMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
-  paperLabel: { color: paperColors.muted, fontSize: 11 },
-  paperHint: { color: paperColors.action, fontSize: 11, fontWeight: '500' },
-  emptyDay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    padding: 24,
-    paddingBottom: 96,
-  },
-  emptyTitle: { color: paperColors.ink, fontSize: 16, fontWeight: '600' },
-  emptyCopy: { color: paperColors.muted, fontSize: 13, marginTop: 8 },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 28,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: paperColors.actionSurface,
-    borderColor: paperColors.lineStrong,
-    borderWidth: StyleSheet.hairlineWidth,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: paperColors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
   },
   scrim: {
     position: 'absolute',
@@ -909,7 +723,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     left: 0,
-    width: '72%',
+    width: '88%',
     maxWidth: DRAWER_MAX_WIDTH,
     backgroundColor: paperColors.paper,
     borderRightWidth: StyleSheet.hairlineWidth,
@@ -917,11 +731,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
   },
-  drawerProfile: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  calendarSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: paperColors.line,
+  },
+  monthSummary: {
+    backgroundColor: paperColors.selectedSurface,
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  monthSummaryText: { color: paperColors.action, fontSize: 14, lineHeight: 24 },
+  summaryAction: {
+    minHeight: 44,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  drawerProfile: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: paperColors.accent,
     borderWidth: 2,
     borderColor: paperColors.ink,
@@ -929,13 +762,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: { color: paperColors.ink, fontSize: 13, fontStyle: 'italic', fontWeight: '600' },
-  profileName: { color: paperColors.ink, fontSize: 14, fontWeight: '500', flex: 1 },
+  profileName: { color: paperColors.ink, ...typography.subheading, fontWeight: '600' },
   drawerActions: { flexDirection: 'row' },
   monthNav: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   monthLabel: {
     color: paperColors.mutedSoft,
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 18,
+    lineHeight: 26,
+    ...paperTypography.drawer,
+    textAlign: 'center',
     marginHorizontal: 2,
   },
   wheelOverlay: {
@@ -975,9 +810,6 @@ const styles = StyleSheet.create({
   wheelItemText: { color: paperColors.muted, fontSize: 15 },
   wheelItemTextSelected: { color: paperColors.ink, fontSize: 17, fontWeight: '600' },
   wheelHint: { color: paperColors.mutedFaint, fontSize: 11, textAlign: 'center', paddingTop: 6 },
-  monthNavSpacer: { flex: 1 },
-  reviewLink: { flexDirection: 'row', alignItems: 'center', gap: 2, marginLeft: 4 },
-  reviewLinkText: { color: paperColors.mutedFaint, fontSize: 11 },
   weekdayRow: { flexDirection: 'row' },
   weekdayCell: {
     flex: 1,
@@ -989,7 +821,7 @@ const styles = StyleSheet.create({
   calendarRow: { flexDirection: 'row' },
   calendarCell: {
     flex: 1,
-    height: 36,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
@@ -999,58 +831,49 @@ const styles = StyleSheet.create({
     borderColor: paperColors.action,
     backgroundColor: paperColors.actionSurface,
   },
-  calendarPaperVisual: { width: 22, height: 26, alignItems: 'center', justifyContent: 'center' },
-  calendarPaper: {
-    position: 'absolute',
-    width: 14,
-    height: 18,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: paperColors.lineStrong,
-    backgroundColor: paperColors.paper,
+  section: {
+    marginTop: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: paperColors.line,
   },
-  legend: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 5,
-    marginTop: 6,
-  },
-  legendText: { color: paperColors.muted, fontSize: 10 },
-  legendDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: paperColors.mutedFaint },
-  legendPaper: {
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: paperColors.lineStrong,
-    backgroundColor: paperColors.paper,
-  },
-  section: { marginTop: 10 },
   sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 40,
   },
-  sectionTitle: { color: paperColors.mutedSoft, fontSize: 12, flex: 1 },
+  sectionTitle: {
+    color: paperColors.action,
+    ...typography.bodySmall,
+    ...paperTypography.drawer,
+    flex: 1,
+  },
   sectionAction: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   drawerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: 44,
-    borderRadius: 10,
-    paddingHorizontal: 2,
+    minHeight: 52,
+    borderRadius: 8,
+    paddingHorizontal: 12,
   },
   drawerRowSelected: { backgroundColor: paperColors.actionSurfaceStrong },
   drawerRowPressed: { backgroundColor: paperColors.selectedSurface },
-  drawerRowLabel: { flex: 1, color: paperColors.ink, fontSize: 13 },
+  drawerRowLabel: {
+    flex: 1,
+    color: paperColors.ink,
+    ...typography.body,
+    ...paperTypography.drawer,
+  },
   countPill: {
     minWidth: 20,
     height: 20,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: paperColors.lineStrong,
-    backgroundColor: paperColors.actionSurfaceStrong,
+    backgroundColor: lightColors.warningSurface,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,

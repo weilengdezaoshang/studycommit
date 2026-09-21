@@ -5,6 +5,7 @@ import type {
   AiApi,
   LearningLogApi,
   PaperApi,
+  PuzzleApi,
   ReviewApi,
   SearchApi,
   StudySessionApi,
@@ -25,6 +26,7 @@ export interface MobileServices {
   topics: TopicMutationApi
   learningLogs: LearningLogApi
   papers: PaperApi
+  puzzles?: PuzzleApi
   ai: AiApi
   uploads: UploadsApi
   reviews: ReviewApi
@@ -110,8 +112,11 @@ function createUnavailableServices(error: HttpError): MobileServices {
       updateQuestion: reject,
       restore: reject,
     },
+    puzzles: { album: reject, selectArtwork: reject, reveal: reject, featureArtwork: reject },
     ai: {
-      explainPaper: reject,
+      quote: reject,
+      explainRun: reject,
+      getRun: reject,
       confirmPaperExplain: reject,
     },
     uploads: {

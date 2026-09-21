@@ -13,7 +13,10 @@ export function clearAssetUrlCache(): void {
   cache.clear()
 }
 
-export async function resolveAssetUrl(assetId: string, uploads: UploadsApi): Promise<string | null> {
+export async function resolveAssetUrl(
+  assetId: string,
+  uploads: UploadsApi,
+): Promise<string | null> {
   const hit = cache.get(assetId)
   if (hit && hit.expiresAt - EXPIRY_SAFETY_MS > Date.now()) {
     return hit.url

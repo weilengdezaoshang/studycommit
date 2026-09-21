@@ -1,3 +1,4 @@
+import { richTextDocumentSchema } from '@studycommit/rpc-contracts/rich-text'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { PaperDraft, PaperDraftStorage } from '@studycommit/common/paper-react'
 
@@ -28,6 +29,7 @@ export function createMobileDraftStorage(
         return {
           paperId: parsed.paperId,
           content: parsed.content,
+          contentDocument: richTextDocumentSchema.safeParse(parsed.contentDocument).data,
           hasQuestion: Boolean(parsed.hasQuestion),
           questionText: typeof parsed.questionText === 'string' ? parsed.questionText : undefined,
           assetUploadIds: parsed.assetUploadIds.filter(

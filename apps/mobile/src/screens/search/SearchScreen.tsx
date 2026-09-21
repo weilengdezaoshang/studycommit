@@ -1,16 +1,32 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- React Native 静态图片资源由 Metro require 解析 */
+import { useEffect, useState } from 'react'
+import { motion, spacing, typography } from '@studycommit/design-tokens'
 import { Ionicons } from '@expo/vector-icons'
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import {
+  AccessibilityInfo,
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useSearchResults } from '@studycommit/common/search-react'
 import { searchRowKey } from '@studycommit/common/search-runtime'
-import { PaperEmptyIllustration } from '../../features/papers/paper-empty-illustration'
+import { paperTypography } from '../../theme/paper-typography'
 import { paperColors } from '../../features/papers/paper-visual'
 import { usePapersState } from '../../features/papers/papers-store'
 import { useMobileServices } from '../../core/MobileServicesProvider'
 
 /** 搜索纸页与箱子:服务端统一搜索(BE-310)优先,失败回退本地过滤;查询逻辑复用公共 Hook。 */
 export function SearchScreen() {
+  const [focused, setFocused] = useState(false)
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const state = usePapersState()
@@ -31,7 +47,10 @@ export function SearchScreen() {
   }
 
   return (
-    <View style={styles.page}>
+    <KeyboardAvoidingView
+      style={styles.page}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <View style={[styles.topBar, { paddingTop: insets.top + 4 }]}>
         <Pressable
           accessibilityRole="button"
@@ -41,14 +60,24 @@ export function SearchScreen() {
         >
           <Ionicons name="chevron-back" size={22} color={paperColors.ink} />
         </Pressable>
-        <Text style={styles.title}>搜索</Text>
+        <Text style={styles.title}>{!focused && !keyword ? 'StudyCommit' : '搜索'}</Text>
         <View style={styles.backButton} />
       </View>
 
+      {!focused && !keyword && (
+        <View style={styles.pageHeading}>
+          <Text accessibilityRole="header" style={styles.headingText}>
+            搜索
+          </Text>
+          <View style={styles.headingUnderline} />
+        </View>
+      )}
       <View style={styles.fieldRow}>
         <TextInput
           style={styles.input}
-          autoFocus
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          accessibilityLabel="搜索记录、疑问或主题"
           placeholder="搜索记录、疑问或主题"
           placeholderTextColor={paperColors.mutedFaint}
           value={query}
@@ -67,7 +96,7 @@ export function SearchScreen() {
       </View>
 
       {keyword.length === 0 ? (
-        <Text style={styles.hint}>输入关键词，找回过去的记录（搜索范围为记录、疑问和主题）</Text>
+        <SearchIntro focused={focused} />
       ) : results.length > 0 ? (
         <ScrollView contentContainerStyle={styles.results}>
           {keyword.length > 0 && serverFailed ? (
@@ -98,11 +127,67 @@ export function SearchScreen() {
         </ScrollView>
       ) : (
         <View style={styles.empty}>
-          <PaperEmptyIllustration />
+          {!focused && (
+            <Image
+              source={require('./assets/search-cat.png')}
+              style={styles.cat}
+              resizeMode="contain"
+              accessible={false}
+            />
+          )}
           <Text style={styles.emptyText}>没有找到与「{keyword}」相关的内容</Text>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
+  )
+}
+
+function SearchIntro({ focused }: { focused: boolean }) {
+  const [opacity] = useState(() => new Animated.Value(1))
+  useEffect(() => {
+    let active = true
+    const update = (reduced: boolean) => {
+      if (!active) {
+        return
+      }
+      opacity.stopAnimation()
+      if (reduced) {
+        opacity.setValue(focused ? 0 : 1)
+      } else {
+        Animated.timing(opacity, {
+          toValue: focused ? 0 : 1,
+          duration: motion.durationFast,
+          useNativeDriver: true,
+        }).start()
+      }
+    }
+    void AccessibilityInfo.isReduceMotionEnabled()
+      .then(update)
+      .catch(() => update(true))
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', update)
+    return () => {
+      active = false
+      opacity.stopAnimation()
+      subscription.remove()
+    }
+  }, [focused, opacity])
+  return (
+    <Animated.View
+      style={[styles.empty, { opacity }]}
+      pointerEvents="none"
+      accessibilityElementsHidden={focused}
+      importantForAccessibility={focused ? 'no-hide-descendants' : 'auto'}
+    >
+      <Image
+        source={require('./assets/search-cat.png')}
+        style={styles.cat}
+        resizeMode="contain"
+        accessible={false}
+      />
+      <Text style={styles.introTitle}>找回曾经记下的想法</Text>
+      <View style={styles.underline} />
+      <Text style={styles.hint}>输入关键词，搜索记录与主题。</Text>
+    </Animated.View>
   )
 }
 
@@ -113,11 +198,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 8,
-    height: 52,
+    minHeight: 52,
+    paddingBottom: spacing.sm,
     backgroundColor: paperColors.canvas,
   },
   backButton: { minWidth: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { color: paperColors.muted, fontSize: 14, fontWeight: '500' },
+  title: { color: paperColors.ink, ...typography.heading, fontWeight: '500' },
+  pageHeading: {
+    alignSelf: 'flex-start',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  headingText: {
+    color: paperColors.ink,
+    ...paperTypography.drawer,
+    // 搜索初始态的大标题对应设计稿的文楷展示字，尺寸仅用于本页。
+    fontSize: 56,
+    lineHeight: 68,
+  },
+  headingUnderline: {
+    height: spacing.xs,
+    width: 120,
+    backgroundColor: paperColors.accent,
+    borderRadius: spacing.xs,
+    transform: [{ rotate: '-2deg' }],
+  },
   fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,7 +233,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 40,
+    height: 48,
     borderRadius: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: paperColors.line,
@@ -138,7 +244,16 @@ const styles = StyleSheet.create({
   },
   clearButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },
   clearText: { color: paperColors.muted, fontSize: 13 },
-  hint: { margin: 20, color: paperColors.muted, fontSize: 13, lineHeight: 20 },
+  cat: { width: 160, height: 120 },
+  introTitle: { color: paperColors.ink, ...typography.subheading, textAlign: 'center' },
+  underline: {
+    width: 200,
+    height: 4,
+    backgroundColor: paperColors.accent,
+    borderRadius: 2,
+    transform: [{ rotate: '-2deg' }],
+  },
+  hint: { color: paperColors.muted, ...typography.bodySmall, textAlign: 'center' },
   offlineNote: {
     color: paperColors.mutedFaint,
     fontSize: 11,
@@ -174,6 +289,13 @@ const styles = StyleSheet.create({
   },
   resultTitle: { color: paperColors.muted, fontSize: 12, fontVariant: ['tabular-nums'] },
   resultDetail: { color: paperColors.ink, fontSize: 15, lineHeight: 24 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  empty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
   emptyText: { color: paperColors.muted, fontSize: 14 },
 })

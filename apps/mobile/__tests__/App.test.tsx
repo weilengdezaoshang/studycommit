@@ -1,3 +1,7 @@
+jest.mock('../src/components/RichTextEditor', () =>
+  jest.requireActual('../src/test/mock-rich-editor'),
+)
+
 import { render, screen } from '@testing-library/react-native'
 import App from '../src/App'
 

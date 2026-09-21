@@ -1,6 +1,21 @@
+import { PaperKnowledgeSection } from './PaperKnowledgeSection'
+import { paperTypography } from '../../theme/paper-typography'
+import { spacing, typography, mistLightColors } from '@studycommit/design-tokens'
+import { RichTextReader } from '../../components/RichTextReader'
+import { PaperTransition } from '../../components/PaperTransition'
 import { useEffect, useMemo, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { paperColors } from '../../features/papers/paper-visual'
@@ -26,28 +41,74 @@ export function PaperDetailScreen() {
   )
   const extra = paper ? state.extras[paper.id] : undefined
   const topic = paper?.topicId ? state.topics.find((item) => item.id === paper.topicId) : undefined
-  const { uploads } = useMobileServices()
-  const [remoteImageUrl, setRemoteImageUrl] = useState<string | null>(null)
-  const remoteAsset = paper?.assets?.find((asset) => asset.kind === 'image')
+  const { uploads, papers } = useMobileServices()
+  const [remoteImageUrls, setRemoteImageUrls] = useState<string[]>([])
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null)
+  const remoteAssets = useMemo(() => paper?.assets ?? [], [paper?.assets])
 
   useEffect(() => {
     // 本地预览优先;无本地图且云端有资产时异步换短时地址
-    if (!remoteAsset || extra?.photoPath) {
+    if (!remoteAssets.length || extra?.photoPath) {
       return
     }
     let cancelled = false
-    void resolveAssetUrl(remoteAsset.id, uploads).then((url) => {
-      if (!cancelled && url) {
-        setRemoteImageUrl(url)
-      }
-    })
+    void Promise.all(remoteAssets.map((asset) => resolveAssetUrl(asset.id, uploads))).then(
+      (urls) => {
+        if (!cancelled) {
+          setRemoteImageUrls(urls.filter((url): url is string => Boolean(url)))
+        }
+      },
+    )
     return () => {
       cancelled = true
     }
-  }, [remoteAsset, extra?.photoPath, uploads])
+  }, [extra?.photoPath, remoteAssets, uploads])
 
+  const [loadError, setLoadError] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  useEffect(() => {
+    if (!papers.get) {
+      return
+    }
+    if (paper && paper.contentDocument !== undefined) {
+      return
+    }
+    let active = true
+    void papers
+      .get(route.params.paperId)
+      .then((value) => {
+        if (active) {
+          papersActions.receivePaper(value)
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setLoadError(true)
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [paper, papers, route.params.paperId, loadAttempt])
   if (!paper) {
-    return <View style={styles.page} />
+    return (
+      <View style={[styles.page, { paddingTop: insets.top }]}>
+        <Pressable onPress={() => navigation.goBack()}>
+          <Text>返回记录</Text>
+        </Pressable>
+        <Text>{loadError ? '记录读取失败' : '正在读取记录…'}</Text>
+        {loadError && (
+          <Pressable
+            onPress={() => {
+              setLoadError(false)
+              setLoadAttempt((value) => value + 1)
+            }}
+          >
+            <Text>重试</Text>
+          </Pressable>
+        )}
+      </View>
+    )
   }
 
   // 问题状态以纸页三态为准,旧演示数据缺状态时按侧车布尔兜底
@@ -79,7 +140,7 @@ export function PaperDetailScreen() {
   }
 
   return (
-    <View style={styles.page}>
+    <PaperTransition style={styles.page}>
       <View style={[styles.topBar, { paddingTop: insets.top }]}>
         <Pressable
           accessibilityRole="button"
@@ -89,7 +150,10 @@ export function PaperDetailScreen() {
         >
           <Ionicons name="chevron-back" size={20} color={paperColors.ink} />
         </Pressable>
-        <Text style={styles.title}>纸页</Text>
+        <View style={styles.brand}>
+          <Ionicons name="book-outline" size={26} color={paperColors.ink} />
+          <Text style={styles.title}>StudyCommit</Text>
+        </View>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="整理"
@@ -100,43 +164,51 @@ export function PaperDetailScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.sheet}>
-        <View style={styles.metaRow}>
-          <Text style={styles.time}>
-            {formatDateLabelOf(paper.createdAt)} · {formatTimeOf(paper.createdAt)}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.sheet}>
+          <Text accessibilityRole="header" style={styles.pageHeading}>
+            记录详情
           </Text>
-          {questionStatus !== 'none' && (
-            <View style={styles.stateChip}>
-              <Text style={styles.stateChipText}>
-                {questionStatus === 'resolved' ? '已解决' : '还在思考'}
-              </Text>
-            </View>
+          <View style={styles.metaRow}>
+            <Text style={styles.time}>
+              {formatDateLabelOf(paper.createdAt)} · {formatTimeOf(paper.createdAt)}
+            </Text>
+            <Text style={styles.time}>所属主题：{topic?.name ?? '待整理'}</Text>
+          </View>
+          <Text style={styles.sectionHeading}>当时记下</Text>
+          {paper.contentDocument ? (
+            <RichTextReader key={paper.id + ':' + paper.version} document={paper.contentDocument} />
+          ) : (
+            <Text style={styles.content}>{paper.content}</Text>
           )}
-        </View>
-        {topic && (
-          <View style={styles.topicChip}>
-            <Text style={styles.topicChipText}>{topic.name}</Text>
-          </View>
-        )}
-        <Text style={styles.content}>{paper.content}</Text>
-        {paper.questionText ? (
-          <View style={styles.questionBlock}>
-            <Text style={styles.blockLabel}>当时留下的疑问</Text>
-            <Text style={styles.blockText}>{paper.questionText}</Text>
-          </View>
-        ) : null}
-        {paper.understandingText ? (
-          <View style={styles.understandingBlock}>
-            <Text style={styles.blockLabel}>我的理解</Text>
-            <Text style={styles.blockText}>{paper.understandingText}</Text>
-          </View>
-        ) : null}
-        {extra?.photoPath ? (
-          <Image source={{ uri: extra.photoPath }} style={styles.photoPreview} />
-        ) : remoteImageUrl ? (
-          <Image source={{ uri: remoteImageUrl }} style={styles.photoPreview} />
-        ) : null}
-      </ScrollView>
+          {paper.questionText ? (
+            <View style={styles.questionBlock}>
+              <Text style={styles.questionLabel}>
+                {hasOpenQuestion ? '?  还在思考' : '✓  已解决'}
+              </Text>
+              <Text style={styles.blockText}>{paper.questionText}</Text>
+            </View>
+          ) : null}
+          {(extra?.photoPath ? [extra.photoPath] : remoteImageUrls).map((url, index) => (
+            <Pressable
+              key={url}
+              accessibilityRole="button"
+              accessibilityLabel={`查看第 ${index + 1} 张图片`}
+              onPress={() => setViewerUrl(url)}
+            >
+              <Image source={{ uri: url }} style={styles.photoPreview} />
+            </Pressable>
+          ))}
+          <PaperKnowledgeSection
+            key={paper.id}
+            paperId={paper.id}
+            understanding={paper.understandingText}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {hasOpenQuestion && (
         <View style={[styles.actions, { paddingBottom: insets.bottom + 16 }]}>
@@ -145,10 +217,27 @@ export function PaperDetailScreen() {
             onPress={() => navigation.navigate('Agent', { paperId: paper.id })}
             style={styles.understandButton}
           >
-            <Text style={styles.understandText}>继续弄懂</Text>
+            <Text style={styles.understandText}>继续弄懂 →</Text>
           </Pressable>
         </View>
       )}
+      <Modal
+        visible={Boolean(viewerUrl)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerUrl(null)}
+      >
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="关闭图片查看"
+          style={styles.imageViewer}
+          onPress={() => setViewerUrl(null)}
+        >
+          {viewerUrl ? (
+            <Image source={{ uri: viewerUrl }} resizeMode="contain" style={styles.viewerImage} />
+          ) : null}
+        </Pressable>
+      </Modal>
 
       {manageOpen && (
         <Pressable
@@ -245,7 +334,7 @@ export function PaperDetailScreen() {
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-    </View>
+    </PaperTransition>
   )
 }
 
@@ -256,6 +345,15 @@ function formatTimeOf(iso: string): string {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: paperColors.canvas },
+  pageHeading: {
+    ...paperTypography.heading,
+    ...typography.title,
+    color: paperColors.ink,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.lg,
+    borderBottomWidth: 4,
+    borderBottomColor: paperColors.actionSurfaceStrong,
+  },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,29 +362,38 @@ const styles = StyleSheet.create({
     backgroundColor: paperColors.canvas,
   },
   sideButton: { width: 48, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: {
+  brand: {
     flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  title: {
+    ...paperTypography.heading,
     textAlign: 'center',
-    color: paperColors.muted,
-    fontSize: 14,
+    color: paperColors.ink,
+    fontSize: 20,
     fontWeight: '500',
   },
   manageText: { color: paperColors.action, fontSize: 14 },
   sheet: {
-    flex: 1,
-    margin: 12,
-    marginTop: 4,
+    flexGrow: 1,
+    margin: 0,
     backgroundColor: paperColors.paper,
-    borderRadius: 14,
-    padding: 20,
+    borderRadius: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: paperColors.lineStrong,
+    padding: spacing.lg,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
   },
-  time: { color: paperColors.muted, fontSize: 11 },
+  time: { color: paperColors.muted, ...typography.caption },
   stateChip: {
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
@@ -309,20 +416,31 @@ const styles = StyleSheet.create({
   questionBlock: {
     marginTop: 16,
     borderRadius: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: paperColors.action,
-    backgroundColor: paperColors.surfaceSoft,
-    padding: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: mistLightColors.warning,
+    backgroundColor: mistLightColors.warningSurface,
+    padding: spacing.md,
     gap: 6,
   },
   understandingBlock: {
     marginTop: 12,
     borderRadius: 12,
-    backgroundColor: paperColors.actionSurface,
-    padding: 12,
+    backgroundColor: paperColors.paper,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderColor: paperColors.line,
+    padding: spacing.md,
     gap: 6,
   },
-  blockLabel: { color: paperColors.muted, fontSize: 11 },
+  sectionHeading: {
+    ...typography.subheading,
+    color: paperColors.ink,
+    marginBottom: spacing.md,
+    alignSelf: 'flex-start',
+    borderBottomWidth: 3,
+    borderBottomColor: paperColors.actionSurfaceStrong,
+  },
+  questionLabel: { ...typography.body, color: paperColors.ink, fontWeight: '600' },
+  blockLabel: { color: paperColors.muted, ...typography.bodySmall },
   blockText: { color: paperColors.ink, fontSize: 14, lineHeight: 24 },
   photoPreview: {
     width: '100%',
@@ -331,17 +449,25 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: paperColors.actionSurface,
   },
+  imageViewer: {
+    flex: 1,
+    backgroundColor: '#18202DEB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  viewerImage: { width: '100%', height: '100%' },
   actions: { paddingHorizontal: 20, paddingTop: 12 },
   understandButton: {
     minHeight: 48,
     borderRadius: 14,
-    backgroundColor: paperColors.actionSurface,
+    backgroundColor: paperColors.action,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: paperColors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  understandText: { color: paperColors.action, fontSize: 14, fontWeight: '500' },
+  understandText: { color: paperColors.paper, fontSize: 14, fontWeight: '500' },
   manageScrim: {
     position: 'absolute',
     top: 0,

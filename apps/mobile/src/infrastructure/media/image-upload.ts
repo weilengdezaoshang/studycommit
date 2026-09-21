@@ -40,14 +40,14 @@ export async function pickLocalImage(): Promise<PickedImage> {
 }
 
 /** 平台仅支持 png/jpeg/webp 直传;其他格式按 jpeg 上报,由服务端魔数校验兜底。 */
-function normalizeMimeType(mimeType: string | null | undefined): AssetMimeType {
+export function normalizeMimeType(mimeType: string | null | undefined): AssetMimeType {
   if (mimeType === 'image/png' || mimeType === 'image/webp') {
     return mimeType
   }
   return 'image/jpeg'
 }
 
-function sizeOfLocalFile(uri: string): number {
+export function sizeOfLocalFile(uri: string): number {
   const file = new File(uri)
   if (!file.exists) {
     throw new Error('图片不存在或已被清理')
@@ -58,31 +58,24 @@ function sizeOfLocalFile(uri: string): number {
 /** 内容指纹:同一文件得到相同摘要,供服务端会话去重与断点续传判定。 */
 export async function sha256OfLocalFile(uri: string): Promise<string> {
   const file = new File(uri)
-  const base64 = await file.base64()
-  return Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, base64, {
-    encoding: Crypto.CryptoEncoding.HEX,
-  })
+  const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, await file.arrayBuffer())
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /** 用 XMLHttpRequest 直传本地文件到签名 PUT 地址(RN 的 fetch 不支持 { uri } 请求体)。 */
-export function putLocalFile(request: AssetPutFileRequest): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest()
-    xhr.open('PUT', request.uploadUrl)
-    for (const [name, value] of Object.entries(request.headers)) {
-      xhr.setRequestHeader(name, value)
-    }
-    if (!request.headers['content-type']) {
-      xhr.setRequestHeader('Content-Type', request.mimeType)
-    }
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve()
-      } else {
-        reject(new Error(`图片上传失败(HTTP ${xhr.status})`))
-      }
-    }
-    xhr.onerror = () => reject(new Error('图片上传失败，请检查网络'))
-    xhr.send({ uri: request.localUri, type: request.mimeType })
+export async function putLocalFile(request: AssetPutFileRequest): Promise<void> {
+  const file = new File(request.localUri)
+  if (!file.exists) {
+    throw new Error('图片不存在或已被清理')
+  }
+  const response = await file.upload(request.uploadUrl, {
+    httpMethod: 'PUT',
+    headers: {
+      ...request.headers,
+      ...(!request.headers['content-type'] ? { 'content-type': request.mimeType } : {}),
+    },
   })
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`图片上传失败(HTTP ${response.status})`)
+  }
 }

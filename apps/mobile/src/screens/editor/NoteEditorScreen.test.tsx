@@ -1,3 +1,6 @@
+jest.mock('../../components/RichTextEditor', () =>
+  jest.requireActual('../../test/mock-rich-editor'),
+)
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native'
 import { NoteEditorScreen } from './NoteEditorScreen'
 import { createMobileDraftStorage } from '../../features/papers/draft-storage'
@@ -36,19 +39,19 @@ describe('NoteEditorScreen save flow', () => {
     const view = await renderEditor()
 
     // 等待草稿锚点建立完成(loading 结束后提示出现)
-    await view.findByText('自动保存中')
+    await view.findByText('写点什么吧')
 
     // 空白正文直接记下:给出校验提示且不返回
-    fireEvent.press(view.getByLabelText('记下'))
-    expect(await view.findByText('先写点什么再记下')).toBeTruthy()
+    await fireEvent.press(view.getByLabelText('保存'))
+    expect(view.getByLabelText('保存').props.accessibilityState.disabled).toBe(true)
     expect(mockGoBack).not.toHaveBeenCalled()
 
     // 输入正文后记下:创建纸页并返回
-    fireEvent.changeText(view.getByPlaceholderText('写点什么吧……'), '刚理解的幂等键设计')
+    await fireEvent.changeText(view.getByPlaceholderText('写点什么吧……'), '刚理解的幂等键设计')
     await act(async () => {
       await Promise.resolve()
     })
-    fireEvent.press(view.getByLabelText('记下'))
+    await fireEvent.press(view.getByLabelText('保存'))
 
     await waitFor(() => {
       expect(mockGoBack).toHaveBeenCalled()

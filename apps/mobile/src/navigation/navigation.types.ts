@@ -7,6 +7,8 @@ import type { Paper } from '@studycommit/rpc-contracts/papers'
 export type RootStackParamList = {
   /** selectedTopicId:从其他页面回到首页时带上箱子筛选;'__inbox__' 表示待整理 */
   Home: { selectedTopicId?: string | null } | undefined
+  Capture: { mode?: 'ocr' | 'image'; scenario?: string } | undefined
+  CaptureDesign: undefined
   NoteEditor: undefined
   PaperDetail: { paperId: string }
   Agent: { paperId: string }

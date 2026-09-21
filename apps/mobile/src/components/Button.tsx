@@ -1,3 +1,4 @@
+import { studyCommitMistBlueColors } from '@studycommit/design-tokens'
 import type { ComponentProps } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons'
 import {
@@ -16,6 +17,7 @@ type IoniconsName = ComponentProps<typeof Ionicons>['name']
 
 export type ButtonProps = Omit<PressableProps, 'children'> & {
   children: string
+  appearance?: 'default' | 'notebook'
   icon?: IoniconsName
   loading?: boolean
   size?: 'medium' | 'large'
@@ -24,6 +26,7 @@ export type ButtonProps = Omit<PressableProps, 'children'> & {
 
 export function Button({
   children,
+  appearance = 'default',
   disabled = false,
   icon,
   loading = false,
@@ -34,7 +37,7 @@ export function Button({
 }: ButtonProps) {
   const theme = useAppTheme()
   const inactive = disabled || loading
-  const palette = {
+  const defaultPalette = {
     primary: {
       backgroundColor: theme.colors.primary,
       borderColor: theme.colors.primary,
@@ -57,6 +60,17 @@ export function Button({
     },
   }[variant]
 
+  const palette =
+    appearance === 'notebook'
+      ? {
+          backgroundColor:
+            variant === 'primary'
+              ? studyCommitMistBlueColors.actionSurface
+              : studyCommitMistBlueColors.paper,
+          borderColor: studyCommitMistBlueColors.action,
+          color: studyCommitMistBlueColors.ink,
+        }
+      : defaultPalette
   return (
     <Pressable
       accessibilityRole="button"
@@ -64,10 +78,12 @@ export function Button({
       disabled={inactive}
       style={(state) => [
         styles.base,
+        appearance === 'notebook' && styles.notebook,
         {
           backgroundColor: palette.backgroundColor,
           borderColor: palette.borderColor,
-          minHeight: size === 'large' ? 56 : theme.sizes.controlHeight,
+          minHeight:
+            size === 'large' ? 56 : appearance === 'notebook' ? 48 : theme.sizes.controlHeight,
           opacity: inactive
             ? theme.motion.disabledOpacity
             : state.pressed
@@ -79,6 +95,7 @@ export function Button({
       ]}
       {...props}
     >
+      {appearance === 'notebook' && <View pointerEvents="none" style={styles.sketchLine} />}
       <View pointerEvents="none" style={styles.content}>
         {loading ? (
           <ActivityIndicator
@@ -118,6 +135,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     justifyContent: 'center',
     paddingVertical: 12,
+  },
+  sketchLine: {
+    position: 'absolute',
+    top: 3,
+    bottom: 3,
+    left: 3,
+    right: 3,
+    borderWidth: 1,
+    borderColor: studyCommitMistBlueColors.lineStrong,
+    borderTopLeftRadius: 9,
+    borderTopRightRadius: 5,
+    borderBottomLeftRadius: 5,
+    borderBottomRightRadius: 13,
+  },
+  notebook: {
+    minHeight: 48,
+    borderWidth: 1.5,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 16,
   },
   content: {
     alignItems: 'center',

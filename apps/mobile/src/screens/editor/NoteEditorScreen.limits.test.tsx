@@ -1,3 +1,6 @@
+jest.mock('../../components/RichTextEditor', () =>
+  jest.requireActual('../../test/mock-rich-editor'),
+)
 import { act, fireEvent, render } from '@testing-library/react-native'
 import { NoteEditorScreen } from './NoteEditorScreen'
 import { createMobileDraftStorage } from '../../features/papers/draft-storage'
@@ -39,7 +42,7 @@ describe('NoteEditorScreen content limit', () => {
     fireEvent.changeText(input, overLimitText)
     expect(await view.findByText('20,500 / 20,000')).toBeTruthy()
     expect(view.getByText('正文最多 20000 字，草稿已保留')).toBeTruthy()
-    expect(view.getByLabelText('记下').props.accessibilityState.disabled).toBe(true)
+    expect(view.getByLabelText('保存').props.accessibilityState.disabled).toBe(true)
     expect(mockGoBack).not.toHaveBeenCalled()
   })
 })

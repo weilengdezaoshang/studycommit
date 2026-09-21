@@ -1,3 +1,5 @@
+import { CaptureScreen } from '../screens/capture/CaptureScreen'
+import { CaptureDesignScreen } from '../screens/capture/CaptureDesignScreen'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { AgentScreen } from '../screens/agent/AgentScreen'
@@ -28,6 +30,12 @@ export function AppNavigator() {
     <NavigationContainer theme={createNavigationTheme()}>
       <Stack.Navigator>
         <Stack.Screen component={HomeScreen} name="Home" options={{ headerShown: false }} />
+        <Stack.Screen component={CaptureScreen} name="Capture" options={MODAL_PRESENTATION} />
+        <Stack.Screen
+          component={CaptureDesignScreen}
+          name="CaptureDesign"
+          options={MODAL_PRESENTATION}
+        />
         <Stack.Screen component={NoteEditorScreen} name="NoteEditor" options={MODAL_PRESENTATION} />
         <Stack.Screen
           component={PaperDetailScreen}

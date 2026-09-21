@@ -1,5 +1,9 @@
+import { paperTypography } from '../../theme/paper-typography'
+import { PaperTransition } from '../../components/PaperTransition'
+import { spacing, radii, typography, motion } from '@studycommit/design-tokens'
+import { RichTextEditor, type RichTextEditorHandle } from '../../components/RichTextEditor'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AppState, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { AppState, Image, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { KeyboardAvoidingView, Platform } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
@@ -29,10 +33,15 @@ function subscribeAppState(listener: (state: 'active' | 'background') => void): 
 
 /** 编辑器:只支持文本与图片;标题、主题与学习目标均非必填。 */
 export function NoteEditorScreen() {
+  const editorRef = useRef<RichTextEditorHandle>(null)
+  const [focused, setFocused] = useState(false)
+  const [formatting, setFormatting] = useState(false)
+  const [reading, setReading] = useState(false)
   const navigation = useNavigation()
   const insets = useSafeAreaInsets()
   const { uploads } = useMobileServices()
   const [recoveryDismissed, setRecoveryDismissed] = useState(false)
+  const [editorRevision, setEditorRevision] = useState(0)
   const [pickError, setPickError] = useState<string | null>(null)
   const draftStorage = useMemo<PaperDraftStorage>(() => createMobileDraftStorage(), [])
   const localPhotoUriRef = useRef<string | null>(null)
@@ -56,7 +65,13 @@ export function NoteEditorScreen() {
     createUploadId: uuid,
   })
   const draft = controller.draft
-  const hasRecoveredContent = controller.recovered && !recoveryDismissed
+  const hasDraftContent = Boolean(
+    draft?.content.trim() ||
+    draft?.localPhotoUri ||
+    draft?.assetUploadIds.length ||
+    draft?.questionText?.trim(),
+  )
+  const hasRecoveredContent = controller.recovered && hasDraftContent && !recoveryDismissed
   const photoUri = draft?.localPhotoUri ?? null
   const photoUploadId = draft?.assetUploadIds[0] ?? null
   const contentLength = draft?.content.length ?? 0
@@ -69,17 +84,51 @@ export function NoteEditorScreen() {
   }, [photoUri])
 
   const save = async () => {
-    const saved = await controller.save()
-    if (saved) {
+    if (reading || controller.saving || !editorRef.current) {
+      return
+    }
+    setReading(true)
+    try {
+      const latest = await editorRef.current.read()
+      const saved = await controller.save(latest)
+      if (saved) {
+        navigation.goBack()
+      }
+    } catch {
+      setPickError('暂时无法读取编辑内容，请重试保存')
+    } finally {
+      setReading(false)
+    }
+  }
+
+  const leave = async () => {
+    if (reading || controller.saving || controller.loading || !editorRef.current) {
+      return
+    }
+    setReading(true)
+    setPickError(null)
+    try {
+      const latest = await editorRef.current.read()
+      await controller.persist(latest)
       navigation.goBack()
+    } catch {
+      setPickError('草稿未能保存，请重试退出')
+    } finally {
+      setReading(false)
     }
   }
 
   const discardRecovered = () => {
-    setRecoveryDismissed(true)
-    void controller.discard().then(() => {
-      controller.dispatch({ type: 'start', paperId: uuid(), now: Date.now() })
-    })
+    void controller
+      .discard()
+      .then(() => {
+        controller.dispatch({ type: 'start', paperId: uuid(), now: Date.now() })
+        setEditorRevision((value) => value + 1)
+        setRecoveryDismissed(true)
+      })
+      .catch(() => {
+        setPickError('草稿未能丢弃，请重试。内容仍然保留。')
+      })
   }
 
   /** 选图 → 直传 → 进草稿;取消/拒绝/超限给出轻提示,不打断正文输入。 */
@@ -137,156 +186,185 @@ export function NoteEditorScreen() {
           ? '正在保存…'
           : controller.saveError
             ? controller.saveError
-            : controller.savedAt
-              ? `草稿已保存 ${formatTime(controller.savedAt)}`
-              : '自动保存中'))
+            : !hasDraftContent
+              ? '写点什么吧'
+              : controller.savedAt
+                ? `草稿已保存 ${formatTime(controller.savedAt)}`
+                : '自动保存中'))
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.page}
-    >
-      <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => navigation.goBack()}
-          style={styles.topButton}
-        >
-          <Text style={styles.cancelText}>取消</Text>
-        </Pressable>
-        <Text style={styles.title}>新记录</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="记下"
-          onPress={save}
-          disabled={controller.saving || overContentLimit}
-          style={styles.topButton}
-        >
-          <Text
-            style={[
-              styles.saveText,
-              (controller.saving || overContentLimit) && styles.saveTextDisabled,
-            ]}
-          >
-            记下
-          </Text>
-        </Pressable>
-      </View>
-
-      {hasRecoveredContent && !recoveryDismissed && (
-        <View style={styles.recoveryBanner}>
-          <Text style={styles.recoveryText} accessibilityLiveRegion="polite">
-            已恢复上次未保存的内容
-          </Text>
+    <PaperTransition style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.page}
+      >
+        <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="丢弃恢复的草稿"
-            onPress={discardRecovered}
+            onPress={leave}
+            disabled={reading || controller.saving || controller.loading}
+            style={styles.topButton}
           >
-            <Text style={styles.recoveryDiscard}>丢弃</Text>
+            <Text style={styles.cancelText}>取消</Text>
+          </Pressable>
+          <Text style={styles.title}>开始记录</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="保存"
+            onPress={save}
+            disabled={
+              controller.loading ||
+              controller.saving ||
+              reading ||
+              assetUpload.uploading ||
+              overContentLimit ||
+              !draft?.content.trim()
+            }
+            style={styles.topButton}
+          >
+            <Text
+              style={[
+                styles.saveText,
+                (controller.loading ||
+                  controller.saving ||
+                  reading ||
+                  assetUpload.uploading ||
+                  overContentLimit ||
+                  !draft?.content.trim()) &&
+                  styles.saveTextDisabled,
+              ]}
+            >
+              {controller.saving || reading ? '保存中…' : '保存'}
+            </Text>
           </Pressable>
         </View>
-      )}
 
-      <View style={styles.sheet}>
-        <View style={styles.dateRow}>
-          <Text style={styles.dateText}>{formatToday()}</Text>
-          <Text style={styles.dateText}>STUDYCOMMIT</Text>
-        </View>
-        <TextInput
-          style={styles.input}
-          multiline
-          autoFocus
-          placeholder="写点什么吧……"
-          placeholderTextColor={paperColors.mutedFaint}
-          value={draft?.content ?? ''}
-          onChangeText={(value) =>
-            controller.dispatch({ type: 'setContent', content: value, now: Date.now() })
-          }
-          textAlignVertical="top"
-        />
-        {nearContentLimit && (
-          <Text
-            style={[styles.counter, overContentLimit && styles.counterOver]}
-            accessibilityLiveRegion="polite"
-          >
-            {`${contentLength.toLocaleString('en-US')} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString('en-US')}`}
-          </Text>
-        )}
-        {photoUri ? (
-          <View style={styles.photoRow}>
-            <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+        {hasRecoveredContent && !recoveryDismissed && (
+          <View style={styles.recoveryBanner}>
+            <Text style={styles.recoveryText} accessibilityLiveRegion="polite">
+              已恢复上次未保存的内容
+            </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="移除图片"
-              onPress={removePhoto}
-              style={styles.photoRemove}
+              accessibilityLabel="丢弃恢复的草稿"
+              onPress={discardRecovered}
             >
-              <Ionicons name="close" size={14} color={paperColors.paper} />
+              <Text style={styles.recoveryDiscard}>丢弃</Text>
             </Pressable>
           </View>
-        ) : null}
-      </View>
+        )}
 
-      <View style={[styles.tools, { paddingBottom: insets.bottom + 16 }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={photoUri ? '重新选择图片' : '添加图片'}
-          onPress={addPhoto}
-          disabled={assetUpload.uploading}
-          style={[styles.tool, photoUri && styles.toolActive]}
-        >
-          <Ionicons name="image-outline" size={16} color={paperColors.muted} />
-          <Text style={styles.toolText}>
-            {assetUpload.uploading ? '上传中…' : photoUri ? '已添加图片' : '图片'}
+        {!focused && <Text style={styles.pageHeading}>开始记录</Text>}
+        <View style={styles.sheet}>
+          <View style={styles.dateRow}>
+            <Text style={styles.dateText}>{formatToday()}</Text>
+            <Text style={styles.dateText}>STUDYCOMMIT</Text>
+          </View>
+          {!controller.loading && draft && (
+            <RichTextEditor
+              key={`${draft.paperId}:${editorRevision}`}
+              editorRef={editorRef}
+              initialText={draft.content}
+              initialDocument={draft.contentDocument}
+              disabled={controller.saving || reading}
+              showFormatting={formatting}
+              onFocusChange={setFocused}
+              onChange={(value) =>
+                controller.dispatch({ type: 'setContent', ...value, now: Date.now() })
+              }
+            />
+          )}
+          {nearContentLimit && (
+            <Text
+              style={[styles.counter, overContentLimit && styles.counterOver]}
+              accessibilityLiveRegion="polite"
+            >
+              {`${contentLength.toLocaleString('en-US')} / ${PAPER_CONTENT_MAX_LENGTH.toLocaleString('en-US')}`}
+            </Text>
+          )}
+          {photoUri && !focused ? (
+            <View style={styles.photoRow}>
+              <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="移除图片"
+                onPress={removePhoto}
+                style={styles.photoRemove}
+              >
+                <Ionicons name="close" size={14} color={paperColors.paper} />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+
+        {!focused && (
+          <View
+            style={[
+              styles.tools,
+              { paddingBottom: focused ? spacing.xs : insets.bottom + spacing.md },
+            ]}
+          >
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={photoUri ? '重新选择图片' : '添加图片'}
+              onPress={addPhoto}
+              disabled={assetUpload.uploading}
+              style={[styles.tool, photoUri && styles.toolActive]}
+            >
+              <Ionicons name="image-outline" size={16} color={paperColors.muted} />
+              <Text style={styles.toolText}>
+                {assetUpload.uploading ? '上传中…' : photoUri ? '已添加图片' : '图片'}
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={draft?.hasQuestion ? '取消问题标记' : '标记为问题'}
+              onPress={() =>
+                controller.dispatch({
+                  type: 'setQuestion',
+                  hasQuestion: !draft?.hasQuestion,
+                  now: Date.now(),
+                })
+              }
+              style={[styles.tool, draft?.hasQuestion && styles.toolActive]}
+            >
+              <Ionicons name="help-circle-outline" size={16} color={paperColors.muted} />
+              <Text style={styles.toolText}>标记问题</Text>
+            </Pressable>
+            {!focused && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="格式"
+                onPress={() => setFormatting(!formatting)}
+                style={styles.tool}
+              >
+                <Text style={styles.toolText}>Aa 格式</Text>
+              </Pressable>
+            )}
+            <Text
+              style={[
+                styles.hint,
+                (pickError || assetUpload.uploadError || controller.saveError) && styles.hintError,
+              ]}
+              accessibilityLiveRegion="polite"
+            >
+              {statusHint}
+            </Text>
+          </View>
+        )}
+        {focused && (
+          <Text style={styles.hint} accessibilityLiveRegion="polite">
+            {statusHint}
           </Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={draft?.hasQuestion ? '取消问题标记' : '标记为问题'}
-          onPress={() =>
-            controller.dispatch({
-              type: 'setQuestion',
-              hasQuestion: !draft?.hasQuestion,
-              now: Date.now(),
-            })
-          }
-          style={[styles.tool, draft?.hasQuestion && styles.toolActive]}
-        >
-          <Ionicons name="help-circle-outline" size={16} color={paperColors.muted} />
-          <Text style={styles.toolText}>标记问题</Text>
-        </Pressable>
-        <Text
-          style={[
-            styles.hint,
-            (pickError || assetUpload.uploadError || controller.saveError) && styles.hintError,
-          ]}
-          accessibilityLiveRegion="polite"
-        >
-          {statusHint}
-        </Text>
-      </View>
-    </KeyboardAvoidingView>
+        )}
+      </KeyboardAvoidingView>
+    </PaperTransition>
   )
 }
 
 function formatToday(): string {
   const date = new Date()
-  const months = [
-    'JAN',
-    'FEB',
-    'MAR',
-    'APR',
-    'MAY',
-    'JUN',
-    'JUL',
-    'AUG',
-    'SEP',
-    'OCT',
-    'NOV',
-    'DEC',
-  ]
-  return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()}`
+  return date.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })
 }
 
 function formatTime(timestamp: number): string {
@@ -306,7 +384,14 @@ const styles = StyleSheet.create({
   },
   topButton: { minWidth: 56, height: 40, alignItems: 'center', justifyContent: 'center' },
   cancelText: { color: paperColors.muted, fontSize: 14 },
-  title: { color: paperColors.muted, fontSize: 14, fontWeight: '500' },
+  title: { color: paperColors.ink, ...typography.body, fontWeight: '600' },
+  pageHeading: {
+    ...paperTypography.heading,
+    color: paperColors.ink,
+    ...typography.title,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+  },
   saveText: {
     color: paperColors.paper,
     backgroundColor: paperColors.action,
@@ -316,7 +401,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     overflow: 'hidden',
   },
-  saveTextDisabled: { opacity: 0.6 },
+  saveTextDisabled: { opacity: motion.disabledOpacity },
   recoveryBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -335,14 +420,11 @@ const styles = StyleSheet.create({
     margin: 12,
     marginBottom: 16,
     backgroundColor: paperColors.paper,
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
-    shadowColor: paperColors.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    gap: spacing.smPlus,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: paperColors.lineStrong,
   },
   dateRow: {
     flexDirection: 'row',
@@ -351,7 +433,7 @@ const styles = StyleSheet.create({
     borderBottomColor: paperColors.line,
     paddingBottom: 10,
   },
-  dateText: { color: paperColors.muted, fontSize: 11, fontWeight: '600', letterSpacing: 1 },
+  dateText: { color: paperColors.muted, ...typography.bodySmall },
   input: { flex: 1, color: paperColors.ink, fontSize: 15, lineHeight: 24, padding: 0 },
   counter: {
     alignSelf: 'flex-end',
@@ -383,8 +465,9 @@ const styles = StyleSheet.create({
   },
   tools: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 10,
+    gap: spacing.xs,
     paddingHorizontal: 12,
     paddingBottom: 6,
   },
@@ -392,7 +475,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
@@ -400,6 +483,11 @@ const styles = StyleSheet.create({
   },
   toolActive: { borderColor: paperColors.line, backgroundColor: paperColors.actionSurface },
   toolText: { color: paperColors.muted, fontSize: 12 },
-  hint: { marginLeft: 'auto', color: paperColors.mutedFaint, fontSize: 11 },
+  hint: {
+    width: '100%',
+    color: paperColors.muted,
+    ...typography.caption,
+    paddingHorizontal: spacing.sm,
+  },
   hintError: { color: paperColors.action },
 })
