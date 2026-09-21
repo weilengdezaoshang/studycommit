@@ -50,9 +50,79 @@ afterEach(() => {
 })
 
 describe('桌面纸页数据通路', () => {
+  it('后续分页失败保留记录并从原游标重试成功', async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce(
+        okEnvelope({ items: [serverPaper], pageInfo: { hasNextPage: true, nextCursor: 'p2' } }),
+      )
+      .mockResolvedValueOnce(
+        okEnvelope({ items: [], pageInfo: { hasNextPage: true, nextCursor: 'p3' } }),
+      )
+      .mockResolvedValueOnce(
+        okEnvelope({ items: [], pageInfo: { hasNextPage: true, nextCursor: 'p4' } }),
+      )
+      .mockRejectedValueOnce(new Error('断网'))
+      .mockResolvedValueOnce(
+        okEnvelope({
+          items: [{ ...serverPaper, id: 'next-paper' }],
+          pageInfo: { hasNextPage: false, nextCursor: null },
+        }),
+      )
+    stubStudyCommit({
+      papers: { ...window.studyCommit.papers, list },
+      topics: {
+        ...window.studyCommit.topics,
+        listActive: vi
+          .fn()
+          .mockResolvedValue(
+            okEnvelope({ items: [], pageInfo: { hasNextPage: false, nextCursor: null } }),
+          ),
+      },
+    })
+    await papersActions.loadRemote()
+    expect(getPapersState().nextCursor).toBe('p4')
+    await papersActions.loadMore()
+    expect(getPapersState().papers).toHaveLength(1)
+    expect(getPapersState().moreError).toContain('仍然保留')
+    await papersActions.loadMore()
+    expect(list).toHaveBeenLastCalledWith({ limit: 100, cursor: 'p4' })
+    expect(getPapersState().papers).toHaveLength(2)
+    expect(getPapersState().moreError).toBeNull()
+    expect(getPapersState().nextCursor).toBeNull()
+  })
+  it('创建纸页时把草稿锚点作为幂等键传给 IPC', async () => {
+    const create = vi.fn().mockResolvedValue(okEnvelope(serverPaper))
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        create,
+      },
+    })
+    await papersActions.createPaper({
+      content: '一条新记录',
+      idempotencyKey: '9a111111-1111-4111-8111-111111111111',
+    })
+    expect(create).toHaveBeenCalledWith(
+      { content: '一条新记录' },
+      { idempotencyKey: '9a111111-1111-4111-8111-111111111111' },
+    )
+    expect(getPapersState().papers[0].id).toBe(serverPaper.id)
+  })
+
   it('loadRemote 成功后用服务端纸页和箱子替换演示数据', async () => {
     stubStudyCommit({
       papers: {
+        get: async () => {
+          throw new Error('详情服务未配置')
+        },
+        knowledge: async () => {
+          throw new Error('详情服务未配置')
+        },
+        updateKnowledge: async () => {
+          throw new Error('详情服务未配置')
+        },
+        assetAccess: window.studyCommit.papers.assetAccess,
         list: vi.fn().mockResolvedValue(
           okEnvelope({
             items: [serverPaper],
@@ -92,6 +162,46 @@ describe('桌面纸页数据通路', () => {
     expect(state.topics).toEqual([
       { id: serverTopic.id, name: serverTopic.name, color: serverTopic.color, version: 1 },
     ])
+  })
+
+  it('列表同步时保留已打开记录的富文本文档', async () => {
+    const contentDocument = {
+      version: 1 as const,
+      doc: {
+        type: 'doc' as const,
+        content: [
+          {
+            type: 'paragraph' as const,
+            content: [{ type: 'text' as const, text: '云端纸页内容' }],
+          },
+        ],
+      },
+    }
+    stubStudyCommit({
+      papers: {
+        ...window.studyCommit.papers,
+        list: vi.fn().mockResolvedValue(
+          okEnvelope({
+            items: [serverPaper],
+            pageInfo: { hasNextPage: false, nextCursor: null },
+          }),
+        ),
+        get: vi.fn().mockResolvedValue(okEnvelope({ ...serverPaper, contentDocument })),
+      },
+      topics: {
+        ...window.studyCommit.topics,
+        listActive: vi
+          .fn()
+          .mockResolvedValue(
+            okEnvelope({ items: [], pageInfo: { hasNextPage: false, nextCursor: null } }),
+          ),
+      },
+    })
+    await papersActions.loadRemote()
+    await papersActions.ensureDetail(serverPaper.id)
+    expect(getPapersState().papers[0].contentDocument).toEqual(contentDocument)
+    await papersActions.loadRemote()
+    expect(getPapersState().papers[0].contentDocument).toEqual(contentDocument)
   })
 
   it('loadRemote 失败时保留当前数据', async () => {

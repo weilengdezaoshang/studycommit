@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react'
-import type { Paper, PaperPage } from '@studycommit/rpc-contracts/papers'
+import type { CreatePaperInput, Paper, PaperPage } from '@studycommit/rpc-contracts/papers'
 import type { PaperQuestionStatus } from '@studycommit/rpc-contracts/paper-question'
 import {
   applyQuestionCommand,
   applyQuestionConfirmed,
+  mergeListedPaper,
   questionExtrasOf,
 } from '@studycommit/common/paper-runtime'
 import type { SerializedHttpError } from '@studycommit/common/http'
@@ -40,6 +41,9 @@ export type PapersState = {
   lastSyncedAt: string | null
   /** 最近一次 loadRemote 失败后为 true,直到下次成功。 */
   syncFailed: boolean
+  nextCursor?: string | null
+  loadingMore?: boolean
+  moreError?: string | null
 }
 
 const listeners = new Set<() => void>()
@@ -83,7 +87,9 @@ export function getPapersState(): PapersState {
   return getState()
 }
 
-type IpcEnvelope<T> = { ok: true; data: T } | { ok: false; error?: { message?: string } }
+type IpcEnvelope<T> =
+  | { ok: true; data: T }
+  | { ok: false; error?: { message?: string; code?: string; status?: number | null } }
 
 type IpcAttempt<T> = { ok: true; data: T } | { ok: false; error: SerializedHttpError | null }
 
@@ -115,7 +121,7 @@ function topicsApi(): import('../../types/study-commit-api').StudyCommitTopicsAp
 async function unwrap<T>(promise: Promise<IpcEnvelope<T>>): Promise<T> {
   const result = await promise
   if (!result.ok) {
-    throw new Error(result.error?.message ?? '请求失败')
+    throw Object.assign(new Error(result.error?.message ?? '请求失败'), result.error)
   }
   return result.data
 }
@@ -158,27 +164,49 @@ function createTopicStoreHost(
 const REMOTE_PAPER_PAGES = 3
 
 const papersActions = {
+  receivePaper(paper: Paper) {
+    setState({
+      papers: [...state.papers.filter((item) => item.id !== paper.id), paper],
+      extras: withQuestionExtras(state.extras, paper),
+    })
+  },
   /** 截图确认页"仅保存文字"等入口:创建纸页并合入本地列表(DE-314 能力前置)。 */
-  async createPaper(input: { content: string; questionText?: string }): Promise<Paper> {
+  async createPaper(input: CreatePaperInput & { idempotencyKey?: string }): Promise<Paper> {
     const api = papersApi()
     if (!api) {
       throw new Error('登录后才能保存纸页')
     }
-    const saved = await unwrap(
-      api.create({
-        content: input.content,
-        ...(input.questionText ? { questionText: input.questionText } : {}),
-      }),
-    )
+    const { idempotencyKey, ...body } = input
+    const saved = await unwrap(api.create(body, idempotencyKey ? { idempotencyKey } : undefined))
     setState({
-      papers: [saved, ...state.papers],
+      papers: [saved, ...state.papers.filter((paper) => paper.id !== saved.id)],
       extras: withQuestionExtras(state.extras, saved),
       source: 'server',
     })
     return saved
   },
+  /** 详情需要富文本时再拉取;列表/搜索不带 contentDocument。 */
+  async ensureDetail(id: string): Promise<Paper | null> {
+    const current = state.papers.find((paper) => paper.id === id && !paper.deletedAt)
+    if (current && current.contentDocument !== undefined) {
+      return current
+    }
+    const api = papersApi()
+    if (!api) {
+      return current ?? null
+    }
+    const saved = await unwrap(api.get(id))
+    if (!saved || saved.deletedAt) {
+      return null
+    }
+    papersActions.receivePaper(saved)
+    return saved
+  },
   /** 登录后拉取云端纸页与箱子;失败时保留当前数据(演示或上一次成功结果)。 */
   async loadRemote(): Promise<void> {
+    if (state.syncing || state.loadingMore) {
+      return
+    }
     const api = papersApi()
     const topics = topicsApi()
     if (!api) {
@@ -194,6 +222,7 @@ const papersActions = {
         )
         items.push(...result.items)
         if (!result.pageInfo.hasNextPage || !result.pageInfo.nextCursor) {
+          cursor = null
           break
         }
         cursor = result.pageInfo.nextCursor
@@ -210,6 +239,8 @@ const papersActions = {
         ...mergeServerState(state, items, nextTopics),
         lastSyncedAt: new Date().toISOString(),
         syncFailed: false,
+        nextCursor: cursor,
+        moreError: null,
       })
     } catch {
       // 同步失败时保留当前数据(演示或上次成功结果),并把失败暴露给状态胶囊
@@ -219,14 +250,38 @@ const papersActions = {
     }
   },
 
-  organizePaper(paperId: string, topicId: string) {
+  async loadMore(): Promise<void> {
+    const api = papersApi()
+    const cursor = state.nextCursor
+    if (!api || !cursor || state.loadingMore || state.syncing) {
+      return
+    }
+    setState({ loadingMore: true, moreError: null })
+    try {
+      const page = await unwrap(api.list({ limit: 100, cursor }))
+      const unique = new Map(state.papers.map((paper) => [paper.id, paper]))
+      for (const paper of page.items) {
+        unique.set(paper.id, paper)
+      }
+      setState({
+        ...mergeServerState(state, [...unique.values()], state.topics),
+        nextCursor: page.pageInfo.hasNextPage ? page.pageInfo.nextCursor : null,
+      })
+    } catch {
+      setState({ moreError: '后续记录加载失败，已加载内容仍然保留。' })
+    } finally {
+      setState({ loadingMore: false })
+    }
+  },
+
+  async organizePaper(paperId: string, topicId: string) {
     const target = state.topics.find((topic) => topic.id === topicId)
     if (!target) {
-      return
+      return false
     }
     const previous = state.papers.find((paper) => paper.id === paperId)
     if (!previous || previous.deletedAt) {
-      return
+      return false
     }
     setState({
       papers: state.papers.map((paper) =>
@@ -243,15 +298,20 @@ const papersActions = {
     })
     const api = papersApi()
     if (api && state.source === 'server') {
-      unwrap(api.organize({ id: paperId, version: previous.version, topicId }))
-        .then((saved) => replacePaper(saved))
+      return await unwrap(api.organize({ id: paperId, version: previous.version, topicId }))
+        .then((saved) => {
+          replacePaper(saved)
+          return true
+        })
         .catch(() => {
           // 服务端失败时回滚到归档前状态
           setState({
             papers: state.papers.map((paper) => (paper.id === paperId ? previous : paper)),
           })
+          return false
         })
     }
+    return true
   },
   /** 传入空串清除日期条件(R43:列表只有「清除日期」操作)。 */
   selectDate(dateKey: string) {
@@ -339,6 +399,19 @@ const papersActions = {
     }
     return topic
   },
+  async createTopicConfirmed(name: string): Promise<void> {
+    const api = topicsApi()
+    if (!api) {
+      throw new Error('登录后才能创建主题')
+    }
+    const saved = await unwrap(api.create({ name }))
+    commitCreatedTopic(saved.id, {
+      id: saved.id,
+      name: saved.name,
+      color: saved.color,
+      version: saved.version,
+    })
+  },
 }
 
 /** 用服务端数据替换本地临时箱子;若加载竞态已把它清除,则追加到列表尾部。 */
@@ -403,15 +476,17 @@ function mergeServerState(
   items: Paper[],
   topics: DesktopTopic[],
 ): Partial<PapersState> {
+  const previousById = new Map(previous.papers.map((paper) => [paper.id, paper]))
+  const papers = items.map((item) => mergeListedPaper(previousById.get(item.id), item))
   const extras: Record<string, PaperExtra> = {}
-  for (const paper of items) {
+  for (const paper of papers) {
     const questionExtras = questionExtrasOf(paper)
     const photoPath = previous.extras[paper.id]?.photoPath ?? null
     if (questionExtras.questionStatus !== 'none' || photoPath) {
       extras[paper.id] = { ...questionExtras, photoPath }
     }
   }
-  return { papers: items, topics, extras, source: 'server' }
+  return { papers, topics, extras, source: 'server' }
 }
 
 export { papersActions }
