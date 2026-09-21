@@ -107,7 +107,14 @@ function createInternalApiClient(deps) {
     })
   }
 
-  return { exchangeIdentity, forward, isConfigured: () => Boolean(baseUrl && secret) }
+  async function sendRaw({ method, url, headers, body }) {
+    const response = await sendRequest({ method, url, headers, body, timeoutMs })
+    if (response.status < 200 || response.status >= 300) {
+      throw new BackendError('PROVIDER_FAILED', '附件上传失败')
+    }
+  }
+
+  return { exchangeIdentity, forward, sendRaw, isConfigured: () => Boolean(baseUrl && secret) }
 }
 
 /** 默认 HTTPS 传输（Node 运行时）；测试注入 sendRequest。 */

@@ -1350,6 +1350,11 @@
   min-height: 680rpx;
 }
 
+.puzzle-drawer-entry { display:flex; align-items:center; justify-content:space-between; width:auto; margin:20rpx 28rpx; padding:22rpx 24rpx; border:1rpx solid var(--sc-line); border-radius:22rpx; background:#fffaf1; color:var(--sc-ink); text-align:left; }
+.puzzle-drawer-entry view { display:grid; gap:6rpx; }
+.puzzle-drawer-entry > image { width:84rpx; height:64rpx; margin-right:16rpx; border-radius:12rpx; }
+.puzzle-drawer-entry small { color:var(--sc-muted); font-size:20rpx; }
+
 .explain-card {
   position: relative;
   width: 100%;

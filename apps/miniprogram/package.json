@@ -6,10 +6,12 @@
     "test:run": "vitest run",
     "typecheck": "tsc --noEmit",
     "check": "node scripts/check-project.mjs",
-    "build:capture-ui": "node ../../scripts/generate-notebook-tokens.mjs && node ../../scripts/build-miniprogram-capture.mjs"
+    "build:capture-ui": "node ../../scripts/generate-notebook-tokens.mjs && node ../../scripts/build-miniprogram-capture.mjs",
+    "build:release": "pnpm build:capture-ui && node scripts/build-release.mjs"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "esbuild": "0.25.12",
     "miniprogram-api-typings": "^4.0.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.10"

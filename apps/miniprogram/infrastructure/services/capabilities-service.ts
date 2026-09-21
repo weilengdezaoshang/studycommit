@@ -47,8 +47,18 @@ export function createCapabilitiesService(
   options: CreateCapabilitiesServiceOptions,
 ): CapabilitiesService {
   const storage = options.storage ?? wxCapabilitiesStorage
-  const fallback = defaultClientCapabilities(options.mode)
-  let current: ClientCapabilities = readCache() ?? fallback
+  const fallback = {
+    ...defaultClientCapabilities(options.mode),
+    captureEnabled: false,
+    imageRecordEnabled: false,
+    ocrEnabled: false,
+  }
+  let current: ClientCapabilities = {
+    ...(readCache() ?? fallback),
+    captureEnabled: false,
+    imageRecordEnabled: false,
+    ocrEnabled: false,
+  }
 
   function readCache(): ClientCapabilities | undefined {
     const cached = storage.get(CAPABILITIES_STORAGE_KEY)

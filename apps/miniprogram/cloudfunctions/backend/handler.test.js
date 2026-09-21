@@ -14,6 +14,10 @@ const ENVELOPE = {
 }
 
 const BASE_ENV = {
+  CLOUD_FILE_ID_PREFIX: 'cloud://x/',
+  CAPTURE_ENABLED: 'true',
+  IMAGE_RECORD_ENABLED: 'true',
+  OCR_ENABLED: 'true',
   INTERNAL_API_BASE_URL: 'https://api.example.com/api',
   INTERNAL_API_SIGNING_SECRET: 'secret-1',
 }
@@ -79,7 +83,7 @@ function createFakeCloudDb(initialDocs = new Map()) {
   }
   const cloud = {
     database: () => db,
-    downloadFile: async () => ({ fileContent: Buffer.from('jpeg-bytes') }),
+    downloadFile: vi.fn(async () => ({ fileContent: Buffer.from('jpeg-bytes') })),
     deleteFile: vi.fn(async () => undefined),
   }
   return { docs, db, cloud }
@@ -179,10 +183,21 @@ describe('backend 云函数信封与路由', () => {
   it('路由表覆盖全部业务操作且为静态映射', () => {
     const router = createRouter()
     const names = router.operationNames()
-    expect(names).toHaveLength(28)
+    // 既有业务操作 + 运营/积分只读操作 + 拼图画册 4 个操作
+    expect(names).toHaveLength(38)
+    expect(names).toContain('uploads.access')
     expect(names).toContain('papers.create')
+    expect(names).toContain('puzzles.album')
+    expect(names).toContain('puzzles.selectArtwork')
+    expect(names).toContain('puzzles.reveal')
+    expect(names).toContain('puzzles.featureArtwork')
     expect(names).toContain('auth.login')
     expect(names).toContain('uploads.attach')
+    expect(names).toContain('operations.bootstrap')
+    expect(names).toContain('campaigns.list')
+    expect(names).toContain('campaigns.get')
+    expect(names).toContain('credits.balance')
+    expect(names).toContain('credits.ledger')
     expect(router.resolve('system.exec')).toBeNull()
   })
 })
@@ -425,6 +440,7 @@ describe('backend 云函数上传适配', () => {
       owner: 'openid-someone-else',
       kind: 'asset',
       cloudPath: 'staging/u-1.jpg',
+      fileID: 'cloud://x/staging/u-1.jpg',
       mimeType: 'image/jpeg',
       sizeBytes: 10,
     })
@@ -445,6 +461,7 @@ describe('backend 云函数上传适配', () => {
       owner: 'openid-1',
       kind: 'asset',
       cloudPath: 'staging/u-1.jpg',
+      fileID: 'cloud://x/staging/u-1.jpg',
       mimeType: 'image/jpeg',
       sizeBytes: 10,
       sha256: 'abc',
@@ -484,7 +501,8 @@ describe('backend 云函数上传适配', () => {
     const raw = internalCalls.find((entry) => entry.kind === 'raw')
     expect(raw).toMatchObject({ method: 'PUT', url: 'https://storage.example.com/put' })
     expect(docs.has('u-1')).toBe(false)
-    expect(cloud.deleteFile).toHaveBeenCalled()
+    expect(cloud.downloadFile).toHaveBeenCalledWith({ fileID: 'cloud://x/staging/u-1.jpg' })
+    expect(cloud.deleteFile).toHaveBeenCalledWith({ fileList: ['cloud://x/staging/u-1.jpg'] })
   })
 
   it('无权绑定他人暂存文件时返回 FORBIDDEN', async () => {
@@ -493,6 +511,7 @@ describe('backend 云函数上传适配', () => {
       owner: 'openid-someone-else',
       kind: 'asset',
       cloudPath: 'staging/u-other.jpg',
+      fileID: 'cloud://x/staging/u-other.jpg',
       mimeType: 'image/jpeg',
       sizeBytes: 10,
     })
@@ -546,12 +565,14 @@ describe('backend 云函数上传适配', () => {
       owner: 'openid-1',
       kind: 'asset',
       cloudPath: 'staging/stale-1.jpg',
+      fileID: 'cloud://x/staging/stale-1.jpg',
       updatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
     })
     docs.set('fresh-1', {
       owner: 'openid-1',
       kind: 'asset',
       cloudPath: 'staging/fresh-1.jpg',
+      fileID: 'cloud://x/staging/fresh-1.jpg',
       updatedAt: new Date(),
     })
     const deleteFile = vi.fn(async () => undefined)
@@ -559,7 +580,7 @@ describe('backend 云函数上传适配', () => {
     expect(result).toEqual({ cleaned: 1 })
     expect(docs.has('stale-1')).toBe(false)
     expect(docs.has('fresh-1')).toBe(true)
-    expect(deleteFile).toHaveBeenCalledWith({ fileList: ['staging/stale-1.jpg'] })
+    expect(deleteFile).toHaveBeenCalledWith({ fileList: ['cloud://x/staging/stale-1.jpg'] })
   })
 
   it('识别定时触发器事件', () => {
@@ -567,4 +588,34 @@ describe('backend 云函数上传适配', () => {
     expect(isTimerEvent({ triggerName: 'x' })).toBe(true)
     expect(isTimerEvent({ version: 1, operation: 'papers.list', requestId: 'r' })).toBe(false)
   })
+})
+
+it('拒绝将同账号登记绑定到另一文件', async () => {
+  const { docs, cloud } = createFakeCloudDb()
+  docs.set('u-1', {
+    owner: 'openid-1',
+    kind: 'asset',
+    cloudPath: 'staging/u-1.jpg',
+    fileID: 'cloud://x/staging/u-1.jpg',
+  })
+  const { handler } = setup({ cloud })
+  const result = await handler({
+    version: 1,
+    operation: 'uploads.attach',
+    requestId: 'mismatch',
+    payload: { uploadId: 'u-1', fileID: 'cloud://other/staging/u-1.jpg' },
+  })
+  expect(result.ok).toBe(false)
+  expect(cloud.downloadFile).not.toHaveBeenCalled()
+  expect(docs.has('u-1')).toBe(true)
+})
+
+it('云存储返回删除失败时保留登记供重试', async () => {
+  const { db, docs } = createFakeCloudDb()
+  docs.set('stale', { _id: 'stale', updatedAt: new Date(0), fileID: 'cloud://x/staging/stale.jpg' })
+  const result = await cleanupStaleStaged(db, {
+    deleteFile: vi.fn(async () => ({ fileList: [{ status: -1 }] })),
+  })
+  expect(result.cleaned).toBe(0)
+  expect(docs.has('stale')).toBe(true)
 })

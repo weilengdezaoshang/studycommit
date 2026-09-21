@@ -55,6 +55,12 @@
       </view>
     </view>
 
+    <button class="puzzle-drawer-entry" bindtap="openPuzzle">
+      <image wx:if="{{puzzleImage}}" src="{{puzzleImage}}" mode="aspectFill" />
+      <view><text>{{puzzleTitle}}</text><small>{{puzzleProgress}} · {{puzzleAction}}</small></view>
+      <text>→</text>
+    </button>
+
     <view class="drawer-calendar">
       <button class="review-entry" aria-label="查看月份装订" bindtap="openReview">
         <view class="review-month-group">

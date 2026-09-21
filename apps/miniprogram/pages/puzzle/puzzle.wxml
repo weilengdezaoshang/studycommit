@@ -1,0 +1,27 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">正在翻开画册…</view>
+  <view wx:elif="{{error}}" class="state"><text>{{error}}</text><button bindtap="load">重试</button></view>
+  <view wx:elif="{{organizing}}" class="organize">
+    <button bindtap="closeOrganize">← 返回画册</button>
+    <text class="kicker">旧记录，慢慢归位 · {{position + 1}} / {{group.length}}</text>
+    <view wx:if="{{group[position]}}" class="paper"><text>{{group[position].content || '这是一条图片记录。'}}</text></view>
+    <picker wx:if="{{group[position]}}" mode="selector" range="{{topics}}" range-key="name" bindchange="chooseTopic"><view class="picker">选择一个主题</view></picker>
+    <view wx:if="{{group[position]}}" class="actions"><button bindtap="skipPaper">稍后处理</button><button class="primary" disabled="{{!topicId}}" bindtap="organizePaper">归入主题</button></view>
+    <text wx:else>这一组已经整理完了。</text>
+  </view>
+  <view wx:elif="{{!current}}" class="gallery">
+    <text class="kicker">先选一幅想慢慢完成的画</text>
+    <button wx:for="{{album.artworks}}" wx:key="id" wx:if="{{item.status === 'published'}}" data-id="{{item.id}}" bindtap="selectArtwork" class="art-card">
+      <image src="{{item.assetUrl}}" mode="aspectFill"/><view><text>{{item.title}}</text><small>{{item.description}}</small></view>
+    </button>
+  </view>
+  <view wx:else class="album">
+    <view class="heading"><view><text class="kicker">当前收集</text><text class="title">{{current.title}}</text></view><text>{{revealed.length}} / 12</text></view>
+    <view class="picture"><image src="{{current.assetUrl}}" mode="aspectFill"/><view class="mask" style="opacity: {{revealed.length / 12}}"></view></view>
+    <canvas wx:if="{{scratching}}" canvas-id="scratch" class="scratch" bindtouchmove="scratch"></canvas>
+    <text wx:if="{{scratching}}" class="hint">用手指慢慢擦开 · {{scratchProgress}}%</text>
+    <button wx:if="{{pendingId && !scratching}}" class="primary" bindtap="startScratch">擦开一小块</button>
+    <button wx:elif="{{current.completedAt && !current.featured}}" class="primary" bindtap="feature">挂到首页</button>
+    <button wx:else bindtap="goOrganize">去整理旧记录</button>
+  </view>
+</view>

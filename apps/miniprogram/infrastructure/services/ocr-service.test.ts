@@ -60,11 +60,11 @@ describe('capabilities-service', () => {
     expect(storage.size).toBe(1)
   })
 
-  it('拉取失败时保留既有能力', async () => {
+  it('首次拉取失败时保持采集入口关闭', async () => {
     const { transport } = createTransport({})
     const service = createCapabilitiesService({ mode: 'cloud-function', transport })
     await service.refresh()
-    expect(service.get().captureEnabled).toBe(true)
+    expect(service.get().captureEnabled).toBe(false)
   })
 })
 

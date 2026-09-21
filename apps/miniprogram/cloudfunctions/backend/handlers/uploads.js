@@ -1,5 +1,14 @@
 const { BackendError } = require('../errors')
 
+// 前缀取自生产云环境真实文件 ID（cloud://环境.存储桶/），只能由服务端配置。
+function cloudFileId(env, cloudPath) {
+  const prefix = env.CLOUD_FILE_ID_PREFIX
+  if (typeof prefix !== 'string' || !/^cloud:\/\/[^/]+\/$/.test(prefix)) {
+    throw new BackendError('SERVICE_DISABLED', '云存储标识尚未配置')
+  }
+  return `${prefix}${cloudPath}`
+}
+
 const STAGED_COLLECTION = 'mp_staged_files'
 const DEFAULT_MAX_IMAGE_BYTES = 10 * 1024 * 1024
 const IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp'])
@@ -24,9 +33,9 @@ function createCapabilitiesOperations() {
       const maxImages = Number.parseInt(env.MAX_CAPTURE_IMAGES, 10)
       return {
         backendMode: 'cloud-function',
-        captureEnabled: env.CAPTURE_ENABLED !== 'false',
-        imageRecordEnabled: env.IMAGE_RECORD_ENABLED !== 'false',
-        ocrEnabled: env.OCR_ENABLED !== 'false',
+        captureEnabled: env.CAPTURE_ENABLED === 'true',
+        imageRecordEnabled: env.IMAGE_RECORD_ENABLED === 'true',
+        ocrEnabled: env.OCR_ENABLED === 'true',
         maxCaptureImages: Number.isFinite(maxImages) && maxImages > 0 ? Math.min(maxImages, 9) : 9,
         maxImageBytes: fileMaxBytes(env),
       }
@@ -58,6 +67,7 @@ function createUploadOperations() {
       const extension =
         mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'
       const cloudPath = `staging/${uploadId}.${extension}`
+      const fileID = cloudFileId(env, cloudPath)
       // set 是 upsert：先查已有归属，防止知道 uploadId 的第三方覆盖他人登记。
       const existing = await readStaged(db, uploadId)
       if (existing && existing.owner !== userContext.openId) {
@@ -70,13 +80,14 @@ function createUploadOperations() {
             owner: userContext.openId,
             kind: 'asset',
             cloudPath,
+            fileID,
             mimeType,
             sizeBytes,
             ...(payload.sha256 ? { sha256: payload.sha256 } : {}),
             updatedAt: db.serverDate(),
           },
         })
-      return { cloudPath }
+      return { cloudPath, fileID }
     },
 
     'uploads.attach': async ({ payload, userContext, db, cloud, forward, sendRaw }) => {
@@ -89,7 +100,10 @@ function createUploadOperations() {
       if (!staged || staged.owner !== userContext.openId || staged.kind !== 'asset') {
         throw new BackendError('FORBIDDEN', '无权绑定该文件')
       }
-      const downloaded = await cloud.downloadFile({ fileID: staged.cloudPath })
+      if (!staged.fileID || fileID !== staged.fileID) {
+        throw new BackendError('FORBIDDEN', '文件与登记不匹配')
+      }
+      const downloaded = await cloud.downloadFile({ fileID: staged.fileID })
       const bytes = downloaded && downloaded.fileContent
       if (!bytes || !bytes.length) {
         throw new BackendError('PROVIDER_FAILED', '暂存文件已失效')
@@ -108,7 +122,7 @@ function createUploadOperations() {
         body: bytes,
       })
       const completed = await forward('POST', `/uploads/${encodeURIComponent(uploadId)}/complete`)
-      await cleanupStaged(db, cloud, uploadId, staged.cloudPath)
+      await cleanupStaged(db, cloud, uploadId, staged.fileID)
       return {
         uploadId,
         assetId: completed ? completed.assetId || completed.id : undefined,
@@ -116,12 +130,13 @@ function createUploadOperations() {
       }
     },
 
-    'uploads.stageTemp': async ({ payload, userContext, db }) => {
+    'uploads.stageTemp': async ({ payload, userContext, db, env }) => {
       if (!payload || payload.kind !== 'ocr-temp') {
         throw new BackendError('INVALID_INPUT', '缺少暂存类型')
       }
       const tempId = randomId()
       const cloudPath = `ocr-temp/${tempId}`
+      const fileID = cloudFileId(env, cloudPath)
       await stagedCollection(db)
         .doc(cloudPath)
         .set({
@@ -129,10 +144,11 @@ function createUploadOperations() {
             owner: userContext.openId,
             kind: 'ocr-temp',
             cloudPath,
+            fileID,
             updatedAt: db.serverDate(),
           },
         })
-      return { cloudPath }
+      return { cloudPath, fileID }
     },
 
     'uploads.cleanupTemp': async ({ payload, userContext, db, cloud }) => {
@@ -145,8 +161,8 @@ function createUploadOperations() {
         // 归属不符时静默忽略，不暴露存在性。
         return { cleaned: false }
       }
-      await cleanupStaged(db, cloud, fileRef, staged.cloudPath)
-      return { cleaned: true }
+      const cleaned = await cleanupStaged(db, cloud, fileRef, staged.fileID)
+      return { cleaned }
     },
   }
 }
@@ -163,16 +179,19 @@ async function readStaged(db, id) {
   }
 }
 
-async function cleanupStaged(db, cloud, id, cloudPath) {
+async function cleanupStaged(db, cloud, id, fileID) {
+  // 先删文件，再删登记；删除失败保留登记供定时任务重试。
   try {
+    if (fileID) {
+      const result = await cloud.deleteFile({ fileList: [fileID] })
+      if (result?.fileList?.some((file) => file.status !== 0)) {
+        return false
+      }
+    }
     await stagedCollection(db).doc(id).remove()
+    return true
   } catch {
-    // 清理失败不影响主流程；暂存文档有过期策略兜底。
-  }
-  try {
-    await cloud.deleteFile({ fileList: [cloudPath] })
-  } catch {
-    // 同上。
+    return false
   }
 }
 
@@ -197,19 +216,9 @@ async function cleanupStaleStaged(db, cloud, now = Date.now) {
     if (!id) {
       continue
     }
-    try {
-      await stagedCollection(db).doc(id).remove()
-    } catch {
-      // 单条失败不阻断清理。
+    if (await cleanupStaged(db, cloud, id, item.fileID)) {
+      cleaned += 1
     }
-    if (item.cloudPath && cloud && typeof cloud.deleteFile === 'function') {
-      try {
-        await cloud.deleteFile({ fileList: [item.cloudPath] })
-      } catch {
-        // 同上；文件残留由云存储生命周期策略兜底。
-      }
-    }
-    cleaned += 1
   }
   return { cleaned }
 }

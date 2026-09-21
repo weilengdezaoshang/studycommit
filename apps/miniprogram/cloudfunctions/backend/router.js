@@ -4,6 +4,10 @@ const {
   createSearchOperations,
   createStudySessionOperations,
   createAuthOperations,
+  createOperationsOperations,
+  createCampaignsOperations,
+  createCreditsOperations,
+  createPuzzleOperations,
 } = require('./handlers/business')
 const { createCapabilitiesOperations, createUploadOperations } = require('./handlers/uploads')
 
@@ -28,8 +32,19 @@ function createRouter() {
   register(createTopicsOperations(), 'identity')
   register(createSearchOperations(), 'identity')
   register(createStudySessionOperations(), 'identity')
+  register(createOperationsOperations(), 'identity')
+  register(createCampaignsOperations(), 'identity')
+  register(createCreditsOperations(), 'identity')
+  register(createPuzzleOperations(), 'identity')
   register(createCapabilitiesOperations(), 'none')
   register(createUploadOperations(), 'none')
+  routes['uploads.access'] = {
+    auth: 'identity',
+    fn: ({ forward, payload }) => {
+      const { pathSegment } = require('./handlers/util')
+      return forward('GET', `/paper-assets/${pathSegment(payload, 'assetId')}/access`)
+    },
+  }
   // attach 需要用户令牌走预签名直传绑定，必须经过身份交换。
   routes['uploads.attach'] = { auth: 'identity', fn: createUploadOperations()['uploads.attach'] }
 

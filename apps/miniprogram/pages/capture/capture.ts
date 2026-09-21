@@ -1,3 +1,4 @@
+import { DESIGN_PREVIEW_ENABLED } from '../../constants/build'
 import {
   captureReducer,
   captureImageVersionKey,
@@ -57,10 +58,11 @@ Page({
     sourceOpen: false,
     picking: false,
     hydrated: false,
+    saved: false,
     activeRunId: '',
   },
   async onLoad(query: Record<string, string | undefined>) {
-    const preview = Boolean(query.scenario)
+    const preview = DESIGN_PREVIEW_ENABLED && Boolean(query.scenario)
     const state = preview
       ? createCaptureScenario(query.scenario!, examples)
       : createCaptureState(query.mode === 'image' ? 'image' : 'ocr')
@@ -82,7 +84,11 @@ Page({
     }
   },
   onHide() {
-    if (!this.data.preview && (this.data.state.images.length || this.data.state.content.trim())) {
+    if (
+      !this.data.preview &&
+      !this.data.saved &&
+      (this.data.state.images.length || this.data.state.content.trim())
+    ) {
       void saveCaptureDraft(this.data.state).catch(() => undefined)
     }
   },
@@ -371,6 +377,7 @@ Page({
         },
         { idempotencyKey: prepared.input.idempotencyKey },
       )
+      this.setData({ saved: true })
       wx.disableAlertBeforeUnload()
       await clearCaptureDraft(this.data.state)
       wx.navigateBack()

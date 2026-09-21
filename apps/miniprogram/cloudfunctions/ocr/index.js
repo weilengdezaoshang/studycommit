@@ -7,6 +7,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 exports.main = createOcrHandler({
   getWXContext: () => cloud.getWXContext(),
   db: cloud.database(),
+  downloadFile: (input) => cloud.downloadFile(input),
+  deleteFile: (input) => cloud.deleteFile(input),
   createOcrClient: (credential, region, timeoutSeconds) =>
     new tencentcloud.ocr.v20181119.Client({
       credential,

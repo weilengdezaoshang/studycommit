@@ -6,6 +6,7 @@ import { createCapabilitiesService, type CapabilitiesService } from './capabilit
 import { MINIPROGRAM_OPERATIONS } from './operations'
 import { createOcrService, type OcrService } from './ocr-service'
 import { createPapersService, type PapersService } from './papers-service'
+import { createPuzzlesService, type PuzzlesService } from './puzzles-service'
 import { createSearchService, type SearchService } from './search-service'
 import { createStudySessionsService, type StudySessionsService } from './study-sessions-service'
 import { createTopicsService, type TopicsService } from './topics-service'
@@ -15,6 +16,7 @@ import { createUploadsService, type UploadsService } from './uploads-service'
 export interface MiniprogramServices {
   auth: AuthService
   papers: PapersService
+  puzzles: PuzzlesService
   uploads: UploadsService
   ocr: OcrService
   topics: TopicsService
@@ -53,6 +55,7 @@ export function createMiniprogramServices(
   return {
     auth: createAuthService({ transport }),
     papers: createPapersService({ transport }),
+    puzzles: createPuzzlesService(transport),
     uploads: createUploadsService({
       transport,
       mode: options.mode,

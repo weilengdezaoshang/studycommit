@@ -16,12 +16,15 @@ const BACKEND_MODE_STORAGE_KEY = 'studycommit.backend.mode.v1'
 const BACKEND_MODES: Record<string, MiniprogramBackendMode> = {
   develop: 'cloud-function',
   trial: 'cloud-function',
-  release: 'http',
+  release: 'cloud-function',
 }
 
 export function resolveLocalBackendMode(): MiniprogramBackendMode {
   const envVersion = wx.getAccountInfoSync().miniProgram.envVersion
   const fallback = BACKEND_MODES[envVersion] ?? 'http'
+  if (envVersion !== 'develop') {
+    return fallback
+  }
   try {
     const override = wx.getStorageSync(BACKEND_MODE_STORAGE_KEY)
     if (override === 'cloud-function' || override === 'http') {
@@ -52,7 +55,7 @@ export function configureMiniprogramServices(
 ): MiniprogramServices {
   cached = createMiniprogramServices({
     mode: options?.mode ?? resolveLocalBackendMode(),
-    allowHttpFallback: options?.allowHttpFallback ?? true,
+    allowHttpFallback: options?.allowHttpFallback ?? false,
     ...options,
   })
   return cached

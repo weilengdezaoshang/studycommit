@@ -99,7 +99,8 @@ function captureReducer(state, action) {
             return invalidatePaperRequest({
                 ...state,
                 images,
-                content: state.edited || state.mode === 'image' ? state.content : recognizedContent(images),
+                content: state.content,
+                edited: state.edited || Boolean(state.content),
                 selected: Math.max(0, Math.min(state.selected, images.length - 1)),
                 saveAttempt: normalizeCaptureState({ ...state, images }).saveAttempt,
             });

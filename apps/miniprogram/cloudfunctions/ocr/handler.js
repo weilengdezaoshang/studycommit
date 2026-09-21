@@ -59,9 +59,12 @@ function createOcrHandler(deps) {
     }
     const { imageId, version } = input
     const day = new Date(now()).toISOString().slice(0, 10)
+    let ownedResource
     try {
       await consumeDailyQuota(db, OPENID, day, config.dailyLimit)
-      const imageBase64 = await resolveImageBytes(db, OPENID, input, downloadFile)
+      const imageBase64 = await resolveImageBytes(db, OPENID, input, downloadFile, (resource) => {
+        ownedResource = resource
+      })
       // SDK 自身超时比协议超时多 1 秒，保证超时统一由处理器判定为 OCR_TIMEOUT。
       const client = createOcrClient(
         credential,
@@ -91,8 +94,8 @@ function createOcrHandler(deps) {
       )
       return fail(code)
     } finally {
-      if (input.fileRef) {
-        await cleanupTempFile(db, deleteFile, input.fileRef)
+      if (ownedResource) {
+        await cleanupTempFile(db, deleteFile, ownedResource)
       }
     }
   }
@@ -101,7 +104,7 @@ function createOcrHandler(deps) {
 const STAGED_COLLECTION = 'mp_staged_files'
 
 /** 识别图片来源：私有临时文件需归属校验；内联 Base64 直接透传。 */
-async function resolveImageBytes(db, openid, input, downloadFile) {
+async function resolveImageBytes(db, openid, input, downloadFile, onOwned) {
   if (!input.fileRef) {
     return input.imageBase64
   }
@@ -116,7 +119,11 @@ async function resolveImageBytes(db, openid, input, downloadFile) {
     // 归属不符或文件不存在一律拒绝，不暴露存在性。
     throw new Error('OCR_FORBIDDEN')
   }
-  const downloaded = await downloadFile({ fileID: input.fileRef })
+  if (typeof staged.fileID !== 'string' || !staged.fileID.startsWith('cloud://')) {
+    throw new Error('OCR_FORBIDDEN')
+  }
+  onOwned({ fileRef: input.fileRef, fileID: staged.fileID })
+  const downloaded = await downloadFile({ fileID: staged.fileID })
   const buffer = downloaded && downloaded.fileContent
   if (!buffer || !buffer.length) {
     throw new Error('OCR_FORBIDDEN')
@@ -129,18 +136,18 @@ async function resolveImageBytes(db, openid, input, downloadFile) {
 }
 
 /** 识别结束后删除临时识别资源（文件与登记文档），失败不影响主流程。 */
-async function cleanupTempFile(db, deleteFile, fileRef) {
+async function cleanupTempFile(db, deleteFile, { fileRef, fileID }) {
   try {
+    if (typeof deleteFile !== 'function') {
+      return
+    }
+    const result = await deleteFile({ fileList: [fileID] })
+    if (result?.fileList?.some((file) => file.status !== 0)) {
+      return
+    }
     await db.collection(STAGED_COLLECTION).doc(fileRef).remove()
   } catch {
-    // 登记文档由过期策略兜底。
-  }
-  if (typeof deleteFile === 'function') {
-    try {
-      await deleteFile({ fileList: [fileRef] })
-    } catch {
-      // 同上。
-    }
+    // 保留登记供定时任务重试。
   }
 }
 

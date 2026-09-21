@@ -97,10 +97,10 @@ export function createOcrService(options: CreateOcrServiceOptions): OcrService {
             retryable: false,
           })
         }
-        const staged = await options.transport.call<{ kind: string }, { cloudPath?: string }>(
-          'uploads.stageTemp',
-          { kind: 'ocr-temp' },
-        )
+        const staged = await options.transport.call<
+          { kind: string },
+          { cloudPath?: string; fileID?: string }
+        >('uploads.stageTemp', { kind: 'ocr-temp' })
         const cloudPath = staged?.cloudPath
         if (!cloudPath) {
           throw new ServiceError({
@@ -111,7 +111,19 @@ export function createOcrService(options: CreateOcrServiceOptions): OcrService {
         }
         fileRef = cloudPath
         stagedTemp = true
-        await uploadCloudFile(cloudPath, input.localPath)
+        try {
+          const fileID = await uploadCloudFile(cloudPath, input.localPath)
+          if (staged.fileID && staged.fileID !== fileID) {
+            throw new ServiceError({
+              code: 'PROVIDER_FAILED',
+              message: '云存储环境不匹配',
+              retryable: false,
+            })
+          }
+        } catch (error) {
+          await options.transport.call('uploads.cleanupTemp', { fileRef }).catch(() => undefined)
+          throw error
+        }
       }
       const resolvedFileRef = fileRef
       try {

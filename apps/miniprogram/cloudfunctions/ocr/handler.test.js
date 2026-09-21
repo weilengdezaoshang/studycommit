@@ -241,7 +241,12 @@ describe('ocr 云函数处理器', () => {
 
   it('私有临时文件归属匹配时下载并识别', async () => {
     const db = createFakeDb()
-    db.docs.set('ocr-temp/t-1', { owner: 'openid-1', kind: 'ocr-temp', cloudPath: 'ocr-temp/t-1' })
+    db.docs.set('ocr-temp/t-1', {
+      owner: 'openid-1',
+      kind: 'ocr-temp',
+      cloudPath: 'ocr-temp/t-1',
+      fileID: 'cloud://x/ocr-temp/t-1',
+    })
     const { handler, providerCalls } = setup({
       db,
       downloadFile: async ({ fileID }) => ({
@@ -265,11 +270,17 @@ describe('ocr 云函数处理器', () => {
     })
     const result = await handler({ imageId: 'img-1', version: 1, fileRef: 'ocr-temp/t-2' })
     expect(result).toEqual({ ok: false, code: 'OCR_FORBIDDEN' })
+    expect(db.docs.has('ocr-temp/t-2')).toBe(true)
   })
 
   it('识别结束后清理临时识别资源', async () => {
     const db = createFakeDb()
-    db.docs.set('ocr-temp/t-3', { owner: 'openid-1', kind: 'ocr-temp', cloudPath: 'ocr-temp/t-3' })
+    db.docs.set('ocr-temp/t-3', {
+      owner: 'openid-1',
+      kind: 'ocr-temp',
+      cloudPath: 'ocr-temp/t-3',
+      fileID: 'cloud://x/ocr-temp/t-3',
+    })
     const deleteFile = vi.fn(async () => undefined)
     const { handler } = setup({
       db,
@@ -279,7 +290,7 @@ describe('ocr 云函数处理器', () => {
     const result = await handler({ imageId: 'img-1', version: 1, fileRef: 'ocr-temp/t-3' })
     expect(result.ok).toBe(true)
     expect(db.docs.has('ocr-temp/t-3')).toBe(false)
-    expect(deleteFile).toHaveBeenCalledWith({ fileList: ['ocr-temp/t-3'] })
+    expect(deleteFile).toHaveBeenCalledWith({ fileList: ['cloud://x/ocr-temp/t-3'] })
   })
 
   it('日志只记录图片身份、版本、耗时和错误码', async () => {

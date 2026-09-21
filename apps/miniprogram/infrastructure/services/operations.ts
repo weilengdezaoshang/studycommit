@@ -84,6 +84,18 @@ const OPERATIONS: OperationRegistry = {
     },
   },
 
+  'puzzles.album': { kind: 'read', http: { method: 'GET', path: '/puzzles/album' } },
+  'puzzles.selectArtwork': { kind: 'write', http: { method: 'POST', path: '/puzzles/selection' } },
+  'puzzles.reveal': {
+    kind: 'write',
+    http: {
+      method: 'POST',
+      path: (input) =>
+        `/puzzles/rewards/${encodeURIComponent(requireString(input, 'rewardId'))}/reveal`,
+    },
+  },
+  'puzzles.featureArtwork': { kind: 'write', http: { method: 'POST', path: '/puzzles/featured' } },
+
   // 箱子（主题）
   'topics.list': {
     kind: 'read',

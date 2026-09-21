@@ -4,7 +4,8 @@
     "pages/login/login",
     "pages/note-editor/note-editor",
     "pages/capture/capture",
-    "pages/capture-design/capture-design"
+    "pages/capture-design/capture-design",
+    "pages/puzzle/puzzle"
   ],
   "window": {
     "navigationBarTitleText": "StudyCommit",

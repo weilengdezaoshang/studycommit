@@ -4,6 +4,7 @@ import { getMiniprogramServices } from '../../infrastructure/services/service-co
 import { monitor } from '../../services/monitor-adapter'
 import { TOPIC_NAME_LIMIT, type TopicSummary } from '../../infrastructure/services/papers-service'
 import type { Paper } from '@studycommit/rpc-contracts/papers'
+import { puzzleOverview } from '@studycommit/common/puzzle-runtime'
 import {
   formatDisplayCount,
   getDrawerTopicSummary,
@@ -155,6 +156,10 @@ Page({
     isTopicFormOpen: false,
     isCreatingTopic: false,
     organizingId: '',
+    puzzleTitle: '我的拼图画册',
+    puzzleProgress: '开始收集',
+    puzzleAction: '选择画作',
+    puzzleImage: '',
     isTimelineSwapping: false,
   },
 
@@ -177,13 +182,8 @@ Page({
   },
 
   async onLoad() {
-    try {
-      this.setData({
-        captureUiEnabled: wx.getAccountInfoSync().miniProgram.envVersion === 'develop',
-      })
-    } catch {
-      /* 非开发环境沿用现有入口 */
-    }
+    const capabilities = await getMiniprogramServices().capabilities.refresh()
+    this.setData({ captureUiEnabled: capabilities.captureEnabled })
 
     this.setData(getCustomNavigationMetrics())
     // 只等待鉴权就绪;未登录的跳转统一由 onShow 处理,避免双重 redirectTo
@@ -217,18 +217,39 @@ Page({
     void this.loadHome()
   },
 
+  openPuzzle() {
+    wx.navigateTo({ url: ROUTES.PUZZLE })
+  },
+
   async loadHome() {
     const currentLoad = ++loadSequence
     this.setData({ isLoading: true, isLoadError: false, loadErrorMessage: '' })
     try {
       const api = getMiniprogramServices().papers
-      const [paperPage, topics] = await Promise.all([api.list({ limit: 100 }), api.listTopics()])
+      const [paperPage, topics, album] = await Promise.all([
+        api.list({ limit: 100 }),
+        api.listTopics(),
+        getMiniprogramServices()
+          .puzzles.album()
+          .catch(() => null),
+      ])
       if (currentLoad !== loadSequence) {
         return
       }
       const topicNameById = new Map(topics.map((topic) => [topic.id, topic.name]))
       this.setData({
         papers: paperPage.items.map((paper) => toPaperViewModel(paper, topicNameById)),
+        ...(album
+          ? (() => {
+              const summary = puzzleOverview(album)
+              return {
+                puzzleTitle: summary.artwork?.title ?? '我的拼图画册',
+                puzzleProgress: summary.progressText,
+                puzzleAction: summary.actionText,
+                puzzleImage: summary.artwork?.assetUrl ?? '',
+              }
+            })()
+          : {}),
       })
       this.applyDerivedData(topics)
     } catch (error) {

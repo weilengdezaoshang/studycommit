@@ -22,6 +22,18 @@ function createPapersOperations() {
   }
 }
 
+function createPuzzleOperations() {
+  return {
+    'puzzles.album': ({ forward }) => forward('GET', '/puzzles/album'),
+    'puzzles.selectArtwork': ({ forward, payload }) =>
+      forward('POST', '/puzzles/selection', payload),
+    'puzzles.reveal': ({ forward, payload }) =>
+      forward('POST', `/puzzles/rewards/${pathSegment(payload, 'rewardId')}/reveal`, payload),
+    'puzzles.featureArtwork': ({ forward, payload }) =>
+      forward('POST', '/puzzles/featured', payload),
+  }
+}
+
 /** 箱子（主题）业务转发。 */
 function createTopicsOperations() {
   return {
@@ -75,10 +87,37 @@ function createAuthOperations() {
   }
 }
 
+/** 运营引导/活动/积分余额:只读转发;领取类写操作按平台适配进度单独开放。 */
+function createOperationsOperations() {
+  return {
+    'operations.bootstrap': ({ forward }) => forward('GET', '/operations/bootstrap'),
+  }
+}
+
+function createCampaignsOperations() {
+  return {
+    'campaigns.list': ({ forward }) => forward('GET', '/campaigns'),
+    'campaigns.get': ({ forward, payload }) =>
+      forward('GET', `/campaigns/${pathSegment(payload, 'id')}`),
+  }
+}
+
+function createCreditsOperations() {
+  return {
+    'credits.balance': ({ forward }) => forward('GET', '/credits/balance'),
+    'credits.ledger': ({ forward, payload }) =>
+      forward('GET', buildQuery('/credits/ledger', payload)),
+  }
+}
+
 module.exports = {
   createPapersOperations,
   createTopicsOperations,
   createSearchOperations,
   createStudySessionOperations,
   createAuthOperations,
+  createOperationsOperations,
+  createCampaignsOperations,
+  createCreditsOperations,
+  createPuzzleOperations,
 }

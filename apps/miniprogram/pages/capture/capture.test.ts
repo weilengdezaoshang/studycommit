@@ -5,6 +5,7 @@ type Context = {
     state: CaptureState
     preview: boolean
     sourceOpen: boolean
+    saved: boolean
     activeRunId: string
   }
   setData(patch: Record<string, unknown>): void
@@ -16,6 +17,7 @@ type Context = {
   retry(): void
   recognize(failedOnly?: boolean): Promise<void>
   previewImages(): void
+  onHide(): void
   save(): void
 }
 type CloudCallResolver = {
@@ -171,4 +173,15 @@ describe('小程序图片页面', () => {
     expect(view.data.state.images[0]).toMatchObject({ status: 'done', text: '第一张文字' })
     expect(view.data.state.images[1]).toMatchObject({ status: 'done', text: '第二张文字' })
   })
+})
+
+it('保存完成后离页不会重新写入草稿', async () => {
+  const view = page('image')
+  view.data.preview = false
+  view.data.saved = true
+  const write = vi.spyOn(wx, 'setStorageSync')
+  view.onHide()
+  await waitTick()
+  expect(write).not.toHaveBeenCalled()
+  write.mockRestore()
 })
