@@ -30,3 +30,5 @@ export {
 export type { PaperDraft, PaperDraftAction } from './draft'
 export { findReusableUploadSession, isUploadSessionExpired } from './upload-session'
 export type { UploadFileFingerprint, UploadSessionRef, UploadSessionStatus } from './upload-session'
+
+export { mergeListedPaper } from './list-merge'
