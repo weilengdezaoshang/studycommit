@@ -25,11 +25,7 @@ import type {
   UpdateTopicInput,
 } from '@studycommit/common/ports'
 import { createHttpError, HttpError, type SerializedHttpError } from '@studycommit/common/http'
-import type {
-  ConfirmPaperExplainOutput,
-  PaperExplainInput,
-  PaperExplainOutput,
-} from '@studycommit/rpc-contracts/ai'
+import type { ConfirmPaperExplainOutput, PaperExplainInput } from '@studycommit/rpc-contracts/ai'
 
 type IpcResult<T> = { ok: true; data: T } | { ok: false; error: SerializedHttpError }
 
@@ -62,7 +58,13 @@ export interface LearningLogGateway {
 }
 
 export interface AiGateway {
-  explainPaper(input: PaperExplainInput): Promise<PaperExplainOutput>
+  quote(): Promise<import('@studycommit/rpc-contracts/ai').AiQuoteOutput>
+  explainRun(
+    input: PaperExplainInput,
+    expectedPrice: { priceCredits: number; priceVersion: number },
+    idempotencyKey: string,
+  ): Promise<import('@studycommit/rpc-contracts/ai').AiStartRunOutput>
+  getRun(runId: string): Promise<import('@studycommit/rpc-contracts/ai').AiGetRunOutput>
   confirmPaperExplain(input: { runId: string }): Promise<ConfirmPaperExplainOutput>
 }
 
@@ -128,7 +130,10 @@ export function createDesktopAiGateway(
   api: Window['studyCommit']['ai'] = window.studyCommit.ai,
 ): AiGateway {
   return {
-    explainPaper: (input) => invokeIpc(() => api.explainPaper(input)),
+    quote: () => invokeIpc(() => api.quote()),
+    explainRun: (input, expectedPrice, idempotencyKey) =>
+      invokeIpc(() => api.startRun({ input, expectedPrice, idempotencyKey })),
+    getRun: (runId) => invokeIpc(() => api.getRun({ runId })),
     confirmPaperExplain: (input) => invokeIpc(() => api.confirmPaperExplain(input)),
   }
 }

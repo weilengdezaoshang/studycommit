@@ -1,0 +1,144 @@
+.record-reader.comic-reader {
+  position: static;
+  inset: auto;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: auto;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  transform: none;
+  display: block;
+}
+.comic-reader .record-reader__bar {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+.comic-reader .record-reader__bar h2 {
+  font: var(--font-size-title) / var(--line-height-title) var(--font-title-hand);
+}
+.comic-reader__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: var(--space-xl);
+  align-items: start;
+  padding-top: var(--space-md);
+}
+.comic-reader__content {
+  min-width: 0;
+}
+.comic-reader__content > .notebook-paper {
+  margin-bottom: var(--space-xl);
+}
+.comic-reader .record-reader__meta {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-md);
+  overflow-wrap: anywhere;
+}
+.comic-reader .reader-question {
+  padding: var(--space-md) var(--space-lg);
+  border: 2px solid var(--color-text);
+  border-radius: 32px 28px 35px 22px;
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+.comic-reader .reader-question p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.comic-reader .paper-knowledge {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.comic-reader .paper-knowledge > h4 {
+  font-family: var(--font-hand);
+}
+.comic-reader textarea,
+.comic-reader input {
+  max-width: 100%;
+  color: var(--color-text);
+  background: var(--color-surface);
+  padding: var(--space-sm-plus);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+.comic-reader textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+}
+.comic-reader .paper-knowledge form {
+  display: grid;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+}
+.comic-reader .paper-knowledge p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.comic-reader .paper-knowledge button {
+  min-height: 40px;
+}
+.paper-knowledge__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+.comic-reader .record-organization {
+  margin-top: 0;
+}
+.record-assets {
+  display: grid;
+  gap: var(--space-md);
+}
+.record-image {
+  min-height: 140px;
+  background: var(--color-surface-muted);
+  border: 1px solid var(--color-border);
+  display: grid;
+  place-items: center;
+}
+.record-image__open {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+}
+.record-image img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+}
+.record-image-dialog img {
+  display: block;
+  max-width: 100%;
+  max-height: 70dvh;
+  object-fit: contain;
+}
+.comic-reader .rich-content pre {
+  white-space: pre;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.comic-reader .rich-content .tiptap {
+  min-width: 0;
+}
+.knowledge-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+@media (max-width: 1050px) {
+  .comic-reader__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .knowledge-comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

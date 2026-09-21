@@ -13,6 +13,10 @@ import type {
   TopicGateway,
 } from '../api/desktop-study-session-gateway'
 import { AppRoutes } from '../../../app/AppRouter'
+import { vi } from 'vitest'
+
+// 未开放功能的回归测试显式开启，不改变产品默认开关。
+vi.mock('../../../../../shared/feature-flags', () => ({ STUDY_SESSIONS_ENABLED: true }))
 
 export function createStudySessionGateway(
   overrides: Partial<StudySessionGateway> = {},
@@ -86,8 +90,14 @@ export function createLearningLogGateway(
 
 export function createAiGateway(overrides: Partial<AiGateway> = {}): AiGateway {
   return {
-    explainPaper: async () => {
-      throw new Error('explainPaper not stubbed')
+    quote: async () => {
+      throw new Error('quote not stubbed')
+    },
+    explainRun: async () => {
+      throw new Error('explainRun not stubbed')
+    },
+    getRun: async () => {
+      throw new Error('getRun not stubbed')
     },
     confirmPaperExplain: async () => {
       throw new Error('confirmPaperExplain not stubbed')

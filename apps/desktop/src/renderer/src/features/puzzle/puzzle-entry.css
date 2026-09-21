@@ -1,0 +1,67 @@
+.dialog.puzzle-dialog {
+  width: min(900px, calc(100vw - 48px));
+  max-width: 900px;
+  max-height: calc(100dvh - 40px);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  overflow: auto;
+  box-shadow: none;
+}
+
+.puzzle-entry-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 250px;
+  min-height: 54px;
+  padding: 5px 10px 5px 5px;
+  border: 1px solid var(--notebook-line, #b8c7c9);
+  border-radius: 13px 11px 14px 10px;
+  background: rgba(255, 253, 247, 0.86);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 2px 3px 0 rgba(81, 104, 108, 0.08);
+}
+
+.puzzle-entry-card:hover {
+  transform: translateY(-1px) rotate(-0.2deg);
+}
+.puzzle-entry-card img {
+  width: 46px;
+  height: 42px;
+  border-radius: 9px;
+  object-fit: cover;
+}
+.puzzle-entry-card span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.puzzle-entry-card strong,
+.puzzle-entry-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.puzzle-entry-card small {
+  color: var(--notebook-muted, #657779);
+  font-size: 11px;
+}
+.puzzle-entry-card b {
+  color: #b7614f;
+  font-size: 11px;
+}
+.puzzle-entry-card.has-reward {
+  border-color: #d9a28f;
+  background: #fff8ef;
+}
+.puzzle-dialog > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

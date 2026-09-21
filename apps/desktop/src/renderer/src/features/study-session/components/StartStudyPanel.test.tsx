@@ -12,7 +12,7 @@ const secondTopic = {
 }
 
 describe('StartStudyPanel', () => {
-  it('keeps the topic unselected and blocks submit until topic and goal are filled', async () => {
+  it('未选择专题或填写目标时禁止开始学习', async () => {
     renderStudyApp('/today', {
       topics: createTopicGateway({
         listActive: async () => ({
@@ -22,25 +22,27 @@ describe('StartStudyPanel', () => {
       }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
-    expect(await screen.findByLabelText('专题')).toHaveValue('')
+    expect(await screen.findByLabelText('专题')).toHaveTextContent('请选择专题')
     expect(screen.getByLabelText('学习目标')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
     expect(screen.getByText('请选择一个专题后再开始。')).toBeInTheDocument()
     expect(screen.getByText('请填写学习目标后再开始。')).toBeInTheDocument()
 
-    await userEvent.selectOptions(screen.getByLabelText('专题'), activeTopicFixture.id)
+    await userEvent.click(screen.getByLabelText('专题'))
+    await userEvent.click(screen.getByRole('option', { name: activeTopicFixture.name }))
     expect(screen.getByRole('button', { name: '开始学习' })).toBeDisabled()
     await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
     expect(screen.getByRole('button', { name: '开始学习' })).toBeEnabled()
   })
 
-  it('creates a session once and stays on today with timer controls', async () => {
+  it('创建一次会话后显示计时控制', async () => {
     const create = vi.fn().mockResolvedValue(runningStudySessionFixture)
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({ create }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
-    await userEvent.selectOptions(await screen.findByLabelText('专题'), activeTopicFixture.id)
+    await userEvent.click(await screen.findByLabelText('专题'))
+    await userEvent.click(screen.getByRole('option', { name: activeTopicFixture.name }))
     await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
     await userEvent.click(screen.getByRole('button', { name: '开始学习' }))
     expect(create).toHaveBeenCalledOnce()
@@ -51,7 +53,7 @@ describe('StartStudyPanel', () => {
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()
   })
 
-  it('enters the existing session when create conflicts', async () => {
+  it('创建冲突时进入已有学习会话', async () => {
     renderStudyApp('/today', {
       studySessions: createStudySessionGateway({
         create: async () => {
@@ -68,7 +70,8 @@ describe('StartStudyPanel', () => {
       }),
     })
     await userEvent.click(await screen.findByRole('button', { name: '开始学习' }))
-    await userEvent.selectOptions(await screen.findByLabelText('专题'), activeTopicFixture.id)
+    await userEvent.click(await screen.findByLabelText('专题'))
+    await userEvent.click(screen.getByRole('option', { name: activeTopicFixture.name }))
     await userEvent.type(screen.getByLabelText('学习目标'), '理解 IPC')
     await userEvent.click(screen.getByRole('button', { name: '开始学习' }))
     expect(await screen.findByRole('button', { name: '暂停' })).toBeInTheDocument()

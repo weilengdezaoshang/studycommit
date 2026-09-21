@@ -9,9 +9,12 @@ import { DesktopServicesProvider } from '../features/study-session/api/DesktopSe
 import { SettingsPage } from '../features/papers/SettingsPage'
 import { RecordsHomePage, type RecordsScope } from '../features/papers/RecordsHomePage'
 import { ComposePage } from '../features/papers/ComposePage'
+import { TopicsPage } from '../features/papers/TopicsPage'
+import { PaperDetailPage } from '../features/papers/PaperDetailPage'
 import { AuthPage } from '../features/auth/AuthPage'
 import { CaptureOverlay } from '../features/capture/CaptureOverlay'
 import { MiniSessionPage } from '../features/mini-session/MiniSessionPage'
+import { STUDY_SESSIONS_ENABLED } from '../../../shared/feature-flags'
 import { SearchPage } from '../features/search/SearchPage'
 import { ReviewPage } from '../features/review/ReviewPage'
 import { CaptureConfirmOverlay } from '../features/capture/CaptureConfirmOverlay'
@@ -82,7 +85,12 @@ export function AppRoutes({
         <Routes>
           {/* 区域截图覆盖窗:独立窗口,不套登录门控与应用壳 */}
           <Route path="capture-overlay" element={<CaptureOverlay />} />
-          <Route path="mini-session" element={<MiniSessionPage />} />
+          <Route
+            path="mini-session"
+            element={
+              STUDY_SESSIONS_ENABLED ? <MiniSessionPage /> : <Navigate to="/timeline" replace />
+            }
+          />
           <Route
             path="auth"
             element={
@@ -107,10 +115,17 @@ export function AppRoutes({
             <Route index element={<LandingRedirect />} />
             <Route
               path="today"
-              element={workspaceMode === 'study-session' ? null : <RecordsHomePage />}
+              element={
+                STUDY_SESSIONS_ENABLED && workspaceMode === 'study-session' ? null : (
+                  <RecordsHomePage />
+                )
+              }
             />
             <Route path="timeline" element={<RecordsHomePage />} />
             <Route path="compose" element={<ComposePage />} />
+            <Route path="topics" element={<TopicsPage />} />
+            <Route path="papers/:paperId/explain" element={<PaperDetailPage explain />} />
+            <Route path="papers/:paperId" element={<PaperDetailPage />} />
             <Route path="problems" element={<ScopeBridge scope={{ kind: 'questions' }} />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="review" element={<ReviewPage />} />

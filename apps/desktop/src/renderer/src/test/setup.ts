@@ -36,6 +36,15 @@ function createDefaultStudyCommit() {
       remove: async () => ({ ok: false as const, error: configurationError() }),
     },
     papers: {
+      get: async () => {
+        throw new Error('详情服务未配置')
+      },
+      knowledge: async () => {
+        throw new Error('详情服务未配置')
+      },
+      updateKnowledge: async () => {
+        throw new Error('详情服务未配置')
+      },
       // 默认失败:渲染层测试继续使用种子演示数据;需要的用例自行覆盖 papers.list
       list: async () => ({ ok: false as const, error: configurationError() }),
       create: async () => ({ ok: false as const, error: configurationError() }),
@@ -44,6 +53,7 @@ function createDefaultStudyCommit() {
       moveToInbox: async () => ({ ok: false as const, error: configurationError() }),
       remove: async () => ({ ok: false as const, error: configurationError() }),
       question: async () => ({ ok: false as const, error: configurationError() }),
+      assetAccess: async () => ({ ok: false as const, error: configurationError() }),
       restore: async () => ({ ok: false as const, error: configurationError() }),
     },
     learningLogs: {
@@ -52,6 +62,42 @@ function createDefaultStudyCommit() {
       update: async () => ({ ok: false as const, error: configurationError() }),
     },
     ai: {
+      quote: async () =>
+        ({
+          ok: false,
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: '请求层尚未就绪',
+            status: null,
+            backendCode: null,
+            requestId: null,
+            details: null,
+          },
+        }) as const,
+      startRun: async () =>
+        ({
+          ok: false,
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: '请求层尚未就绪',
+            status: null,
+            backendCode: null,
+            requestId: null,
+            details: null,
+          },
+        }) as const,
+      getRun: async () =>
+        ({
+          ok: false,
+          error: {
+            code: 'CONFIGURATION_ERROR',
+            message: '请求层尚未就绪',
+            status: null,
+            backendCode: null,
+            requestId: null,
+            details: null,
+          },
+        }) as const,
       explainPaper: async () => ({ ok: false as const, error: configurationError() }),
       confirmPaperExplain: async () => ({ ok: false as const, error: configurationError() }),
     },

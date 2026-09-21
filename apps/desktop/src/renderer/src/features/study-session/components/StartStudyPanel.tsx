@@ -103,7 +103,7 @@ export function StartStudyPanel({
           <button
             type="button"
             className="button button--secondary"
-            onClick={() => void window.studyCommit.capture.openPermissionSettings()}
+            onClick={() => void captureEntry.openSettings()}
           >
             打开系统设置
           </button>
@@ -133,7 +133,7 @@ export function StartStudyPanel({
           hint={topicId ? undefined : '请选择一个专题后再开始。'}
           id="start-topic"
           label="专题"
-          onChange={(event) => setTopicId(event.target.value)}
+          onValueChange={setTopicId}
           placeholder="请选择专题"
           required
           value={topicId}

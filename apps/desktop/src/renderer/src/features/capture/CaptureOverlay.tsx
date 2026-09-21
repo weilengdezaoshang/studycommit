@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CaptureOverlayState } from '../../types/study-commit-api'
+import { NotebookButton, StateNotice } from '../../components/notebook/Notebook'
+import './capture-overlay.css'
+import { CaptureSelectionActions } from './CaptureSelectionActions'
 
 interface SelectionRect {
   x: number
@@ -34,30 +37,75 @@ function normalizeRect(
 export function CaptureOverlay(): React.JSX.Element {
   const [state, setState] = useState<CaptureOverlayState | null>(null)
   const [rect, setRect] = useState<SelectionRect | null>(null)
+  const [dragging, setDragging] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const busy = useRef(false)
   const dragStart = useRef<{ x: number; y: number } | null>(null)
   const shiftRef = useRef(false)
 
   const submit = useCallback(() => {
-    if (!rect || submitting) {
+    if (!state || !rect || rect.width < 1 || rect.height < 1 || busy.current || dragStart.current) {
       return
     }
+    busy.current = true
+    setError('')
     setSubmitting(true)
-    void window.studyCommit.capture.overlaySelection({ selection: rect })
-  }, [rect, submitting])
+    void window.studyCommit.capture
+      .overlaySelection({ selection: rect })
+      .then((result) => {
+        if (!result.ok) {
+          throw new Error('截图生成失败')
+        }
+      })
+      .catch(() => {
+        busy.current = false
+        setSubmitting(false)
+        setError('截图生成失败，选区已保留，请重试或取消。')
+      })
+  }, [rect, state])
+
+  const cancel = useCallback(() => {
+    if (busy.current) {
+      return
+    }
+    busy.current = true
+    setSubmitting(true)
+    setError('')
+    void window.studyCommit.capture
+      .overlayCancel()
+      .then((result) => {
+        if (!result.ok) {
+          throw new Error('取消失败')
+        }
+      })
+      .catch(() => {
+        busy.current = false
+        setSubmitting(false)
+        setError('暂时无法取消，请重试或按 Esc。')
+      })
+  }, [])
 
   useEffect(() => {
     const offState = window.studyCommit.capture.onOverlayState(setState)
-    void window.studyCommit.capture.overlayReady()
+    void window.studyCommit.capture
+      .overlayReady()
+      .catch(() => setError('截图画面加载失败，请取消后重试。'))
+    return offState
+  }, [])
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Shift') {
         shiftRef.current = true
       }
       if (event.key === 'Escape') {
-        void window.studyCommit.capture.overlayCancel()
+        event.preventDefault()
+        cancel()
       }
-      if (event.key === 'Enter' && rect && rect.width >= 1 && rect.height >= 1) {
-        void submit()
+      if (event.key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+        event.preventDefault()
+        submit()
       }
     }
     const onKeyUp = (event: KeyboardEvent) => {
@@ -68,18 +116,17 @@ export function CaptureOverlay(): React.JSX.Element {
     window.addEventListener('keydown', onKeyDown)
     window.addEventListener('keyup', onKeyUp)
     return () => {
-      offState()
       window.removeEventListener('keydown', onKeyDown)
       window.removeEventListener('keyup', onKeyUp)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rect])
+  }, [submit, cancel])
 
   const onMouseDown = (event: React.MouseEvent) => {
-    if (submitting) {
+    if (busy.current || !state || event.button !== 0) {
       return
     }
     dragStart.current = { x: event.clientX, y: event.clientY }
+    setDragging(true)
     setRect({ x: event.clientX, y: event.clientY, width: 0, height: 0 })
   }
 
@@ -93,6 +140,7 @@ export function CaptureOverlay(): React.JSX.Element {
 
   const onMouseUp = () => {
     dragStart.current = null
+    setDragging(false)
   }
 
   return (
@@ -184,6 +232,30 @@ export function CaptureOverlay(): React.JSX.Element {
           正在生成截图…
         </div>
       ) : null}
+      {!dragging && (
+        <CaptureSelectionActions rect={rect}>
+          {error && <StateNotice>{error}</StateNotice>}
+          <div className="capture-selection-actions__row" role="group" aria-label="截图操作">
+            <span role="status">
+              {submitting
+                ? '正在处理截图…'
+                : rect && rect.width >= 1 && rect.height >= 1
+                  ? '选区已就绪，可重新拖拽调整'
+                  : '拖拽选择截图区域'}
+            </span>
+            <NotebookButton disabled={submitting} onClick={cancel}>
+              取消截图 · Esc
+            </NotebookButton>
+            <NotebookButton
+              variant="primary"
+              disabled={submitting || !state || !rect || rect.width < 1 || rect.height < 1}
+              onClick={submit}
+            >
+              确认截图 · Enter
+            </NotebookButton>
+          </div>
+        </CaptureSelectionActions>
+      )}
     </div>
   )
 }

@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'StudyCommitTitleHand';
+  src: url('./assets/fonts/StudyCommitCasual-UI.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* V7 雾蓝手绘主题:霞鹜文楷界面子集(R51),仅用于短标题、导航与操作;缺字回退系统字体。 */
 @font-face {
   font-family: 'StudyCommitDrawerHand';
@@ -14,6 +22,7 @@
   background: var(--color-background);
   font-synthesis: none;
   /* 手写字体栈:标题与导航使用,正文与数字保持清晰阅读字体 */
+  --font-title-hand: 'StudyCommitTitleHand', 'PingFang SC', system-ui, sans-serif;
   --font-hand: 'StudyCommitDrawerHand', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
 }
 
@@ -8093,4 +8102,187 @@ button:focus-visible {
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* R88、R93–R95：独立解释页，下层原位接替；正文保持可选取。 */
+.paper-explain-page {
+  position: relative;
+  min-height: 600px;
+  height: calc(100dvh - 120px);
+  background: var(--color-background);
+  padding: 24px;
+  max-width: 720px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+}
+.paper-explain-page header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.paper-explain-page details p {
+  max-height: 160px;
+  overflow: auto;
+}
+.explanation-deck {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  overflow: hidden;
+}
+.explanation-card {
+  position: relative;
+  height: 100%;
+  min-height: 280px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px 8px 24px 8px;
+  background: var(--color-surface);
+  display: flex;
+  flex-direction: column;
+}
+.explanation-card--next {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.explanation-card .paper-explain__body {
+  overflow: auto;
+  flex: 1;
+}
+.explanation-intent {
+  height: 26px;
+  text-align: right;
+  font-size: 13px;
+}
+.explanation-accessible-actions {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.explanation-accessible-actions:focus-within {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+}
+
+.paper-knowledge {
+  padding: 16px;
+  display: grid;
+  gap: 16px;
+}
+.paper-knowledge__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.paper-knowledge form,
+.paper-knowledge label {
+  display: grid;
+  gap: 12px;
+}
+.paper-knowledge textarea {
+  width: 100%;
+  min-height: 100px;
+}
+.paper-knowledge p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.knowledge-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.knowledge-comparison article {
+  max-height: 320px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+}
+@media (max-width: 600px) {
+  .knowledge-comparison {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 三方向解释卡：与最新简洁纸面稿对齐。 */
+.paper-explain-page > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.paper-explain-page > details {
+  color: var(--color-text-secondary);
+}
+.paper-explain-page .explanation-card {
+  border-radius: 6px;
+  box-shadow: 0 3px 8px rgb(40 40 40 / 8%);
+}
+.paper-explain-page .paper-explain__body {
+  font-size: 16px;
+  line-height: 1.75;
+}
+.paper-explain-page .paper-explain__body > strong {
+  display: block;
+  margin-bottom: 24px;
+  font-size: 20px;
+}
+.paper-explain-page .paper-explain__body > details {
+  margin-top: 24px;
+}
+
+.paper-explain__generate {
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--ink, #2b2b2b);
+  border-radius: var(--radius, 10px);
+  background: var(--paper, #fffdf7);
+  font: inherit;
+  cursor: pointer;
+}
+
+.paper-explain__generate:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.record-reader__assets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-block: 14px;
+}
+.record-reader__assets button {
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.record-reader__assets img {
+  display: block;
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+.record-reader__viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  border: 0;
+  background: rgba(20, 27, 37, 0.9);
+  padding: 32px;
+}
+.record-reader__viewer img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }

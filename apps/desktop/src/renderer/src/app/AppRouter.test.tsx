@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { AppRoutes } from './AppRouter'
 
@@ -13,6 +13,25 @@ function renderAt(path: string) {
 }
 
 describe('application shell', () => {
+  it('陪学关闭时旧小窗地址回到记录本且不读取已有会话', async () => {
+    const getActive = vi.spyOn(window.studyCommit.studySessions, 'getActive')
+    renderAt('/mini-session')
+    expect(await screen.findByRole('heading', { name: '记录本' })).toBeInTheDocument()
+    act(() => window.dispatchEvent(new Event('studycommit:open-study')))
+    expect(screen.queryByRole('dialog', { name: '学习面板' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /继续学习/ })).not.toBeInTheDocument()
+    expect(getActive).not.toHaveBeenCalled()
+  })
+
+  it('陪学关闭时旧工作区模式仍显示记录本', async () => {
+    render(
+      <MemoryRouter initialEntries={['/today']}>
+        <AppRoutes workspaceMode="study-session" />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('heading', { name: '记录本' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '开始学习' })).not.toBeInTheDocument()
+  })
   it('根路由重定向到上次顶级路径并渲染记录本', async () => {
     renderAt('/')
     expect(await screen.findByRole('heading', { name: '记录本' })).toBeInTheDocument()
@@ -46,9 +65,9 @@ describe('application shell', () => {
     expect(active.className).toContain('drawer-icon-action')
   })
 
-  it('记录本展示种子数据且不出现旧业务指标', () => {
+  it('首次加载失败时提供重试且不将种子数据当作缓存', async () => {
     renderAt('/timeline')
-    expect(screen.getByText(/全部记录 · \d+ 条记录/)).toBeInTheDocument()
+    expect(await screen.findByText('记录暂时加载失败')).toBeInTheDocument()
     expect(screen.queryByText(/50 分钟|今日累计/)).not.toBeInTheDocument()
   })
 

@@ -53,7 +53,7 @@ describe('记录本学习入口', () => {
 
   it('没有活动学习时不显示学习入口', async () => {
     renderStudyApp('/timeline')
-    expect(await screen.findByText(/全部记录 · \d+ 条记录/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '记录本' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /继续学习/ })).not.toBeInTheDocument()
   })
 })

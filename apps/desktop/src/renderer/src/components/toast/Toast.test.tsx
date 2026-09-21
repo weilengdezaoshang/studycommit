@@ -1,19 +1,23 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ToastProvider, useToast } from '@studycommit/common/toast-react'
 import { Toast } from './Toast'
 
 /** 测试探针:把 ToastApi 暴露给用例驱动。 */
 let probe: ReturnType<typeof useToast> | null = null
-function Probe() {
-  probe = useToast()
+function Probe({ onReady }: { onReady: (api: ReturnType<typeof useToast>) => void }) {
+  const api = useToast()
+  useEffect(() => {
+    onReady(api)
+  }, [api, onReady])
   return null
 }
 
 function renderToast() {
   return render(
     <ToastProvider renderToast={(toast) => <Toast {...toast} />}>
-      <Probe />
+      <Probe onReady={(api) => (probe = api)} />
     </ToastProvider>,
   )
 }

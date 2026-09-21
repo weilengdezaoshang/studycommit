@@ -1,0 +1,136 @@
+.dialog-backdrop:has(> .record-composer) {
+  padding: 12px;
+}
+.dialog.record-composer {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(800px, calc(100vw - 48px));
+  max-width: none;
+  max-height: calc(100dvh - 64px);
+  padding: var(--space-lg);
+  border: 2px solid transparent;
+  border-radius: 4px 9px 3px 8px;
+  background: var(--color-surface);
+  box-shadow:
+    7px 8px 0 var(--color-surface),
+    9px 10px 0 var(--color-border-strong);
+  overflow: visible;
+}
+.dialog.record-composer > h2,
+.record-close-confirm > h2 {
+  font: var(--font-size-title) / var(--line-height-title) var(--font-title-hand);
+  margin: 0 48px var(--space-md) 0;
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-surface);
+  text-decoration-thickness: 6px;
+  text-underline-offset: 4px;
+}
+.record-composer__close {
+  position: absolute;
+  right: var(--space-md);
+  top: var(--space-sm);
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-display);
+  cursor: pointer;
+}
+.record-composer__scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-xs);
+  overscroll-behavior: contain;
+}
+.record-composer__topic {
+  background: var(--color-primary-surface);
+  padding: var(--space-xs) var(--space-sm-plus);
+  border: 1px solid var(--color-text);
+  border-radius: 4px 7px;
+}
+.record-composer .rich-content {
+  border: 1px solid var(--color-border-strong);
+  padding: var(--space-md);
+  border-radius: 3px 5px;
+}
+.record-composer .rich-content .tiptap {
+  min-height: 220px;
+  max-height: 40dvh;
+  overflow: auto;
+}
+.record-composer .rich-toolbar button {
+  min-height: 36px;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.record-composer .rich-toolbar button:disabled {
+  opacity: var(--motion-disabled-opacity);
+}
+.record-composer .rich-toolbar button[aria-pressed='true'] {
+  background: var(--color-primary-surface);
+  border-color: var(--color-primary);
+}
+.compose-question {
+  margin-block: var(--space-md);
+}
+.compose-question summary {
+  display: list-item;
+  width: fit-content;
+  padding: var(--space-sm);
+  font-family: var(--font-hand);
+  cursor: pointer;
+  background: var(--color-warning-surface);
+  border-radius: 40% 35% 20% 30%;
+}
+.compose-question textarea {
+  margin-top: var(--space-sm);
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  padding: var(--space-sm-plus);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+.record-composer__footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm-plus);
+  padding-top: var(--space-md);
+  margin-top: var(--space-md);
+  border-top: 2px solid var(--color-text);
+  flex-shrink: 0;
+}
+.record-composer__footer > span {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+.record-composer__footer > div {
+  margin-left: auto;
+}
+.dialog.record-close-confirm {
+  max-width: min(600px, calc(100vw - 32px));
+  border: 2px solid var(--color-text);
+  background: var(--color-surface);
+}
+.rich-content pre {
+  white-space: pre;
+  max-width: 100%;
+  overflow-x: auto;
+}
+@media (max-width: 650px), (max-height: 600px) {
+  .dialog.record-composer {
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: var(--space-md);
+  }
+  .record-composer .rich-content .tiptap {
+    min-height: 160px;
+  }
+}

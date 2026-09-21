@@ -1,0 +1,59 @@
+.workspace {
+  --workspace-header-height: 64px;
+  padding-top: var(--workspace-header-height);
+}
+.workspace > .app-header {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--workspace-header-height);
+  z-index: 10;
+  border-bottom: 2px solid var(--color-text);
+  background: var(--color-surface);
+}
+.app-header .app-header__brand {
+  color: var(--color-text);
+  font: var(--font-size-heading) / var(--line-height-heading) var(--font-title-hand);
+  text-decoration: underline;
+  text-decoration-color: var(--color-primary-surface);
+  text-underline-offset: 6px;
+}
+.notebook-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.notebook-header-actions a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 4px 7px;
+  min-height: 40px;
+}
+.notebook-header-actions svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.notebook-header-actions a > span {
+  font-size: var(--font-size-body-small);
+}
+.content:has(.comic-home),
+.content:has(.comic-reader) {
+  background: var(--color-background);
+  padding-top: var(--space-sm);
+}
+@media (max-width: 850px) {
+  .notebook-header-actions a > span {
+    display: none;
+  }
+  .notebook-header-actions {
+    gap: var(--space-sm);
+  }
+}

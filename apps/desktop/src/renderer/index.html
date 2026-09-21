@@ -2,7 +2,8 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: http://localhost:*; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <!-- 本机开发图片存储：只允许明确的 MinIO 与拼图 API 来源。 -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://127.0.0.1:9000 http://localhost:9000 http://127.0.0.1:3000 http://localhost:3000; connect-src 'self' ws: http://localhost:*; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>StudyCommit</title>
   </head>

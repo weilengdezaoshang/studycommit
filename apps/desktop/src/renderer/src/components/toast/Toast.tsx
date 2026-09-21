@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ToastViewState } from '@studycommit/common/toast-react'
 
 const ICONS: Record<ToastViewState['type'], string> = {
@@ -12,43 +12,56 @@ const EXIT_MS = 260
 
 export function Toast({ message, onClose, type, count }: ToastViewState): React.JSX.Element | null {
   // 消息清空后保留一帧退出动画,避免瞬时跳变
-  const [leaving, setLeaving] = useState(false)
   const [entered, setEntered] = useState(false)
-  const lastContent = useRef<{ message: string; type: ToastViewState['type'] } | null>(null)
+  const [shown, setShown] = useState<{ message: string; type: ToastViewState['type'] } | null>(
+    () => (message ? { message, type } : null),
+  )
+  const signature = message ? `${type}\u0000${message}` : null
+  const [shownSignature, setShownSignature] = useState(signature)
+
+  if (message && signature !== shownSignature) {
+    setShownSignature(signature)
+    setShown({ message, type })
+  }
 
   useEffect(() => {
-    if (message) {
-      lastContent.current = { message, type }
-      setLeaving(false)
-      const raf = requestAnimationFrame(() => setEntered(true))
-      return () => cancelAnimationFrame(raf)
+    if (!message) {
+      return
     }
-    if (lastContent.current) {
-      setEntered(false)
-      setLeaving(true)
-      const timer = setTimeout(() => {
-        lastContent.current = null
-        setLeaving(false)
-      }, EXIT_MS)
-      return () => clearTimeout(timer)
-    }
+    const frame = requestAnimationFrame(() => {
+      setEntered(true)
+    })
+    return () => cancelAnimationFrame(frame)
   }, [message, type])
 
-  if (!Boolean(message) && !leaving) {
-    return null
-  }
+  useEffect(() => {
+    if (!message && shown) {
+      const frame = requestAnimationFrame(() => {
+        setEntered(false)
+      })
+      const timer = setTimeout(() => {
+        setShown(null)
+        setShownSignature(null)
+      }, EXIT_MS)
+      return () => {
+        cancelAnimationFrame(frame)
+        clearTimeout(timer)
+      }
+    }
+  }, [message, shown])
+
   // 退出动画期间 provider 已重置 type,展示最后一条的类型样式
-  const shown = message ? { message, type } : lastContent.current
-  if (!shown) {
+  const displayed = message ? { message, type } : shown
+  if (!displayed) {
     return null
   }
   return (
-    <div className={`toast toast--${shown.type}${entered ? ' is-in' : ''}`} role="status">
+    <div className={`toast toast--${displayed.type}${entered ? ' is-in' : ''}`} role="status">
       <button type="button" className="toast__message" onClick={onClose}>
         <span className="toast__icon" aria-hidden="true">
-          {ICONS[shown.type]}
+          {ICONS[displayed.type]}
         </span>
-        {shown.message}
+        {displayed.message}
         {count > 1 && <span className="toast__count">×{count}</span>}
       </button>
     </div>

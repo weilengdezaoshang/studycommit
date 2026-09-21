@@ -14,6 +14,7 @@ import {
 import { StudyPanelOverlay } from '../features/study-session/StudyPanelOverlay'
 import { TodayPage } from '../features/study-session/pages/TodayPage'
 import { papersActions } from '../features/papers/papers-store'
+import { STUDY_SESSIONS_ENABLED } from '../../../shared/feature-flags'
 
 function PageOutlet(): React.JSX.Element {
   const location = useLocation()
@@ -38,11 +39,18 @@ export function AppShell({
 }: {
   workspaceMode?: 'mock' | 'study-session'
 }): React.JSX.Element {
-  const [drawerOpen, setDrawerOpen] = useState(process.env.NODE_ENV === 'test')
-  const [studyPanelOpen, setStudyPanelOpen] = useState(false)
-  const openDrawer = useCallback(() => setDrawerOpen(true), [])
-  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
-  const closeStudyPanel = useCallback(() => setStudyPanelOpen(false), [])
+  return STUDY_SESSIONS_ENABLED ? (
+    <StudyEnabledShell workspaceMode={workspaceMode} />
+  ) : (
+    <WorkspaceShell workspaceMode="mock" />
+  )
+}
+
+function StudyEnabledShell({
+  workspaceMode,
+}: {
+  workspaceMode: 'mock' | 'study-session'
+}): React.JSX.Element {
   const { studySessions, topics, learningLogs } = useDesktopServices()
   const study = useStudySessionController({
     studySessions,
@@ -51,6 +59,24 @@ export function AppShell({
     subscribeForeground: subscribeWindowFocus,
     enablePoll: process.env.NODE_ENV !== 'test',
   })
+  return (
+    <StudyControllerProvider controller={study}>
+      <WorkspaceShell workspaceMode={workspaceMode} />
+    </StudyControllerProvider>
+  )
+}
+
+function WorkspaceShell({
+  workspaceMode,
+}: {
+  workspaceMode: 'mock' | 'study-session'
+}): React.JSX.Element {
+  const [drawerOpen, setDrawerOpen] = useState(process.env.NODE_ENV === 'test')
+  const [studyPanelOpen, setStudyPanelOpen] = useState(false)
+  const openDrawer = useCallback(() => setDrawerOpen(true), [])
+  const closeDrawer = useCallback(() => setDrawerOpen(false), [])
+  const closeStudyPanel = useCallback(() => setStudyPanelOpen(false), [])
+  const study = useStudyController()
   const { pathname } = useLocation()
   const showToday = pathname === '/today'
 
@@ -63,6 +89,9 @@ export function AppShell({
 
   // 主页「学习中 · 继续学习」入口请求打开学习面板(面板状态在 shell 层)
   useEffect(() => {
+    if (!STUDY_SESSIONS_ENABLED) {
+      return
+    }
     const open = (): void => setStudyPanelOpen(true)
     window.addEventListener('studycommit:open-study', open)
     return () => window.removeEventListener('studycommit:open-study', open)
@@ -74,25 +103,23 @@ export function AppShell({
   }, [])
 
   return (
-    <StudyControllerProvider controller={study}>
-      <div className="app-shell">
-        <NavigationPersistence />
-        <Sidebar open={drawerOpen} onClose={closeDrawer} />
-        <div className="workspace">
-          <AppHeader drawerOpen={drawerOpen} onMenu={openDrawer} />
-          <main className="content" tabIndex={-1}>
-            {showToday && workspaceMode === 'study-session' ? (
-              <ErrorBoundary>
-                <TodayPage study={study} />
-              </ErrorBoundary>
-            ) : (
-              /* 路由决定内容:/today 渲染纸页首页(选中日期的记录) */
-              <PageOutlet />
-            )}
-          </main>
-        </div>
-        {studyPanelOpen ? <StudyPanelHost onClose={closeStudyPanel} /> : null}
+    <div className="app-shell">
+      <NavigationPersistence />
+      <Sidebar open={drawerOpen} onClose={closeDrawer} />
+      <div className="workspace">
+        <AppHeader drawerOpen={drawerOpen} onMenu={openDrawer} />
+        <main className="content" tabIndex={-1}>
+          {study && showToday && workspaceMode === 'study-session' ? (
+            <ErrorBoundary>
+              <TodayPage study={study} />
+            </ErrorBoundary>
+          ) : (
+            /* 路由决定内容:/today 渲染纸页首页(选中日期的记录) */
+            <PageOutlet />
+          )}
+        </main>
       </div>
-    </StudyControllerProvider>
+      {studyPanelOpen ? <StudyPanelHost onClose={closeStudyPanel} /> : null}
+    </div>
   )
 }

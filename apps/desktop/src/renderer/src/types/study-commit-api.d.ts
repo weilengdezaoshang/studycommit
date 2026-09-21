@@ -1,4 +1,5 @@
 import type { PaperKnowledge, PaperKnowledgeCommand } from '@studycommit/rpc-contracts/papers'
+import type { PuzzleAlbum, PuzzleReward } from '@studycommit/rpc-contracts/puzzles'
 import type {
   ActiveStudySessionResponse,
   CompleteStudySessionInput,
@@ -224,6 +225,12 @@ export interface StudyCommitApi {
   topics: StudyCommitTopicsApi
   learningLogs: StudyCommitLearningLogsApi
   papers: StudyCommitPapersApi
+  puzzles?: {
+    album: () => Promise<IpcResult<PuzzleAlbum>>
+    selectArtwork: (artworkId: string) => Promise<IpcResult<PuzzleAlbum>>
+    reveal: (rewardId: string) => Promise<IpcResult<PuzzleReward>>
+    featureArtwork: (artworkId: string) => Promise<IpcResult<PuzzleAlbum>>
+  }
   ai: StudyCommitAiApi
   auth: StudyCommitAuthApi
   capture: StudyCommitCaptureApi

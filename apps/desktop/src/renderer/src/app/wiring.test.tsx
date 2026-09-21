@@ -1,10 +1,12 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import { AppRoutes } from './AppRouter'
+import { mockRemoteRecords } from '../test/records-fixture'
 
 function renderAt(path: string) {
+  mockRemoteRecords()
   return render(
     <MemoryRouter initialEntries={[path]}>
       <AppRoutes />
@@ -71,51 +73,46 @@ describe('drawer wiring', () => {
     await user.click(screen.getByRole('button', { name: dayLabel }))
 
     // 只剩选中日期的记录组,并出现清除日期入口
-    expect(screen.getByText(/· 1 条记录/)).toBeInTheDocument()
+    expect(screen.getByText('1 条记录')).toBeInTheDocument()
     expect(screen.queryAllByText(/React 的状态更新/)).toHaveLength(0)
-    await user.click(screen.getByRole('button', { name: '清除日期' }))
+    await user.click(screen.getByRole('button', { name: /清除日期/ }))
     expect((await screen.findAllByText(/React 的状态更新/)).length).toBeGreaterThanOrEqual(1)
   })
 
-  it('单击记录卡片在右侧阅读与思考栏打开全文', async () => {
+  it('单击记录卡片进入完整详情并显示独立整理区域', async () => {
     const user = userEvent.setup()
     renderAt('/timeline')
     const card = await screen.findByRole('button', { name: /打开记录：.*React 的状态更新/ })
     expect(screen.queryByRole('complementary', { name: '阅读与思考' })).not.toBeInTheDocument()
     await user.click(card)
 
-    const reader = screen.getByRole('complementary', { name: '阅读与思考' })
+    const reader = await screen.findByRole('article', { name: '阅读与思考' })
     expect(reader).toHaveTextContent(/React 的状态更新/)
-    expect(reader).toHaveTextContent('整理与更多')
+    expect(reader).toHaveTextContent('整理这条记录')
   })
 
-  it('阅读栏内整理与更多展开后可归入主题', async () => {
+  it('详情的独立整理区域可归入主题', async () => {
     const user = userEvent.setup()
     renderAt('/timeline')
     const card = await screen.findByRole('button', { name: /打开记录：.*React 的状态更新/ })
     await user.click(card)
 
-    const reader = screen.getByRole('complementary', { name: '阅读与思考' })
-    await user.click(within(reader).getByText('整理与更多'))
-    await user.selectOptions(
-      within(reader).getByLabelText(/收纳到主题|给这张纸页找个归属/),
-      'topic-mobile',
-    )
-    await user.click(within(reader).getByRole('button', { name: '归入主题' }))
+    const reader = await screen.findByRole('article', { name: '阅读与思考' })
+    await user.click(within(reader).getByLabelText(/所属主题/))
+    await user.click(screen.getByRole('option', { name: '移动端设计' }))
+    await user.click(within(reader).getByRole('button', { name: /归入主题/ }))
 
-    expect(await screen.findByText(/纸页已归入「移动端设计」/)).toBeInTheDocument()
+    expect(await screen.findByText('记录已归入主题')).toBeInTheDocument()
   })
 
-  it('滚轮滚动后预览跟随滚动位置', async () => {
+  it('日历通过公共下拉选择年份和月份并立即更新', async () => {
     const user = userEvent.setup()
     renderAt('/today')
-    await user.click(screen.getByRole('button', { name: '选择年月' }))
-
-    const yearColumn = document.querySelector<HTMLDivElement>('.wheel-column[aria-label="年份"]')
-    expect(yearColumn).not.toBeNull()
-    yearColumn!.scrollTop = 120
-    fireEvent.scroll(yearColumn!)
-
-    expect(screen.getByText(/1903 年 \d+ 月/)).toBeInTheDocument()
+    await user.click(screen.getByRole('combobox', { name: '选择年份' }))
+    expect(document.querySelector('.dropdown-select-menu')).not.toBeNull()
+    await user.click(screen.getByRole('option', { name: '2024 年' }))
+    await user.click(screen.getByRole('combobox', { name: '选择月份' }))
+    await user.click(screen.getByRole('option', { name: '2 月' }))
+    expect(screen.getByLabelText('2024 年 2 月学习记录热力图')).toBeInTheDocument()
   })
 })

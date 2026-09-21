@@ -1,0 +1,159 @@
+/* 抽屉与日期格为桌面布局；颜色、间距、字号沿用公共设计变量。 */
+.sidebar.notebook-drawer {
+  width: 344px;
+  padding: var(--space-lg) var(--space-md);
+  background: var(--color-surface);
+  border-right: 2px solid var(--color-text);
+}
+.notebook-drawer .drawer-identity {
+  gap: var(--space-sm);
+  padding: 0 0 var(--space-md);
+  border-bottom: 1px dashed var(--color-border-strong);
+}
+.notebook-drawer .drawer-auth-status {
+  font-size: var(--font-size-caption);
+}
+.notebook-drawer .drawer-icon-action {
+  width: 36px;
+  height: 40px;
+}
+.notebook-drawer .drawer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px 15px 10px 14px;
+}
+.notebook-drawer .drawer-section {
+  margin-top: var(--space-md);
+  padding: 0;
+}
+.notebook-drawer .drawer-section__heading {
+  padding-inline: var(--space-sm);
+  min-height: 32px;
+}
+.notebook-drawer .drawer-section h2 {
+  font-size: var(--font-size-body-small);
+  color: var(--color-text-muted);
+}
+.notebook-drawer .drawer-link {
+  min-height: 42px;
+  padding: var(--space-sm);
+  border-radius: 3px 6px 4px 5px;
+}
+.notebook-drawer .drawer-link[aria-current='page'] {
+  background: var(--color-primary-surface);
+}
+.notebook-drawer .drawer-link[aria-current='page']::after {
+  display: none;
+}
+.notebook-drawer .drawer-calendar {
+  position: relative;
+  margin: var(--space-lg) 0 var(--space-sm);
+  padding: var(--space-sm-plus);
+  background: var(--color-surface);
+  border-radius: 4px 7px 3px 6px;
+  box-shadow: 3px 4px 0 var(--color-primary-surface);
+}
+.notebook-drawer .drawer-month-nav {
+  margin: 0 0 var(--space-sm);
+  min-height: 36px;
+}
+.notebook-drawer .month-label--button {
+  font-size: var(--font-size-heading);
+}
+.notebook-drawer .drawer-month-selects {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+.notebook-drawer .drawer-month-selects .notebook-select__control {
+  font-size: var(--font-size-body-small);
+}
+.notebook-drawer .month-shift {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px 7px;
+  color: var(--color-text);
+}
+.notebook-drawer .mini-calendar__week,
+.notebook-drawer .mini-calendar__days {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-xs);
+}
+.notebook-drawer .mini-calendar__week {
+  margin: 0 0 var(--space-xs);
+}
+.notebook-drawer .mini-calendar__days {
+  margin: 0 0 var(--space-xs);
+}
+.sidebar.notebook-drawer .drawer-calendar .calendar-cell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+  border-radius: 4px 7px 3px 5px;
+  color: var(--color-text);
+  font-size: var(--font-size-body-small);
+  transition: none;
+}
+.sidebar.notebook-drawer .calendar-cell:not(:disabled):not(.calendar-cell--blank):hover {
+  background: var(--color-primary-surface);
+}
+.sidebar.notebook-drawer .calendar-cell.calendar-cell--selected {
+  background: var(--color-primary-surface);
+}
+.notebook-drawer .calendar-date-number {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.notebook-drawer .calendar-cell--today .calendar-date-number {
+  border: 1.5px solid var(--color-primary);
+  border-radius: 45% 52% 44% 50%;
+}
+.notebook-drawer .calendar-record-count {
+  min-height: 12px;
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--color-primary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sidebar.notebook-drawer .calendar-cell:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.sidebar.notebook-drawer .calendar-cell:disabled {
+  color: var(--color-text-muted);
+  opacity: var(--motion-disabled-opacity);
+}
+.notebook-drawer .drawer-month-summary {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--color-border-strong);
+  gap: var(--space-xs);
+}
+.notebook-drawer .drawer-month-summary p {
+  font-size: var(--font-size-caption);
+}
+.notebook-drawer .drawer-help {
+  width: 24px;
+  height: 24px;
+}
+.notebook-drawer .drawer-month-help {
+  margin-bottom: 0;
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-body);
+}

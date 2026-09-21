@@ -1,7 +1,9 @@
+import { Link } from 'react-router'
 import { SyncPill } from './sync/SyncPill'
+import './notebook/notebook-header.css'
 
 /**
- * V7 顶栏(R60/R61):汉堡 + StudyCommit 手写字标 + 右侧同步状态。
+ * 顶栏保留抽屉入口、返回记录本的字标与同步状态；工具入口放入抽屉。
  * 页面标题交给各页面自身的内容标题(如"记录本"),顶栏不再重复。
  */
 export function AppHeader({
@@ -28,9 +30,13 @@ export function AppHeader({
             <i />
           </span>
         </button>
-        <span className="app-header__brand">StudyCommit</span>
+        <Link to="/timeline" className="app-header__brand" aria-label="StudyCommit，返回记录本">
+          StudyCommit
+        </Link>
       </div>
-      <SyncPill />
+      <div className="notebook-header-actions">
+        <SyncPill />
+      </div>
     </header>
   )
 }
