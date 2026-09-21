@@ -65,6 +65,9 @@ importers:
       '@ant-design/v5-patch-for-react-19':
         specifier: ^1.0.3
         version: 1.0.3(antd@5.29.3(date-fns@2.30.0)(luxon@3.7.2)(moment@2.31.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@studycommit/common':
+        specifier: workspace:*
+        version: link:../../common
       '@studycommit/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
@@ -567,6 +570,9 @@ importers:
       '@studycommit/design-tokens':
         specifier: workspace:*
         version: link:../design-tokens
+      '@studycommit/rpc-contracts':
+        specifier: workspace:*
+        version: link:../rpc-contracts
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -15952,7 +15958,7 @@ snapshots:
       obug: 2.1.4
       std-env: 4.2.0
       tinyrainbow: 3.1.1
-      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(less@4.9.1)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.12)(yaml@2.9.0))
+      vitest: 4.1.10(@types/node@24.13.3)(@vitest/coverage-v8@4.1.10)(jsdom@30.0.1)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(less@4.1.3)(lightningcss@1.33.0)(sass@1.54.0)(terser@5.49.0)(tsx@4.23.12)(yaml@2.9.0))
 
   '@vitest/expect@4.1.10':
     dependencies:
