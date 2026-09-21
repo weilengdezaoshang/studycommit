@@ -1,11 +1,14 @@
-const { chromium, expect } = require('@playwright/test')
-const { mkdir } = require('node:fs/promises')
-const { resolve } = require('node:path')
+import { chromium, expect } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
 
 // 使用真实构建的React页面与隔离IPC夹具；不会访问账户或服务端数据。
 async function main() {
   const output = resolve(
-    __dirname,
+    scriptDir,
     '../../../docs/design/desktop-records-refinement-2026-09-16/implementation',
   )
   await mkdir(output, { recursive: true })
@@ -97,14 +100,18 @@ async function main() {
                   relationsHasMore: false,
                 }),
           create: async (input, options) => {
-            if (window.__recordScenario === 'save-failure') return fail()
+            if (window.__recordScenario === 'save-failure') {
+              return fail()
+            }
             const saved = {
               ...papers[0],
               ...input,
               id: options?.idempotencyKey ?? 'new',
               createdAt: new Date().toISOString(),
             }
-            if (!papers.some((paper) => paper.id === saved.id)) papers.unshift(saved)
+            if (!papers.some((paper) => paper.id === saved.id)) {
+              papers.unshift(saved)
+            }
             return ok(saved)
           },
           assetAccess: async () => fail(),
@@ -148,7 +155,9 @@ async function main() {
       await page
         .getByRole('region', { name: '开发 API 配置' })
         .screenshot({ path: resolve(output, '35-dev-api-settings.png') })
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
       console.log(
         '通过：开发 API 设置表单、已存密钥不回显、保存反馈。使用隔离 IPC，不访问真实配置。',
       )
@@ -162,7 +171,9 @@ async function main() {
       await page.evaluate(() => document.fonts.ready)
       const date = drawer.locator('.calendar-cell:not(.calendar-cell--blank)').first()
       const rect = await date.boundingBox()
-      if (!rect || Math.abs(rect.width - rect.height) > 1) throw new Error('日期不是方形')
+      if (!rect || Math.abs(rect.width - rect.height) > 1) {
+        throw new Error('日期不是方形')
+      }
       await expect(date).toHaveCSS('background-image', 'none')
       await page.screenshot({ path: resolve(output, '33-notebook-drawer.png') })
       const yearSelect = drawer.getByRole('combobox', { name: '选择年份' })
@@ -191,7 +202,9 @@ async function main() {
       await drawer.getByRole('button', { name: '下一个月' }).click()
       await date.click()
       await expect(drawer).toHaveAttribute('aria-hidden', 'true')
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
       console.log('通过：抽屉方形日期、无斜纹、图例、切月、选择日期及窄窗口。')
       return
     }
@@ -204,7 +217,9 @@ async function main() {
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
       await expect(header).toBeInViewport()
       const box = await header.boundingBox()
-      if (!box || Math.abs(box.y) > 1) throw new Error('顶栏没有固定在窗口顶部')
+      if (!box || Math.abs(box.y) > 1) {
+        throw new Error('顶栏没有固定在窗口顶部')
+      }
       await page.screenshot({ path: resolve(output, '32-fixed-header.png') })
       await page.setViewportSize({ width: 900, height: 600 })
       await expect(header.getByRole('status')).toBeInViewport()
@@ -259,9 +274,13 @@ async function main() {
       await page.evaluate(() => window.scrollTo(0, 0))
       await expect(input).toBeInViewport()
       const inputBox = await input.boundingBox()
-      if (!inputBox || inputBox.width < 400) throw new Error('窄窗口搜索框被挤压')
+      if (!inputBox || inputBox.width < 400) {
+        throw new Error('窄窗口搜索框被挤压')
+      }
       await page.screenshot({ path: resolve(output, '29-search-narrow.png') })
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
       console.log('通过：搜索初始、结果、无结果、离线回退、清空与窄窗口显示。')
       return
     }
@@ -293,7 +312,9 @@ async function main() {
       await page.keyboard.press('Escape')
       await expect(page.getByRole('listbox')).toHaveCount(0)
       await page.screenshot({ path: resolve(output, '22-home-toolbar-narrow.png') })
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
       await status.evaluate((element) => {
         element.parentElement.style.position = 'fixed'
         element.parentElement.style.bottom = '8px'
@@ -315,7 +336,9 @@ async function main() {
       await format.click()
       await page.getByRole('option', { name: '标题 1', exact: true }).click()
       await expect(format).toHaveText('标题 1')
-      if (errors.length) throw new Error(errors.join('\n'))
+      if (errors.length) {
+        throw new Error(errors.join('\n'))
+      }
       console.log('通过：公共手绘下拉、筛选与排序、键盘关闭、窄窗口和底部向上避让。')
       return
     }
@@ -361,7 +384,9 @@ async function main() {
     }
     await page.screenshot({ path: resolve(output, '06-narrow.png') })
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
-    if (overflow) throw new Error('窄窗口出现整页横向溢出')
+    if (overflow) {
+      throw new Error('窄窗口出现整页横向溢出')
+    }
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('http://127.0.0.1:4178/?scenario=empty#/timeline')
     await expect(page.getByRole('heading', { name: '记录本还是空的' })).toBeVisible()
@@ -369,7 +394,9 @@ async function main() {
     await page.goto('http://127.0.0.1:4178/?scenario=list-failure#/timeline')
     await expect(page.getByRole('heading', { name: '记录暂时加载失败' })).toBeVisible()
     await page.screenshot({ path: resolve(output, '08-load-failure.png') })
-    if (errors.length) throw new Error(errors.join('\n'))
+    if (errors.length) {
+      throw new Error(errors.join('\n'))
+    }
     console.log(
       '通过：首页、详情、弹窗、空输入、保存失败保留正文、超限禁用、900×600布局；截图：' + output,
     )

@@ -19,7 +19,6 @@ export default tseslint.config(
       'apps/mobile/ios/**',
       'apps/desktop/test-results/**',
       'apps/desktop/playwright-report/**',
-      'apps/desktop/scripts/**',
       'apps/api/drizzle/**',
       'apps/miniprogram/shared/**',
       'docs/prototypes/**',
@@ -61,6 +60,16 @@ export default tseslint.config(
     files: ['apps/miniprogram/cloudfunctions/**/*.js'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+  {
+    files: ['apps/desktop/scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
     },
   },
   {

@@ -1,8 +1,13 @@
-const { app, BrowserWindow, nativeImage } = require('electron')
-const { createWorker } = require('tesseract.js')
-const { resolve, join } = require('node:path')
-const { readFileSync, mkdirSync, writeFileSync } = require('node:fs')
-const { transpileModule, ModuleKind } = require('typescript')
+import { app, BrowserWindow, nativeImage } from 'electron'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createWorker } from 'tesseract.js'
+import { ModuleKind, transpileModule } from 'typescript'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const nodeRequire = createRequire(import.meta.url)
 
 const chinese = [
   '启动桌面端和移动端',
@@ -53,8 +58,9 @@ function distance(a, b) {
   let row = Array.from({ length: b.length + 1 }, (_, i) => i)
   for (let i = 0; i < a.length; i++) {
     const next = [i + 1]
-    for (let j = 0; j < b.length; j++)
+    for (let j = 0; j < b.length; j++) {
       next.push(Math.min(next[j] + 1, row[j + 1] + 1, row[j] + (a[i] === b[j] ? 0 : 1)))
+    }
     row = next
   }
   return row[b.length]
@@ -63,33 +69,35 @@ function distance(a, b) {
 app
   .whenReady()
   .then(async () => {
-    const output = resolve(__dirname, '../../../docs/design/ocr-regression-2026-09-16')
+    const output = resolve(scriptDir, '../../../docs/design/ocr-regression-2026-09-16')
     mkdirSync(output, { recursive: true })
     const compiled = transpileModule(
-      readFileSync(resolve(__dirname, '../src/main/capture/ocr-image.ts'), 'utf8'),
+      readFileSync(resolve(scriptDir, '../src/main/capture/ocr-image.ts'), 'utf8'),
       { compilerOptions: { module: ModuleKind.CommonJS } },
     )
     const implementation = {}
-    new Function('require', 'exports', compiled.outputText)(require, implementation)
+    new Function('require', 'exports', compiled.outputText)(nodeRequire, implementation)
     const window = new BrowserWindow({
       show: false,
       webPreferences: { sandbox: true, contextIsolation: true },
     })
     await window.loadURL('data:text/html,<html><body></body></html>')
     const worker = await createWorker('chi_sim+eng', 1, {
-      langPath: resolve(__dirname, '../resources/ocr-models'),
+      langPath: resolve(scriptDir, '../resources/ocr-models'),
       gzip: false,
       cacheMethod: 'none',
     })
     const results = []
     try {
-      if (process.argv[2])
+      if (process.argv[2]) {
         cases.unshift({ name: '用户实际贴边截图', lines: chinese, file: process.argv[2] })
+      }
       for (let index = 0; index < cases.length; index++) {
         const sample = cases[index]
         let bytes
-        if (sample.file) bytes = readFileSync(sample.file)
-        else {
+        if (sample.file) {
+          bytes = readFileSync(sample.file)
+        } else {
           const data = await window.webContents.executeJavaScript(
             `(${((sample) => {
               const canvas = document.createElement('canvas')

@@ -1,21 +1,26 @@
-const { app, nativeImage } = require('electron')
-const { createWorker } = require('tesseract.js')
-const { resolve } = require('node:path')
-const { readFileSync } = require('node:fs')
-const { transpileModule, ModuleKind } = require('typescript')
+import { app, nativeImage } from 'electron'
+import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createWorker } from 'tesseract.js'
+import { ModuleKind, transpileModule } from 'typescript'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const nodeRequire = createRequire(import.meta.url)
 
 app
   .whenReady()
   .then(async () => {
     const source = nativeImage.createFromPath(process.argv[2])
     const compiled = transpileModule(
-      readFileSync(resolve(__dirname, '../src/main/capture/ocr-image.ts'), 'utf8'),
+      readFileSync(resolve(scriptDir, '../src/main/capture/ocr-image.ts'), 'utf8'),
       { compilerOptions: { module: ModuleKind.CommonJS } },
     )
     const implementation = {}
-    new Function('require', 'exports', compiled.outputText)(require, implementation)
+    new Function('require', 'exports', compiled.outputText)(nodeRequire, implementation)
     const worker = await createWorker('chi_sim+eng', 1, {
-      langPath: resolve(__dirname, '../resources/ocr-models'),
+      langPath: resolve(scriptDir, '../resources/ocr-models'),
       gzip: false,
       cacheMethod: 'none',
     })
@@ -35,6 +40,6 @@ app
     }
   })
   .catch((error) => {
-    console.error(error.message)
+    console.error(error instanceof Error ? error.message : error)
     app.exit(1)
   })

@@ -1,15 +1,18 @@
-const { chromium, expect } = require('@playwright/test')
-const { createRequire } = require('node:module')
-const { resolve } = require('node:path')
-const { randomUUID } = require('node:crypto')
-const apiRequire = createRequire(resolve(__dirname, '../../api/package.json'))
+import { chromium, expect } from '@playwright/test'
+import { randomUUID } from 'node:crypto'
+import { createRequire } from 'node:module'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
+const apiRequire = createRequire(resolve(scriptDir, '../../api/package.json'))
 const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } =
   apiRequire('@aws-sdk/client-s3')
 const { getSignedUrl } = apiRequire('@aws-sdk/s3-request-presigner')
 
 // 隔离记录夹具 + 真实本机对象存储；不读取或改动用户记录。
 async function main() {
-  process.loadEnvFile(resolve(__dirname, '../../api/.env'))
+  process.loadEnvFile(resolve(scriptDir, '../../api/.env'))
   if (!['http://127.0.0.1:9000', 'http://localhost:9000'].includes(process.env.S3_ENDPOINT)) {
     throw new Error('仅允许明确的本机开发存储')
   }

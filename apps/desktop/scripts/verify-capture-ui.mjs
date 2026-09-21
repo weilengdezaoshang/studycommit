@@ -1,5 +1,8 @@
-const { chromium, expect } = require('@playwright/test')
-const { resolve } = require('node:path')
+import { chromium, expect } from '@playwright/test'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
 
 async function main() {
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
@@ -57,7 +60,7 @@ async function main() {
     await expect(page.getByRole('button', { name: '取消截图 · Esc' })).toBeInViewport()
     await page.screenshot({
       path: resolve(
-        __dirname,
+        scriptDir,
         '../../../docs/design/desktop-records-refinement-2026-09-16/implementation/09-capture-selection.png',
       ),
     })

@@ -1,17 +1,20 @@
-const { chromium, expect } = require('@playwright/test')
-const { resolve } = require('node:path')
-const { mkdir, readFile } = require('node:fs/promises')
+import { chromium, expect } from '@playwright/test'
+import { mkdir, readFile } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const scriptDir = dirname(fileURLToPath(import.meta.url))
 
 async function main() {
   const output = resolve(
-    __dirname,
+    scriptDir,
     '../../../docs/design/desktop-records-refinement-2026-09-16/implementation',
   )
   await mkdir(output, { recursive: true })
   const preview =
     'data:image/png;base64,' +
     (
-      await readFile(resolve(__dirname, '../../../docs/design/ocr-regression-2026-09-16/1.png'))
+      await readFile(resolve(scriptDir, '../../../docs/design/ocr-regression-2026-09-16/1.png'))
     ).toString('base64')
   const browser = await chromium.launch({ channel: 'chrome', headless: true })
   try {
@@ -81,8 +84,9 @@ async function main() {
     await expect(save).toBeInViewport()
     await page.screenshot({ path: resolve(output, '19-capture-handdrawn-narrow.png') })
     await page.setViewportSize({ width: 1100, height: 850 })
-    for (let count = 1; count < 9; count++)
+    for (let count = 1; count < 9; count++) {
       await page.getByRole('button', { name: `追加截图（${count}/9）` }).click()
+    }
     await expect(page.getByRole('button', { name: '追加截图（9/9）' })).toBeDisabled()
     await page.getByRole('button', { name: '删除第 9 张' }).click()
     await expect(page.getByRole('button', { name: '追加截图（8/9）' })).toBeEnabled()
