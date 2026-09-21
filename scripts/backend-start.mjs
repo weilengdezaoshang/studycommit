@@ -15,7 +15,7 @@ try {
   log('正在启动 PostgreSQL 和 Redis')
   let started = false
   for (let attempt = 1; attempt <= 3 && !started; attempt += 1) {
-    started = run('docker', ['compose', 'up', '-d', '--wait'], {
+    started = run('docker', ['compose', 'up', '-d', '--wait', 'postgres', 'redis', 'minio'], {
       cwd: projectRoot,
       env,
       allowFailure: true,
@@ -27,6 +27,11 @@ try {
   if (!started) {
     throw new Error('连续 3 次无法启动 PostgreSQL 和 Redis。')
   }
+  // 初始化任务成功后会退出，不能和常驻服务一起使用 up --wait。
+  run('docker', ['compose', 'run', '--rm', '--no-deps', 'minio-init'], {
+    cwd: projectRoot,
+    env,
+  })
   log('正在执行数据库迁移')
   run('pnpm', ['--filter', '@studycommit/api', 'db:migrate'], { cwd: projectRoot, env })
   log(`后端已就绪：http://localhost:${env.API_PORT ?? 3000}/api`)
