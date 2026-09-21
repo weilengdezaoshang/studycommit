@@ -47,6 +47,7 @@ const organizeErrors: Record<
 type PaperRow = {
   id: string
   content: string
+  contentDocument?: Paper['contentDocument']
   topicId: string | null
   version: number
   createdAt: Date
@@ -107,6 +108,12 @@ export class PapersService {
   }
 
   async update(userId: string, input: UpdatePaperInput) {
+    if (!input.content) {
+      const assets = await this.repository.findAttachedAssetsByPaperIds(userId, [input.id])
+      if ((assets.get(input.id) ?? []).length === 0) {
+        throw new BadRequestException(PAPER_ERROR.contentOrAssetRequired)
+      }
+    }
     return this.mapWrite(userId, await this.repository.update(userId, input))
   }
 
@@ -163,7 +170,7 @@ export class PapersService {
   async list(userId: string, input: ListPapersInput) {
     try {
       const page = await this.repository.list(userId, input)
-      return { ...page, items: await this.decorate(userId, page.items) }
+      return { ...page, items: await this.decorate(userId, page.items, false) }
     } catch (error) {
       if (error instanceof Error && error.message === 'INVALID_CURSOR') {
         throw new BadRequestException({ code: 'INVALID_CURSOR', message: '分页游标无效' })
@@ -195,26 +202,34 @@ export class PapersService {
         details: { paper: await this.decorateOne(userId, result.paper) },
       })
     }
+    if (result.kind === PAPER_COMMAND_KIND.documentRequired) {
+      throw new BadRequestException(PAPER_ERROR.documentRequired)
+    }
     throw new NotFoundException(PAPER_ERROR.notFound)
   }
 
   /** 批量装配已绑定资产摘要:两次查询,避免 N+1。 */
-  private async decorate(userId: string, rows: PaperRow[]): Promise<Paper[]> {
+  private async decorate(
+    userId: string,
+    rows: PaperRow[],
+    includeDocument = true,
+  ): Promise<Paper[]> {
     const assetsMap = await this.repository.findAttachedAssetsByPaperIds(
       userId,
       rows.map((row) => row.id),
     )
-    return rows.map((row) => this.mapPaper(row, assetsMap.get(row.id) ?? []))
+    return rows.map((row) => this.mapPaper(row, assetsMap.get(row.id) ?? [], includeDocument))
   }
 
   private async decorateOne(userId: string, row: PaperRow): Promise<Paper> {
-    return (await this.decorate(userId, [row]))[0]
+    return (await this.decorate(userId, [row], true))[0]
   }
 
-  private mapPaper(row: PaperRow, assets: Paper['assets']): Paper {
+  private mapPaper(row: PaperRow, assets: Paper['assets'], includeDocument: boolean): Paper {
     return {
       id: row.id,
       content: row.content,
+      ...(includeDocument ? { contentDocument: row.contentDocument ?? null } : {}),
       status: row.topicId ? 'organized' : 'inbox',
       topicId: row.topicId,
       version: row.version,

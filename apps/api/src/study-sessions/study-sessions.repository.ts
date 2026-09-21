@@ -750,12 +750,7 @@ export class StudySessionsRepository {
     return this.database.db
       .select()
       .from(paperFragments)
-      .where(
-        and(
-          eq(paperFragments.userId, userId),
-          eq(paperFragments.sessionId, sessionId),
-        ),
-      )
+      .where(and(eq(paperFragments.userId, userId), eq(paperFragments.sessionId, sessionId)))
       .orderBy(paperFragments.position, paperFragments.id)
   }
 

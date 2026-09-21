@@ -63,6 +63,69 @@ describe('Papers API', () => {
     expect(created.json().updatedAt).toEqual(created.json().createdAt)
   })
 
+  it('保存富文本文档后可完整读取，列表不带文档，省略字段不清除格式', async () => {
+    const contentDocument = {
+      version: 1,
+      doc: {
+        type: 'doc',
+        content: [
+          { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: '学习笔记' }] },
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '重点', marks: [{ type: 'bold' }] }],
+          },
+        ],
+      },
+    }
+    const created = await create(userA, crypto.randomUUID(), {
+      content: '学习笔记\n重点',
+      contentDocument,
+    })
+    expect(created.statusCode).toBe(201)
+    expect(created.json().contentDocument).toEqual(contentDocument)
+    const fetched = await app.inject({
+      method: 'GET',
+      url: `/api/papers/${created.json().id}`,
+      headers: { 'x-user-id': userA },
+    })
+    expect(fetched.json().contentDocument).toEqual(contentDocument)
+    const listed = await list()
+    const listedPaper = listed
+      .json()
+      .items.find((item: { id: string }) => item.id === created.json().id)
+    expect(listedPaper.contentDocument).toBeUndefined()
+    const omitted = await update(created.json().id, { content: '纯文本新内容', version: 1 })
+    expect(omitted.statusCode).toBe(400)
+    expect(omitted.json().code).toBe('PAPER_DOCUMENT_REQUIRED')
+    const kept = await update(created.json().id, {
+      content: '学习笔记\n重点',
+      version: 1,
+    })
+    expect(kept.statusCode).toBe(200)
+    expect(kept.json().contentDocument).toEqual(contentDocument)
+    const cleared = await update(created.json().id, {
+      content: '纯文本新内容',
+      contentDocument: null,
+      version: 1,
+    })
+    expect(cleared.statusCode).toBe(200)
+    expect(cleared.json().contentDocument).toBeNull()
+  })
+
+  it('拒绝富文本文档与正文不一致的写入', async () => {
+    const result = await create(userA, crypto.randomUUID(), {
+      content: '正文',
+      contentDocument: {
+        version: 1,
+        doc: {
+          type: 'doc',
+          content: [{ type: 'paragraph', content: [{ type: 'text', text: '不同内容' }] }],
+        },
+      },
+    })
+    expect(result.statusCode).toBe(400)
+  })
+
   it('相同幂等键重试返回首次结果，内容不同则冲突', async () => {
     const first = await create(userA, 'same-paper-key')
     const replay = await create(userA, 'same-paper-key')
@@ -806,7 +869,13 @@ describe('Papers API', () => {
       })
     ).json()
     expect(fetched.assets).toEqual([
-      { id: expect.any(String), kind: 'source_screenshot', mimeType: 'image/png', width: 800, height: 600 },
+      {
+        id: expect.any(String),
+        kind: 'source_screenshot',
+        mimeType: 'image/png',
+        width: 800,
+        height: 600,
+      },
     ])
 
     const list = (

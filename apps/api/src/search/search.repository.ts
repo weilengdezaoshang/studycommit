@@ -1,10 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, desc, eq, isNull, lt, or, sql } from 'drizzle-orm'
+import { PAPER_KNOWLEDGE_ADDITION_LIMIT } from '@studycommit/rpc-contracts/papers'
 import { DatabaseService } from '../database/database.service'
 import { papers } from '../database/schema'
 import { escapeLikePattern } from '../common/escape-like'
+import { paperListColumns } from '../papers/paper-list-columns'
 
-export type Paper = typeof papers.$inferSelect
+export type Paper = Omit<typeof papers.$inferSelect, 'contentDocument'>
 
 export interface SearchPaperPage {
   items: Paper[]
@@ -13,7 +15,7 @@ export interface SearchPaperPage {
 
 const SEARCH_STATEMENT_TIMEOUT = '2s'
 
-const encodeCursor = (paper: Paper) =>
+const encodeCursor = (paper: Pick<Paper, 'updatedAt' | 'id'>) =>
   Buffer.from(JSON.stringify({ updatedAt: paper.updatedAt.toISOString(), id: paper.id })).toString(
     'base64url',
   )
@@ -49,7 +51,12 @@ export class SearchRepository {
       const conditions = [
         eq(papers.userId, userId),
         isNull(papers.deletedAt),
-        or(sql`${papers.content} ILIKE ${pattern}`, sql`${papers.questionText} ILIKE ${pattern}`)!,
+        or(
+          sql`${papers.content} ILIKE ${pattern}`,
+          sql`${papers.questionText} ILIKE ${pattern}`,
+          sql`${papers.understandingText} ILIKE ${pattern}`,
+          sql`EXISTS (SELECT 1 FROM (SELECT a.content FROM paper_additions a WHERE a.paper_id=${papers.id} AND a.user_id=${userId} ORDER BY a.created_at DESC, a.id DESC LIMIT ${PAPER_KNOWLEDGE_ADDITION_LIMIT}) recent WHERE recent.content ILIKE ${pattern})`,
+        )!,
       ]
       if (cursor) {
         const decoded = decodeCursor(cursor)
@@ -62,7 +69,7 @@ export class SearchRepository {
         )
       }
       const rows = await tx
-        .select()
+        .select(paperListColumns)
         .from(papers)
         .where(and(...conditions))
         .orderBy(desc(papers.updatedAt), desc(papers.id))

@@ -17,6 +17,7 @@ export const PAPER_COMMAND_KIND = {
   ok: 'ok',
   notFound: 'not_found',
   versionConflict: 'version_conflict',
+  documentRequired: 'document_required',
 } as const
 
 export type PaperCommandKind = (typeof PAPER_COMMAND_KIND)[keyof typeof PAPER_COMMAND_KIND]
@@ -42,5 +43,13 @@ export const PAPER_ERROR = {
   questionTextRequired: {
     code: 'PAPER_QUESTION_TEXT_REQUIRED',
     message: '设置问题需要先写下问题内容',
+  },
+  documentRequired: {
+    code: 'PAPER_DOCUMENT_REQUIRED',
+    message: '修改正文需要同时提交富文本或显式清除格式',
+  },
+  contentOrAssetRequired: {
+    code: 'PAPER_CONTENT_OR_ASSET_REQUIRED',
+    message: '正文和图片不能同时为空',
   },
 } as const

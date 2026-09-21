@@ -1,3 +1,4 @@
+import { PaperKnowledgeService } from './paper-knowledge.service'
 import { Controller, Headers, Inject, Req, UseGuards } from '@nestjs/common'
 import { Implement, implement } from '@orpc/nest'
 import {
@@ -18,7 +19,10 @@ import { PapersService } from './papers.service'
 @Controller()
 @UseGuards(IdentityGuard)
 export class PapersRpcController {
-  constructor(@Inject(PapersService) private readonly papers: PapersService) {}
+  constructor(
+    @Inject(PapersService) private readonly papers: PapersService,
+    @Inject(PaperKnowledgeService) private readonly knowledge: PaperKnowledgeService,
+  ) {}
 
   @Implement(paperContract)
   papersRouter(
@@ -26,6 +30,12 @@ export class PapersRpcController {
     @Headers('idempotency-key') idempotencyKey: string | undefined,
   ) {
     return {
+      knowledge: implement(paperContract.knowledge).handler(({ input }) =>
+        handleOrpc(() => this.knowledge.get(request.userId, input.id)),
+      ),
+      updateKnowledge: implement(paperContract.updateKnowledge).handler(({ input }) =>
+        handleOrpc(() => this.knowledge.update(request.userId, input)),
+      ),
       create: implement(paperContract.create).handler(({ input, context }) =>
         handleOrpc(async () => {
           const result = await this.papers.create(

@@ -34,6 +34,7 @@ const row = {
 describe('PapersService', () => {
   it('创建记录并推导为待整理状态', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       create: vi
         .fn()
         .mockResolvedValue({ kind: PAPER_CREATE_KIND.ok, paper: row, replayed: false }),
@@ -45,6 +46,8 @@ describe('PapersService', () => {
       paper: {
         id: paperId,
         content: row.content,
+        contentDocument: null,
+        assets: [],
         status: 'inbox',
         topicId: null,
         version: 1,
@@ -65,14 +68,52 @@ describe('PapersService', () => {
   })
 
   it('其他用户或已删除记录返回不存在', async () => {
-    const repository = { findById: vi.fn().mockResolvedValue(null) }
+    const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
+      findById: vi.fn().mockResolvedValue(null),
+    }
     await expect(
       new PapersService(repository as never).get(userId, paperId),
     ).rejects.toBeInstanceOf(NotFoundException)
   })
 
+  it('允许已含附件的记录将正文更新为空', async () => {
+    const repository = {
+      findAttachedAssetsByPaperIds: vi
+        .fn()
+        .mockResolvedValue(new Map([[paperId, [{ id: 'asset' }]]])),
+      update: vi.fn().mockResolvedValue({
+        kind: PAPER_COMMAND_KIND.ok,
+        paper: { ...row, content: '', version: 2 },
+      }),
+    }
+    await expect(
+      new PapersService(repository as never).update(userId, {
+        id: paperId,
+        version: 1,
+        content: '',
+      }),
+    ).resolves.toMatchObject({ content: '' })
+  })
+
+  it('拒绝把没有附件的记录更新成空正文', async () => {
+    const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
+      update: vi.fn(),
+    }
+    await expect(
+      new PapersService(repository as never).update(userId, {
+        id: paperId,
+        version: 1,
+        content: '',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
+    expect(repository.update).not.toHaveBeenCalled()
+  })
+
   it('透传列表筛选并映射分页结果', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       list: vi
         .fn()
         .mockResolvedValue({ items: [row], pageInfo: { hasNextPage: false, nextCursor: null } }),
@@ -88,6 +129,7 @@ describe('PapersService', () => {
 
   it('相同幂等键用于不同内容时拒绝', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       create: vi.fn().mockResolvedValue({ kind: PAPER_CREATE_KIND.idempotencyConflict }),
     }
     await expect(
@@ -97,6 +139,7 @@ describe('PapersService', () => {
 
   it('幂等键唯一冲突后重试创建', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       create: vi
         .fn()
         .mockRejectedValueOnce(
@@ -113,7 +156,10 @@ describe('PapersService', () => {
   })
 
   it('无效分页游标映射为错误请求', async () => {
-    const repository = { list: vi.fn().mockRejectedValue(new Error('INVALID_CURSOR')) }
+    const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
+      list: vi.fn().mockRejectedValue(new Error('INVALID_CURSOR')),
+    }
     await expect(
       new PapersService(repository as never).list(userId, { limit: 20 }),
     ).rejects.toBeInstanceOf(BadRequestException)
@@ -122,6 +168,7 @@ describe('PapersService', () => {
   it('归入箱子后映射为已整理状态', async () => {
     const topicId = crypto.randomUUID()
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       organize: vi.fn().mockResolvedValue({
         kind: PAPER_ORGANIZE_KIND.ok,
         paper: { ...row, topicId, version: 2 },
@@ -138,6 +185,7 @@ describe('PapersService', () => {
 
   it('版本冲突时带上当前记录', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       organize: vi.fn().mockResolvedValue({
         kind: PAPER_ORGANIZE_KIND.versionConflict,
         paper: { ...row, version: 2 },
@@ -159,6 +207,7 @@ describe('PapersService', () => {
 
   it('已归档主题不可归类', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       organize: vi.fn().mockResolvedValue({ kind: PAPER_ORGANIZE_KIND.topicArchived }),
     }
     await expect(
@@ -170,9 +219,24 @@ describe('PapersService', () => {
     ).rejects.toMatchObject({ response: { code: TOPIC_ERROR.archived.code } })
   })
 
+  it('已有富文本时省略文档字段拒绝纯文本覆盖', async () => {
+    const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
+      update: vi.fn().mockResolvedValue({ kind: PAPER_COMMAND_KIND.documentRequired }),
+    }
+    await expect(
+      new PapersService(repository as never).update(userId, {
+        id: paperId,
+        content: '纯文本新内容',
+        version: 1,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException)
+  })
+
   it('修改正文后保持箱子并增加版本', async () => {
     const topicId = crypto.randomUUID()
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       update: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.ok,
         paper: { ...row, content: '改后的内容', topicId, version: 2 },
@@ -194,6 +258,7 @@ describe('PapersService', () => {
 
   it('修改正文版本冲突时带上当前记录', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       update: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.versionConflict,
         paper: { ...row, version: 2 },
@@ -215,6 +280,7 @@ describe('PapersService', () => {
 
   it('移回待整理后映射为待整理状态', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       moveToInbox: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.ok,
         paper: { ...row, topicId: null, version: 3 },
@@ -227,6 +293,7 @@ describe('PapersService', () => {
 
   it('移回待整理时记录不存在', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       moveToInbox: vi.fn().mockResolvedValue({ kind: PAPER_COMMAND_KIND.notFound }),
     }
     await expect(
@@ -237,6 +304,7 @@ describe('PapersService', () => {
   it('删除成功后返回删除时间与新版本', async () => {
     const deletedAt = new Date('2026-01-01T01:00:00.000Z')
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       remove: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.ok,
         paper: { ...row, version: 2, deletedAt },
@@ -253,6 +321,7 @@ describe('PapersService', () => {
 
   it('删除版本冲突时带上当前记录', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       remove: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.versionConflict,
         paper: { ...row, version: 2 },
@@ -271,6 +340,7 @@ describe('PapersService', () => {
   it('解决问题后返回带解决时间与三态的记录', async () => {
     const resolvedAt = new Date('2026-01-02T08:00:00.000Z')
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       updateQuestion: vi.fn().mockResolvedValue({
         kind: PAPER_QUESTION_KIND.ok,
         paper: {
@@ -298,6 +368,7 @@ describe('PapersService', () => {
 
   it('非法问题迁移映射为错误请求并区分缺少文本', async () => {
     const invalidRepository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       updateQuestion: vi.fn().mockResolvedValue({
         kind: PAPER_QUESTION_KIND.invalidTransition,
         reason: 'invalid_transition',
@@ -321,6 +392,7 @@ describe('PapersService', () => {
     ).rejects.toBeInstanceOf(BadRequestException)
 
     const textRepository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       updateQuestion: vi.fn().mockResolvedValue({
         kind: PAPER_QUESTION_KIND.invalidTransition,
         reason: 'question_text_required',
@@ -337,6 +409,7 @@ describe('PapersService', () => {
 
   it('问题状态版本冲突时带上服务端最新记录', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       updateQuestion: vi.fn().mockResolvedValue({
         kind: PAPER_QUESTION_KIND.versionConflict,
         paper: { ...row, questionStatus: 'thinking', hasQuestion: true, version: 3 },
@@ -365,6 +438,7 @@ describe('PapersService', () => {
 
   it('已删除记录不能修改问题状态', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       updateQuestion: vi.fn().mockResolvedValue({ kind: PAPER_QUESTION_KIND.notFound }),
     }
     await expect(
@@ -378,6 +452,7 @@ describe('PapersService', () => {
 
   it('恢复已删除记录后返回未删除状态', async () => {
     const repository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       restore: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.ok,
         paper: { ...row, version: 3, deletedAt: null },
@@ -390,6 +465,7 @@ describe('PapersService', () => {
 
   it('恢复未删除或冲突的记录沿用命令错误映射', async () => {
     const idempotentRepository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       restore: vi.fn().mockResolvedValue({ kind: PAPER_COMMAND_KIND.ok, paper: row }),
     }
     await expect(
@@ -397,6 +473,7 @@ describe('PapersService', () => {
     ).resolves.toMatchObject({ id: paperId })
 
     const conflictRepository = {
+      findAttachedAssetsByPaperIds: vi.fn().mockResolvedValue(new Map()),
       restore: vi.fn().mockResolvedValue({
         kind: PAPER_COMMAND_KIND.versionConflict,
         paper: { ...row, version: 5 },

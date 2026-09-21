@@ -21,6 +21,8 @@ import {
 } from './papers.constants'
 import { planQuestionTransition } from '@studycommit/rpc-contracts/paper-question'
 import { UploadsRepository } from '../uploads/uploads.repository'
+import { PuzzlesRepository } from '../puzzles/puzzles.repository'
+import { paperListColumns } from './paper-list-columns'
 
 export type Paper = typeof papers.$inferSelect
 export type PaperCreateResult =
@@ -38,6 +40,7 @@ export type PaperCommandResult =
   | { kind: typeof PAPER_COMMAND_KIND.ok; paper: Paper }
   | { kind: typeof PAPER_COMMAND_KIND.notFound }
   | { kind: typeof PAPER_COMMAND_KIND.versionConflict; paper: Paper }
+  | { kind: typeof PAPER_COMMAND_KIND.documentRequired }
 
 export type PaperQuestionResult =
   | { kind: typeof PAPER_QUESTION_KIND.ok; paper: Paper }
@@ -50,7 +53,7 @@ export type PaperQuestionResult =
 
 type Cursor = { createdAt: string; id: string }
 
-const encodeCursor = (paper: Paper) =>
+const encodeCursor = (paper: Pick<Paper, 'createdAt' | 'id'>) =>
   Buffer.from(JSON.stringify({ createdAt: paper.createdAt.toISOString(), id: paper.id })).toString(
     'base64url',
   )
@@ -70,6 +73,7 @@ export class PapersRepository {
   constructor(
     @Inject(DatabaseService) private readonly database: DatabaseService,
     @Inject(UploadsRepository) private readonly uploads: UploadsRepository,
+    @Inject(PuzzlesRepository) private readonly puzzles: PuzzlesRepository,
   ) {}
 
   /** 批量读取已绑定图片资产摘要(跨设备渲染用),按 paperId 分组。 */
@@ -79,12 +83,26 @@ export class PapersRepository {
   ): Promise<
     Map<
       string,
-      { id: string; kind: 'image' | 'source_screenshot'; mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; width: number; height: number }[]
+      {
+        id: string
+        kind: 'image' | 'source_screenshot'
+        mimeType: 'image/png' | 'image/jpeg' | 'image/webp'
+        width: number
+        height: number
+        position: number
+      }[]
     >
   > {
     const grouped = new Map<
       string,
-      { id: string; kind: 'image' | 'source_screenshot'; mimeType: 'image/png' | 'image/jpeg' | 'image/webp'; width: number; height: number }[]
+      {
+        id: string
+        kind: 'image' | 'source_screenshot'
+        mimeType: 'image/png' | 'image/jpeg' | 'image/webp'
+        width: number
+        height: number
+        position: number
+      }[]
     >()
     if (paperIds.length === 0) {
       return grouped
@@ -97,6 +115,7 @@ export class PapersRepository {
         mimeType: paperAssets.mimeType,
         width: paperAssets.width,
         height: paperAssets.height,
+        position: paperAssets.position,
       })
       .from(paperAssets)
       .where(
@@ -107,7 +126,7 @@ export class PapersRepository {
           isNull(paperAssets.deletedAt),
         ),
       )
-      .orderBy(asc(paperAssets.id))
+      .orderBy(asc(paperAssets.position), asc(paperAssets.id))
     for (const row of rows) {
       if (row.paperId === null || row.width === null || row.height === null) {
         continue
@@ -124,6 +143,7 @@ export class PapersRepository {
         mimeType,
         width: row.width,
         height: row.height,
+        position: row.position,
       })
       grouped.set(row.paperId, list)
     }
@@ -145,6 +165,7 @@ export class PapersRepository {
     idempotency: { key: string; hash: string },
   ): Promise<PaperCreateResult> {
     return this.database.db.transaction(async (tx) => {
+      const content = input.content ?? ''
       const [record] = await tx
         .select()
         .from(idempotencyRecords)
@@ -173,14 +194,15 @@ export class PapersRepository {
         ? { questionStatus: 'thinking' as const, questionText: input.questionText }
         : input.hasQuestion
           ? // 标记疑问但未写问题文本:以正文截断充当问题文本,与迁移回填规则一致
-            { questionStatus: 'thinking' as const, questionText: input.content.slice(0, 2_000) }
+            { questionStatus: 'thinking' as const, questionText: content.slice(0, 2_000) }
           : { questionStatus: 'none' as const, questionText: null }
 
       const [paper] = await tx
         .insert(papers)
         .values({
           userId,
-          content: input.content,
+          content,
+          contentDocument: input.contentDocument ?? null,
           topicId: null,
           hasQuestion: questionFields.questionStatus !== 'none',
           isQuestionResolved: false,
@@ -255,6 +277,9 @@ export class PapersRepository {
         )
         .returning()
       if (updated) {
+        if (paper.topicId === null) {
+          await this.puzzles.recordOrganization(tx, userId, paper)
+        }
         return { kind: PAPER_ORGANIZE_KIND.ok, paper: updated }
       }
 
@@ -284,7 +309,19 @@ export class PapersRepository {
       if (!paper) {
         return { kind: PAPER_COMMAND_KIND.notFound }
       }
-      if (paper.content === input.content) {
+      const nextDocument =
+        input.contentDocument === undefined ? paper.contentDocument : input.contentDocument
+      if (
+        input.contentDocument === undefined &&
+        paper.contentDocument != null &&
+        paper.content !== input.content
+      ) {
+        return { kind: PAPER_COMMAND_KIND.documentRequired }
+      }
+      if (
+        paper.content === input.content &&
+        JSON.stringify(paper.contentDocument ?? null) === JSON.stringify(nextDocument ?? null)
+      ) {
         return { kind: PAPER_COMMAND_KIND.ok, paper }
       }
       if (paper.version !== input.version) {
@@ -295,6 +332,7 @@ export class PapersRepository {
         .update(papers)
         .set({
           content: input.content,
+          contentDocument: nextDocument ?? null,
           version: sql`${papers.version} + 1`,
           updatedAt: sql`now()`,
         })
@@ -319,7 +357,12 @@ export class PapersRepository {
       if (!latest) {
         return { kind: PAPER_COMMAND_KIND.notFound }
       }
-      if (latest.content === input.content) {
+      const latestDocument =
+        input.contentDocument === undefined ? latest.contentDocument : input.contentDocument
+      if (
+        latest.content === input.content &&
+        JSON.stringify(latest.contentDocument ?? null) === JSON.stringify(latestDocument ?? null)
+      ) {
         return { kind: PAPER_COMMAND_KIND.ok, paper: latest }
       }
       return { kind: PAPER_COMMAND_KIND.versionConflict, paper: latest }
@@ -591,7 +634,7 @@ export class PapersRepository {
     }
     const createdAt = sql<Date>`date_trunc('milliseconds', ${papers.createdAt})`
     const rows = await this.database.db
-      .select()
+      .select(paperListColumns)
       .from(papers)
       .where(and(...conditions))
       .orderBy(desc(createdAt), desc(papers.id))
