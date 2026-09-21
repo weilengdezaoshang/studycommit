@@ -6,7 +6,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
-import { Inject, Injectable, Optional } from '@nestjs/common'
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import type { AssetMimeType } from '@studycommit/rpc-contracts/uploads'
 import type { AppEnv } from '../config/env'
@@ -25,11 +25,14 @@ export type StoragePutInstruction = {
 
 export type StorageStat = { size: number; etag: string | null }
 
+export type StorageObject = { body: Buffer; contentType: string | null }
+
 export interface StorageGateway {
   presignPut(key: string, contentType: string, ttlSeconds: number): Promise<StoragePutInstruction>
   presignGet(key: string, ttlSeconds: number): Promise<{ url: string; expiresAt: Date }>
   stat(key: string): Promise<StorageStat | null>
   readHead(key: string, bytes: number): Promise<Buffer>
+  read(key: string): Promise<StorageObject | null>
   delete(key: string): Promise<void>
 }
 
@@ -106,6 +109,24 @@ export class S3StorageGateway implements StorageGateway {
     return Buffer.from(body ?? [])
   }
 
+  async read(key: string): Promise<StorageObject | null> {
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({ Bucket: this.options.bucket, Key: key }),
+      )
+      const body = await response.Body?.transformToByteArray()
+      if (!body?.length) {
+        return null
+      }
+      return { body: Buffer.from(body), contentType: response.ContentType ?? null }
+    } catch (error) {
+      if (isObjectMissing(error)) {
+        return null
+      }
+      throw error
+    }
+  }
+
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.options.bucket, Key: key }))
   }
@@ -168,6 +189,14 @@ export class MemoryStorageGateway implements StorageGateway {
     return object.subarray(0, bytes)
   }
 
+  async read(key: string): Promise<StorageObject | null> {
+    const object = this.objects.get(key)
+    if (!object) {
+      return null
+    }
+    return { body: object, contentType: null }
+  }
+
   async delete(key: string): Promise<void> {
     this.objects.delete(key)
     this.etags.delete(key)
@@ -207,6 +236,11 @@ export class StorageGatewayProvider {
     @Optional() @Inject(STORAGE_GATEWAY) gateway?: StorageGateway,
   ) {
     this.gateway = gateway === undefined ? createStorageGatewayFromEnv(config) : gateway
+    if (!this.gateway) {
+      new Logger(StorageGatewayProvider.name).warn(
+        '对象存储未配置，截图上传不可用；请配置 S3_ENDPOINT、S3_ACCESS_KEY_ID、S3_SECRET_ACCESS_KEY 后重启 API。',
+      )
+    }
   }
 }
 

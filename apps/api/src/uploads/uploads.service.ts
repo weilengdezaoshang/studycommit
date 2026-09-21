@@ -181,6 +181,7 @@ export class UploadsService {
         },
         stat: async () => null,
         readHead: async () => Buffer.alloc(0),
+        read: async () => null,
         delete: async () => undefined,
       }
     }
