@@ -1,0 +1,111 @@
+.artwork-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sc-space-md);
+  margin-bottom: var(--sc-space-lg);
+}
+.artwork-toolbar .ant-tabs-nav {
+  margin-bottom: 0;
+}
+.artwork-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-space-lg);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+.artwork-row img {
+  width: 144px;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  border-radius: var(--sc-radius-sm);
+}
+.artwork-row strong {
+  max-width: 220px;
+  overflow-wrap: anywhere;
+}
+.artwork-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 1fr);
+  gap: var(--sc-space-lg);
+}
+.artwork-preview {
+  width: 100%;
+  aspect-ratio: 4/3;
+  display: block;
+  object-fit: contain;
+  border-radius: var(--sc-radius-sm);
+  background: var(--sc-paper-muted);
+  margin-top: var(--sc-space-md);
+}
+.artwork-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--sc-space-md);
+  color: var(--sc-muted);
+}
+.artwork-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-space-lg);
+}
+.artwork-assets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sc-space-md);
+}
+.artwork-asset {
+  border: 1px solid var(--sc-line);
+  padding: var(--sc-space-sm);
+  border-radius: var(--sc-radius-sm);
+  color: var(--sc-ink);
+  background: var(--sc-paper);
+  cursor: pointer;
+  text-align: left;
+}
+.artwork-asset[data-selected='true'] {
+  outline: 2px solid var(--sc-action);
+}
+.artwork-asset img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+}
+.artwork-asset > button {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.artwork-asset span {
+  display: block;
+  margin-top: var(--sc-space-xs);
+}
+@media (max-width: 1000px) {
+  .artwork-editor {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 600px) {
+  .artwork-assets {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.artwork-crop-preview {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--sc-color-line-strong);
+  border-radius: var(--sc-radius-md);
+}

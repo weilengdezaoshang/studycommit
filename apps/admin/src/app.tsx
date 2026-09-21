@@ -34,8 +34,8 @@ setLoginRedirect(() => {
 export async function getInitialState(): Promise<InitialState> {
   const session = getSession()
   if (!session) {
-return { session: null }
-}
+    return { session: null }
+  }
   try {
     const me = await adminApi.me()
     const next = { ...session, userId: me.userId, role: me.role }
@@ -92,7 +92,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
   },
   actionsRender: () => [
     <Tag key="env" color="orange" className="admin-environment-tag">
-      ● 测试环境 · 示例数据
+      ● 本地开发
     </Tag>,
     <Space key="tz" size={6} className="admin-timezone">
       <GlobalOutlined />
@@ -130,8 +130,8 @@ export const layout: RunTimeLayoutConfig = ({ initialState, setInitialState }) =
   onPageChange: () => {
     const { pathname } = history.location
     if (pathname === LOGIN_PATH) {
-return
-}
+      return
+    }
     const session = getSession()
     if (!session) {
       history.push(LOGIN_PATH)
@@ -141,8 +141,8 @@ return
       .me()
       .then((me) => {
         if (getSession()?.accessToken !== session.accessToken) {
-return
-}
+          return
+        }
         if (me.role !== session.role || me.userId !== session.userId) {
           const next = { ...session, userId: me.userId, role: me.role }
           setSession(next)
@@ -152,8 +152,8 @@ return
       })
       .catch((error: unknown) => {
         if (getSession()?.accessToken !== session.accessToken) {
-return
-}
+          return
+        }
         if (isUnauthorized(error) || isForbidden(error)) {
           clearSession()
           queryClient.clear()
@@ -172,7 +172,7 @@ export function rootContainer(container: ReactNode) {
 
 function roleLabel(role: AdminRole | undefined) {
   if (!role) {
-return '未登录'
-}
+    return '未登录'
+  }
   return ROLE_LABEL[role]
 }

@@ -131,6 +131,10 @@ export class AdminClient {
   put<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>('PUT', path, body)
   }
+
+  delete<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>('DELETE', path, body)
+  }
 }
 
 /** 解析查询串;null/undefined/空字符串省略. */

@@ -1,4 +1,7 @@
 export const routes = [
+  { path: '/artworks', name: '画作管理', icon: 'PictureOutlined', component: './Artworks' },
+  { path: '/artworks/new', component: './Artworks/Edit', hideInMenu: true },
+  { path: '/artworks/:id', component: './Artworks/Edit', hideInMenu: true },
   {
     path: '/login',
     layout: false,
