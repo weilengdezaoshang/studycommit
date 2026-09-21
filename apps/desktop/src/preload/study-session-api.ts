@@ -9,6 +9,16 @@ import { captureIpcChannels } from '../shared/capture-channels'
 import { reviewIpcChannels } from '../shared/review-channels'
 import { searchIpcChannels } from '../shared/search-channels'
 import { miniIpcChannels } from '../shared/mini-channels'
+import { puzzleIpcChannels } from '../shared/puzzle-channels'
+
+export const puzzlePreloadApi = {
+  album: () => ipcRenderer.invoke(puzzleIpcChannels.album),
+  selectArtwork: (artworkId: string) =>
+    ipcRenderer.invoke(puzzleIpcChannels.selectArtwork, { artworkId }),
+  reveal: (rewardId: string) => ipcRenderer.invoke(puzzleIpcChannels.reveal, { rewardId }),
+  featureArtwork: (artworkId: string) =>
+    ipcRenderer.invoke(puzzleIpcChannels.featureArtwork, { artworkId }),
+}
 
 export const miniPreloadApi = {
   open: () => ipcRenderer.invoke(miniIpcChannels.open),
@@ -124,6 +134,7 @@ export const studyCommitPreloadApi = {
   topics: topicPreloadApi,
   learningLogs: learningLogPreloadApi,
   papers: paperPreloadApi,
+  puzzles: puzzlePreloadApi,
   ai: aiPreloadApi,
   auth: authPreloadApi,
   capture: capturePreloadApi,

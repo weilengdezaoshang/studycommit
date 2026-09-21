@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest'
 import { HttpError } from '@studycommit/common/http'
+import { net } from 'electron'
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp/studycommit-test' },
@@ -12,6 +13,51 @@ import { createMemorySessionPersist, DesktopAuthSessionStore } from '../auth/ses
 import { createDesktopServices, resolveDesktopServices } from './create-services'
 
 describe('createDesktopServices', () => {
+  it('默认请求适配器向 Electron 传递完整请求并保留地址请求头与正文', async () => {
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    vi.mocked(net.fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          user: {
+            id: '11111111-1111-4111-8111-111111111111',
+            nickname: '学习者',
+            avatarUrl: null,
+            status: 'active',
+          },
+          tokens: { accessToken: 'test-access', refreshToken: 'test-refresh', expiresAt },
+        }),
+        { headers: { 'content-type': 'application/json' } },
+      ),
+    )
+    const services = createDesktopServices(
+      { STUDYCOMMIT_API_ORIGIN: 'http://127.0.0.1:3000', NODE_ENV: 'development' },
+      { sessionStore: new DesktopAuthSessionStore(createMemorySessionPersist()) },
+    )
+    await services.auth.loginAccount('demo', 'test-password')
+    const [request] = vi.mocked(net.fetch).mock.calls.at(-1)!
+    expect(request).toBeInstanceOf(Request)
+    const sent = request as Request
+    expect(sent.url).toBe('http://127.0.0.1:3000/api/auth/account/login')
+    expect(sent.method).toBe('POST')
+    expect(sent.headers.get('content-type')).toContain('application/json')
+    expect(await sent.json()).toEqual({
+      account: 'demo',
+      password: 'test-password',
+      deviceType: 'desktop',
+    })
+    vi.mocked(net.fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ session: null, serverNow: expiresAt }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    await services.studySessions.getActive()
+    const [authenticatedRequest] = vi.mocked(net.fetch).mock.calls.at(-1)!
+    expect(authenticatedRequest).toBeInstanceOf(Request)
+    expect((authenticatedRequest as Request).headers.get('authorization')).toBe(
+      'Bearer test-access',
+    )
+  })
+
   it('maps missing origin to CONFIGURATION_ERROR', () => {
     expect(() => createDesktopServices({ NODE_ENV: 'development' })).toThrow(HttpError)
     try {

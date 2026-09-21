@@ -7,6 +7,11 @@ export { searchIpcChannels }
 
 export function registerSearchIpc(host: IpcHost, search: SearchApi): void {
   host.handle(searchIpcChannels.query, (input) =>
-    search.query(parseIpcInput<{ q: string; limit?: number; cursor?: string }>(searchQuerySchema, input ?? { q: '' })),
+    search.query(
+      parseIpcInput<{ q: string; limit?: number; cursor?: string }>(
+        searchQuerySchema,
+        input ?? { q: '' },
+      ),
+    ),
   )
 }

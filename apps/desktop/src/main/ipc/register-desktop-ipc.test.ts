@@ -21,6 +21,7 @@ import { aiIpcChannels } from '../../shared/ai-channels'
 import { reviewIpcChannels } from '../../shared/review-channels'
 import { searchIpcChannels } from '../../shared/search-channels'
 import { paperIpcChannels } from '../../shared/paper-channels'
+import { puzzleIpcChannels } from '../../shared/puzzle-channels'
 import { authIpcChannels } from './auth-ipc'
 import { registerDesktopIpc } from './register-desktop-ipc'
 import { studySessionIpcChannels } from './study-session-ipc'
@@ -116,6 +117,7 @@ describe('registerDesktopIpc', () => {
         ...Object.values(authIpcChannels),
         ...Object.values(learningLogIpcChannels),
         ...Object.values(paperIpcChannels),
+        ...Object.values(puzzleIpcChannels),
         // 计费通道:旧同步/流式入口已移除,仅注册报价/受理/查询/确认。
         ...Object.values(aiIpcChannels),
         ...Object.values(reviewIpcChannels),

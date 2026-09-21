@@ -15,6 +15,7 @@ import { registerMiniIpc } from './mini-ipc'
 import { registerAuthIpc } from './auth-ipc'
 import { registerLearningLogIpc } from './learning-log-ipc'
 import { registerPaperIpc } from './paper-ipc'
+import { registerPuzzleIpc } from './puzzle-ipc'
 import { registerStudySessionIpc } from './study-session-ipc'
 import { STUDY_SESSIONS_ENABLED } from '../../shared/feature-flags'
 import { registerTopicIpc } from './topic-ipc'
@@ -56,6 +57,7 @@ export function registerDesktopIpc(
   registerTopicIpc(host, services.topics)
   registerLearningLogIpc(host, services.learningLogs)
   registerPaperIpc(host, services.papers, services.uploads)
+  registerPuzzleIpc(host, services.puzzles)
   registerAuthIpc(host, services.auth, options.capture ? registerCaptureShortcut : undefined)
   const disposeAi = registerAiIpc(host, services.ai)
   registerReviewIpc(host, services.reviews)

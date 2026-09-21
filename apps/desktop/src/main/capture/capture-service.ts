@@ -1,11 +1,4 @@
-import {
-  BrowserWindow,
-  desktopCapturer,
-  screen,
-  shell,
-  systemPreferences,
-  type Display,
-} from 'electron'
+import { BrowserWindow, desktopCapturer, screen, type Display } from 'electron'
 import {
   captureIpcChannels,
   isCaptureSelection,
@@ -14,10 +7,9 @@ import {
   type CaptureSelection,
 } from '../../shared/capture-channels'
 import type { CaptureRegistry } from './capture-registry'
+import { CapturePermissions, type CapturePermissionsPort } from './capture-permissions'
 
 const REQUEST_TIMEOUT_MS = 60_000
-const MACOS_SCREEN_SETTINGS_URL =
-  'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture'
 
 export interface CaptureRequestOutcome {
   result: CaptureRequestResult
@@ -39,6 +31,7 @@ interface PendingCapture {
 export class CaptureService {
   private overlayWindow: BrowserWindow | null = null
   private pending: PendingCapture | null = null
+  private requesting = false
   /** 确认页预览:captureId → dataUrl(仅本地内存,不落盘不上传) */
   private readonly previews = new Map<string, string>()
 
@@ -46,26 +39,15 @@ export class CaptureService {
     private readonly registry: CaptureRegistry,
     private readonly preloadPath: string,
     private readonly loadOverlay: (window: BrowserWindow) => Promise<void>,
+    private readonly permissions: CapturePermissionsPort = new CapturePermissions(),
   ) {}
 
-  permissionCheck(): CapturePermission {
-    if (process.platform !== 'darwin') {
-      return 'not-needed'
-    }
-    const status = systemPreferences.getMediaAccessStatus('screen')
-    if (status === 'granted') {
-      return 'granted'
-    }
-    if (status === 'denied' || status === 'restricted') {
-      return 'denied'
-    }
-    return 'unavailable'
+  permissionCheck(): Promise<CapturePermission> {
+    return this.permissions.check()
   }
 
-  openPermissionSettings(): void {
-    if (process.platform === 'darwin') {
-      void shell.openExternal(MACOS_SCREEN_SETTINGS_URL)
-    }
+  async openPermissionSettings(): Promise<void> {
+    await this.permissions.openSettings()
   }
 
   /** 覆盖窗 webContents id:overlay 通道消息只接受来自覆盖窗的发送方。 */
@@ -74,16 +56,42 @@ export class CaptureService {
   }
 
   async requestCapture(): Promise<CaptureRequestResult> {
-    const permission = this.permissionCheck()
-    if (permission !== 'granted' && permission !== 'not-needed') {
-      return { status: 'permission-denied' }
-    }
-    if (this.pending) {
+    if (this.requesting || this.pending) {
       return { status: 'failed', message: '已有截图正在进行' }
     }
+    this.requesting = true
+    try {
+      let permission: CapturePermission
+      try {
+        permission = await this.permissions.request()
+      } catch (error) {
+        console.error('[capture] 屏幕权限申请失败', error)
+        return { status: 'failed', message: '屏幕权限申请失败，请重启应用后重试' }
+      }
+      if (permission !== 'granted' && permission !== 'not-needed') {
+        return { status: 'permission-denied' }
+      }
+      return await this.captureGrantedDisplay()
+    } finally {
+      this.requesting = false
+    }
+  }
 
+  private async captureGrantedDisplay(): Promise<CaptureRequestResult> {
     const display = screen.getPrimaryDisplay()
-    const image = await this.grabDisplay(display)
+    let image: Electron.NativeImage | null
+    try {
+      image = await this.grabDisplay(display)
+    } catch {
+      const currentPermission = await this.permissionCheck()
+      return currentPermission === 'granted' || currentPermission === 'not-needed'
+        ? { status: 'failed', message: '无法获取屏幕画面，请重试' }
+        : { status: 'permission-denied' }
+    }
+    const currentPermission = await this.permissionCheck()
+    if (currentPermission !== 'granted' && currentPermission !== 'not-needed') {
+      return { status: 'permission-denied' }
+    }
     if (!image) {
       return { status: 'failed', message: '无法获取屏幕画面' }
     }

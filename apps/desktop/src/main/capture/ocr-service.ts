@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import { prepareOcrImage } from './ocr-image'
 
 /**
  * 本地 OCR(DE-311):tesseract.js 在主进程内运行识别(其内部自带 worker 线程,
@@ -26,7 +27,14 @@ interface OcrWorkerLike {
 
 type CreateWorkerLike = (
   language: string,
-  options: { langPath: string; logger: () => void },
+  oem: number,
+  options: {
+    langPath: string
+    gzip: boolean
+    cacheMethod: 'none'
+    errorHandler: () => void
+    logger: () => void
+  },
 ) => Promise<OcrWorkerLike>
 
 export class OcrService {
@@ -41,14 +49,16 @@ export class OcrService {
     if (cached) {
       return cached
     }
-    const image = await readFile(filePath)
+    const image = prepareOcrImage(await readFile(filePath))
     const worker = await this.ensureWorker()
     const { data } = await worker.recognize(image)
     const result: OcrResult = {
       text: data.text.trim(),
       confidence: typeof data.confidence === 'number' ? data.confidence : null,
     }
-    this.cache.set(captureId, result)
+    if (result.text) {
+      this.cache.set(captureId, result)
+    }
     return result
   }
 
@@ -67,7 +77,10 @@ export class OcrService {
   }
 
   private ensureWorker(): Promise<OcrWorkerLike> {
-    this.workerPromise ??= this.createWorker()
+    this.workerPromise ??= this.createWorker().catch((error: unknown) => {
+      this.workerPromise = null
+      throw error
+    })
     return this.workerPromise
   }
 
@@ -80,8 +93,11 @@ export class OcrService {
     } catch {
       return Promise.reject(new OcrUnavailableError('OCR 组件未安装，无法识别截图文字'))
     }
-    return createWorker('chi_sim+eng', {
+    return createWorker('chi_sim+eng', 1, {
       langPath: this.modelsDir,
+      gzip: false,
+      cacheMethod: 'none',
+      errorHandler: () => undefined,
       logger: () => undefined,
     })
   }

@@ -16,6 +16,7 @@ describe('study session preload api', () => {
       'topics',
       'learningLogs',
       'papers',
+      'puzzles',
       'ai',
       'auth',
       'capture',

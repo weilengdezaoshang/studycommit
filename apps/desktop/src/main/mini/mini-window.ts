@@ -105,8 +105,7 @@ export class MiniSessionWindowManager {
     }
     const [x, y] = mini.getPosition()
     const state: MiniWindowState = { x, y }
-    writeFile(this.stateFilePath, JSON.stringify(state))
-      .catch(() => undefined)
+    writeFile(this.stateFilePath, JSON.stringify(state)).catch(() => undefined)
   }
 }
 

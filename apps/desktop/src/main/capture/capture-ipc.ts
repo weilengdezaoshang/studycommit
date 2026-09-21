@@ -26,9 +26,11 @@ function overlayGuarded<T>(deps: CaptureIpcDeps, senderId: number, run: () => T)
 }
 
 export function registerCaptureIpc(host: IpcHost, deps: CaptureIpcDeps): void {
+  /** 同一截图保存重试复用 uploadId，避免网络响应丢失后产生重复附件会话。 */
+  const uploadAttempts = new Map<string, string>()
   host.handle(captureIpcChannels.permissionCheck, async () => deps.service.permissionCheck())
   host.handle(captureIpcChannels.openPermissionSettings, async () => {
-    deps.service.openPermissionSettings()
+    await deps.service.openPermissionSettings()
     return { ok: true as const }
   })
   // 该 invoke 会挂起直到覆盖窗流程结束(完成/取消/超时),由 CaptureService 内部超时兜底
@@ -62,11 +64,11 @@ export function registerCaptureIpc(host: IpcHost, deps: CaptureIpcDeps): void {
   host.handle(captureIpcChannels.ocr, async (input) => {
     const captureId = (input as { captureId?: unknown } | undefined)?.captureId
     if (!isCaptureId(captureId)) {
-      return { text: '', confidence: null }
+      throw createHttpError({ code: 'INVALID_RESPONSE', message: '截图标识无效，请重新截图' })
     }
     const entry = deps.registry.get(captureId)
     if (!entry) {
-      return { text: '', confidence: null }
+      throw createHttpError({ code: 'NOT_FOUND', message: '截图已失效，请重新截图' })
     }
     return deps.ocr.recognize(captureId, entry.filePath)
   })
@@ -92,7 +94,8 @@ export function registerCaptureIpc(host: IpcHost, deps: CaptureIpcDeps): void {
     }
     const bytes = await readFile(entry.filePath)
     const sha256 = createHash('sha256').update(bytes).digest('hex')
-    const uploadId = randomUUID()
+    const uploadId = uploadAttempts.get(captureId) ?? randomUUID()
+    uploadAttempts.set(captureId, uploadId)
     const created = await deps.uploads.create({
       uploadId,
       kind: 'source_screenshot',

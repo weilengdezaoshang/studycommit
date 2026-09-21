@@ -4,6 +4,7 @@ import type {
   AiApi,
   LearningLogApi,
   PaperApi,
+  PuzzleApi,
   StudySessionApi,
   TopicMutationApi,
   UploadsApi,
@@ -19,6 +20,7 @@ export interface DesktopServices {
   topics: TopicMutationApi
   learningLogs: LearningLogApi
   papers: PaperApi
+  puzzles?: PuzzleApi
   ai: AiApi
   auth: DesktopAuthApiPort
   reviews: ReviewApi
@@ -43,7 +45,9 @@ export function createDesktopServices(
     origin,
     apiPrefix,
     allowInsecureHttp,
-    fetchImpl: options?.fetchImpl ?? ((input, init) => net.fetch(String(input), init)),
+    fetchImpl:
+      options?.fetchImpl ??
+      ((input, init) => net.fetch(input instanceof URL ? input.href : input, init)),
     getHeaders: async () => ({
       accept: 'application/json',
       ...(await sessions.authorizationHeaders()),
@@ -53,7 +57,9 @@ export function createDesktopServices(
   const auth = new DesktopAuthApi(sessions, client)
   sessions.bindRefresh((refreshToken) => auth.refresh(refreshToken))
   return {
-    ...createOrpcServices(client, { createIdempotencyKey: () => crypto.randomUUID() }),
+    ...createOrpcServices(client, {
+      createIdempotencyKey: () => crypto.randomUUID(),
+    }),
     auth,
   }
 }
@@ -107,8 +113,11 @@ function createUnavailableServices(error: HttpError): DesktopServices {
       updateQuestion: reject,
       restore: reject,
     },
+    puzzles: { album: reject, selectArtwork: reject, reveal: reject, featureArtwork: reject },
     ai: {
-      explainPaper: reject,
+      quote: reject,
+      explainRun: reject,
+      getRun: reject,
       confirmPaperExplain: reject,
     },
     learningLogs: {

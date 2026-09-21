@@ -1,4 +1,7 @@
 export const paperIpcChannels = {
+  get: 'papers:get',
+  knowledge: 'papers:knowledge',
+  updateKnowledge: 'papers:update-knowledge',
   list: 'papers:list',
   create: 'papers:create',
   update: 'papers:update',
@@ -7,4 +10,5 @@ export const paperIpcChannels = {
   remove: 'papers:remove',
   question: 'papers:question',
   restore: 'papers:restore',
+  assetAccess: 'papers:asset-access',
 } as const

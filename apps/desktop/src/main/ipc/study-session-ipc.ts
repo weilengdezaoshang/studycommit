@@ -8,6 +8,7 @@ import {
   updateSessionFragmentInputSchema,
 } from '@studycommit/common/contracts'
 import type { StudySessionApi } from '@studycommit/common/ports'
+import { createHttpError } from '@studycommit/common/http'
 import { studySessionIpcChannels } from '../../shared/study-session-channels'
 import type { OfflineJobQueue, PendingFragmentJob } from '../offline/offline-queue'
 import { parseIpcInput, type IpcHost } from './ipc-host'
@@ -15,6 +16,7 @@ import { parseIpcInput, type IpcHost } from './ipc-host'
 export { studySessionIpcChannels }
 
 export interface StudySessionIpcOptions {
+  enabled?: boolean
   /** 片段离线队列:创建失败落盘,启动/后续成功时重放(DE-312) */
   offlineQueue?: OfflineJobQueue
 }
@@ -24,6 +26,14 @@ export function registerStudySessionIpc(
   client: StudySessionApi,
   options: StudySessionIpcOptions = {},
 ): void {
+  if (options.enabled === false) {
+    for (const channel of Object.values(studySessionIpcChannels)) {
+      host.handle(channel, async () => {
+        throw createHttpError({ code: 'FORBIDDEN', message: '陪学功能暂未开放' })
+      })
+    }
+    return
+  }
   const offlineQueue = options.offlineQueue
   const drainQueue = (): void => {
     void offlineQueue
