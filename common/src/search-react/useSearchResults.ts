@@ -39,6 +39,7 @@ export function useSearchResults(input: {
   /** 服务端搜索结果;null 表示尚未成功(含离线回退) */
   const [serverRows, setServerRows] = useState<SearchRow[] | null>(null)
   const [serverFailed, setServerFailed] = useState(false)
+  const [completedKeyword, setCompletedKeyword] = useState('')
   const requestSeq = useRef(0)
 
   useEffect(() => {
@@ -56,22 +57,26 @@ export function useSearchResults(input: {
           }
           setServerRows(toServerSearchRows(result))
           setServerFailed(false)
+          setCompletedKeyword(keyword)
         })
         .catch(() => {
           if (requestSeq.current === seq) {
             setServerRows(null)
             setServerFailed(true)
+            setCompletedKeyword(keyword)
           }
         })
     }, debounceMs)
     return () => {
       clearTimeout(timer)
+      requestSeq.current++
     }
   }, [keyword, gateway, debounceMs])
 
   const localRows = useMemo(() => filterLocalSearchRows(source, keyword), [source, keyword])
 
-  const showServer = Boolean(keyword) && serverRows !== null
+  const currentResult = Boolean(keyword) && completedKeyword === keyword
+  const showServer = currentResult && serverRows !== null
   const rows = useMemo(() => {
     if (showServer && serverRows) {
       return mergeSearchRows(serverRows, localRows)
@@ -79,5 +84,5 @@ export function useSearchResults(input: {
     return localRows
   }, [showServer, serverRows, localRows])
 
-  return { query, setQuery, keyword, rows, showServer, serverFailed }
+  return { query, setQuery, keyword, rows, showServer, serverFailed: currentResult && serverFailed }
 }

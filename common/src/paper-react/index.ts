@@ -18,3 +18,14 @@ export type {
   UseAssetUploadOptions,
 } from './use-asset-upload'
 export type { PaperDraft, PaperDraftAction } from '../paper-runtime'
+
+export { usePaperExplanation } from './use-paper-explanation'
+
+export { usePaperKnowledge } from './use-paper-knowledge'
+export {
+  PAPER_KNOWLEDGE_COPY,
+  knowledgeHistoryLabel,
+  knowledgeRelationLabel,
+} from './knowledge-copy'
+
+export { useRelationCandidates } from './use-relation-candidates'

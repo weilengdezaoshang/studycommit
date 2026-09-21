@@ -104,10 +104,16 @@ describe('createPaperDraftReducer', () => {
 })
 
 describe('paperDraftValidationError', () => {
-  it('正文为空白时给出先写点什么的提示', () => {
+  it('正文和附件都为空时提示补充内容', () => {
     expect(paperDraftValidationError(draftWith({ content: '   ' }))).toBe(
       PAPER_DRAFT_ERROR.contentRequired,
     )
+  })
+
+  it('正文为空但已有图片时允许保存', () => {
+    expect(
+      paperDraftValidationError(draftWith({ content: '   ', assetUploadIds: ['upload-1'] })),
+    ).toBeNull()
   })
 
   it('正文超出上限时给出超长提示', () => {

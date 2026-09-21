@@ -7,6 +7,7 @@ export type {
   ApplicationServices,
   LearningLogApi,
   PaperApi,
+  PuzzleApi,
   StudySessionApi,
   TopicApi,
   TopicMutationApi,

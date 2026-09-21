@@ -86,6 +86,9 @@ export function createOrpcServices(
         call(() => client.learningLogs.update({ id, ...body }, { context: {} })),
     },
     papers: {
+      get: (id) => call(() => client.papers.get({ id }, { context: {} })),
+      knowledge: (id) => call(() => client.papers.knowledge({ id }, { context: {} })),
+      updateKnowledge: (input) => call(() => client.papers.updateKnowledge(input, { context: {} })),
       list: (input) => call(() => client.papers.list(input ?? {}, { context: {} })),
       create: (input, createOptions) =>
         call(() =>
@@ -102,10 +105,39 @@ export function createOrpcServices(
       updateQuestion: (input) => call(() => client.papers.question(input, { context: {} })),
       restore: (input) => call(() => client.papers.restore(input, { context: {} })),
     },
+    puzzles: {
+      album: () => call(() => client.puzzles.album(undefined, { context: {} })),
+      selectArtwork: (artworkId) =>
+        call(() => client.puzzles.selectArtwork({ artworkId }, { context: {} })),
+      reveal: (rewardId) => call(() => client.puzzles.reveal({ rewardId }, { context: {} })),
+      featureArtwork: (artworkId) =>
+        call(() => client.puzzles.featureArtwork({ artworkId }, { context: {} })),
+    },
     ai: {
-      explainPaper: (input) => call(() => client.ai.explainPaper(input, { context: {} })),
+      quote: () => call(() => client.ai.quote({ action: 'paper_explain' }, { context: {} })),
+      explainRun: (input, expectedPrice, idempotencyKey) =>
+        call(() =>
+          client.ai.startRun(
+            { action: 'paper_explain', input, expectedPrice },
+            { context: { idempotencyKey } },
+          ),
+        ),
+      getRun: (runId) => call(() => client.ai.getRun({ runId }, { context: {} })),
       confirmPaperExplain: (input) =>
         call(() => client.ai.confirmPaperExplain(input, { context: {} })),
+    },
+    credits: {
+      balance: () => call(() => client.credits.balance(undefined, { context: {} })),
+    },
+    campaigns: {
+      list: () => call(() => client.campaigns.list(undefined, { context: {} })),
+      claim: ({ id, expectedVersion }, idempotencyKey) =>
+        call(() =>
+          client.campaigns.claim({ id, expectedVersion }, { context: { idempotencyKey } }),
+        ),
+    },
+    operations: {
+      bootstrap: () => call(() => client.operations.bootstrap(undefined, { context: {} })),
     },
     uploads: createOrpcUploadsService(client),
     reviews: createOrpcReviewsService(client),

@@ -55,6 +55,7 @@ describe('paper schema', () => {
       content: '一段记录',
       questionText: '为什么',
       understandingText: '因为有批处理',
+      assetUploadIds: ['0b8f3c64-6e2a-4a5d-9d0a-2f0f5d3a1b21'],
     }
     expect(createPaperInputSchema.parse(createInput)).toEqual(rpcCreateInput.parse(createInput))
 

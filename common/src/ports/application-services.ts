@@ -1,3 +1,4 @@
+import type { PaperKnowledge, PaperKnowledgeCommand } from '@studycommit/rpc-contracts/papers'
 import type {
   LearningLog,
   LearningLogPage,
@@ -17,7 +18,7 @@ import type {
   StudySession,
   UpdateSessionFragmentInput,
 } from '../contracts/study-session'
-import type { AiApi } from './ai'
+import type { AiApi, CampaignsApi, CreditsApi, OperationsApi } from './ai'
 import type { UploadsApi } from './uploads'
 import type { ReviewApi } from './review'
 import type { SearchApi } from './search'
@@ -33,6 +34,14 @@ import type {
   UpdatePaperInput,
   UpdatePaperQuestionInput,
 } from '../contracts/paper'
+import type { PuzzleAlbum, PuzzleReward } from '@studycommit/rpc-contracts/puzzles'
+
+export interface PuzzleApi {
+  album(): Promise<PuzzleAlbum>
+  selectArtwork(artworkId: string): Promise<PuzzleAlbum>
+  reveal(rewardId: string): Promise<PuzzleReward>
+  featureArtwork(artworkId: string): Promise<PuzzleAlbum>
+}
 
 export interface StudySessionApi {
   create(input: CreateStudySessionInput): Promise<StudySession>
@@ -89,6 +98,9 @@ export interface LearningLogApi {
 }
 
 export interface PaperApi {
+  get?(id: string): Promise<Paper>
+  knowledge?(id: string): Promise<PaperKnowledge>
+  updateKnowledge?(input: PaperKnowledgeCommand): Promise<PaperKnowledge>
   list(input?: ListPapersInput): Promise<PaperPage>
   /**
    * 创建纸页:options.idempotencyKey 传入草稿锚点(客户端 UUID)时,
@@ -105,10 +117,14 @@ export interface PaperApi {
 }
 
 export interface ApplicationServices {
+  readonly credits?: CreditsApi
+  readonly campaigns?: CampaignsApi
+  readonly operations?: OperationsApi
   studySessions: StudySessionApi
   topics: TopicApi
   learningLogs: LearningLogApi
   papers: PaperApi
+  readonly puzzles?: PuzzleApi
   ai: AiApi
   /** 图片直传会话(BE-308);桌面端由主进程持令牌调用 */
   uploads: UploadsApi

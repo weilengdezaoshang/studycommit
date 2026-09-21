@@ -209,3 +209,14 @@ describe('runCaptureRecognition', () => {
     expect(events[0]).toMatchObject({ id: 'a', runId: 'run-1' })
   })
 })
+
+it('删除全部附件并再次进入编辑仍保留识别正文', () => {
+  let state = captureReducer(example(), { type: 'edit' })
+  const content = state.content
+  for (const image of state.images) {
+    state = captureReducer(state, { type: 'remove', id: image.id })
+  }
+  state = captureReducer(state, { type: 'edit' })
+  expect(state.images).toHaveLength(0)
+  expect(state.content).toBe(content)
+})

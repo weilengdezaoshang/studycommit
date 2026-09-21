@@ -23,7 +23,10 @@ function createClient(): ApiOrpcClient {
       moveToInbox: vi.fn(),
       remove: vi.fn(),
     },
-    ai: { explainPaper: vi.fn(), confirmPaperExplain: vi.fn() },
+    ai: { quote: vi.fn(), startRun: vi.fn(), getRun: vi.fn(), confirmPaperExplain: vi.fn() },
+    credits: { balance: vi.fn() },
+    campaigns: { list: vi.fn(), claim: vi.fn() },
+    operations: { bootstrap: vi.fn() },
     auth: {},
     templates: {},
     health: {},
@@ -105,23 +108,55 @@ describe('createOrpcServices', () => {
       { content: '一段记录', hasQuestion: false },
       { context: { idempotencyKey: 'generated-key' } },
     )
+    await services.papers.create(
+      { content: '带幂等键的记录', hasQuestion: false },
+      { idempotencyKey: 'draft-paper-id' },
+    )
+    expect(raw.papers.create).toHaveBeenNthCalledWith(
+      2,
+      { content: '带幂等键的记录', hasQuestion: false },
+      {
+        context: { idempotencyKey: 'draft-paper-id' },
+      },
+    )
     expect(raw.papers.moveToInbox).toHaveBeenCalledExactlyOnceWith(paperInput, { context: {} })
   })
 
-  it('AI 解释卡操作映射到对应的 oRPC procedure', async () => {
+  it('AI 计费操作映射到对应的 oRPC procedure 并携带幂等键', async () => {
     const client = createClient()
     const services = createOrpcServices(client, options)
     const explainInput = { content: '一段记录', directive: 'initial' as const, round: 1 }
+    const expectedPrice = { priceCredits: 5, priceVersion: 1 }
 
-    await services.ai.explainPaper(explainInput)
+    await services.ai.quote()
+    await services.ai.explainRun(explainInput, expectedPrice, 'generated-key')
+    await services.ai.getRun('run-1')
     await services.ai.confirmPaperExplain({ runId: 'run-1' })
+    await services.credits?.balance()
+    await services.campaigns?.list()
+    await services.campaigns?.claim({ id: 'campaign-1', expectedVersion: 2 }, 'claim-key')
+    await services.operations?.bootstrap()
 
     const raw = client as unknown as Record<string, Record<string, ReturnType<typeof vi.fn>>>
-    expect(raw.ai.explainPaper).toHaveBeenCalledExactlyOnceWith(explainInput, { context: {} })
+    expect(raw.ai.quote).toHaveBeenCalledExactlyOnceWith(
+      { action: 'paper_explain' },
+      { context: {} },
+    )
+    expect(raw.ai.startRun).toHaveBeenCalledExactlyOnceWith(
+      { action: 'paper_explain', input: explainInput, expectedPrice },
+      { context: { idempotencyKey: 'generated-key' } },
+    )
+    expect(raw.ai.getRun).toHaveBeenCalledExactlyOnceWith({ runId: 'run-1' }, { context: {} })
     expect(raw.ai.confirmPaperExplain).toHaveBeenCalledExactlyOnceWith(
       { runId: 'run-1' },
       { context: {} },
     )
+    expect(raw.credits.balance).toHaveBeenCalledExactlyOnceWith(undefined, { context: {} })
+    expect(raw.campaigns.claim).toHaveBeenCalledExactlyOnceWith(
+      { id: 'campaign-1', expectedVersion: 2 },
+      { context: { idempotencyKey: 'claim-key' } },
+    )
+    expect(raw.operations.bootstrap).toHaveBeenCalledExactlyOnceWith(undefined, { context: {} })
   })
 
   it.each([

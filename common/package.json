@@ -22,7 +22,9 @@
     "./study-session-react": "./src/study-session-react/index.ts",
     "./study-session-runtime": "./src/study-session-runtime/index.ts",
     "./toast-react": "./src/toast-react/index.ts",
-    "./topic-store-runtime": "./src/topic-store-runtime/index.ts"
+    "./topic-store-runtime": "./src/topic-store-runtime/index.ts",
+    "./puzzle-runtime": "./src/puzzle-runtime/index.ts",
+    "./puzzle-react": "./src/puzzle-react/index.ts"
   },
   "scripts": {
     "test": "vitest",
@@ -36,8 +38,9 @@
     "@orpc/client": "^1.15.0",
     "@orpc/contract": "^1.15.0",
     "@orpc/openapi-client": "^1.15.0",
-    "zod": "^4.4.3",
-    "@studycommit/rpc-contracts": "workspace:*"
+    "@studycommit/rpc-contracts": "workspace:*",
+    "partial-json": "^0.1.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

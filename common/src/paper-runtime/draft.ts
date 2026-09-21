@@ -1,3 +1,4 @@
+import type { RichTextDocument } from '@studycommit/rpc-contracts/rich-text'
 /**
  * 纸页草稿运行时(SH-304):无 React 纯函数,移动端与桌面端编辑器共用。
  * 草稿以客户端 UUID(paperId)为锚:它同时充当创建纸页的幂等键,
@@ -10,7 +11,7 @@ export const PAPER_QUESTION_MAX_LENGTH = 2_000
 export const PAPER_DRAFT_MAX_ASSETS = 9
 
 export const PAPER_DRAFT_ERROR = {
-  contentRequired: '先写点什么再记下',
+  contentRequired: '请写下内容或添加图片',
   contentTooLong: `正文最多 ${PAPER_CONTENT_MAX_LENGTH} 字`,
   questionTooLong: `问题最多 ${PAPER_QUESTION_MAX_LENGTH} 字`,
 } as const
@@ -19,6 +20,7 @@ export interface PaperDraft {
   /** 客户端 UUID,兼作创建纸页的幂等键 */
   paperId: string
   content: string
+  contentDocument?: RichTextDocument | null
   hasQuestion: boolean
   questionText?: string
   /** 已完成直传的上传会话 ID,创建时绑定到纸页 */
@@ -43,7 +45,7 @@ export type PaperDraftAction =
     }
   /** 挂载时从本地存储恢复完整草稿:保留原 paperId 与失败次数,幂等键不换 */
   | { type: 'restore'; draft: PaperDraft }
-  | { type: 'setContent'; content: string; now: number }
+  | { type: 'setContent'; content: string; contentDocument?: RichTextDocument | null; now: number }
   | { type: 'setQuestion'; hasQuestion: boolean; questionText?: string; now: number }
   | { type: 'attachAsset'; uploadId: string; now: number }
   | { type: 'detachAsset'; uploadId: string; now: number }
@@ -55,6 +57,7 @@ export type PaperDraftAction =
 /** 归一化草稿输入:trim 正文与问题文本,供校验和创建载荷统一使用。 */
 export function normalizePaperDraft(draft: Pick<PaperDraft, 'content' | 'questionText'>): {
   content: string
+  contentDocument?: RichTextDocument | null
   questionText: string
 } {
   return {
@@ -66,7 +69,7 @@ export function normalizePaperDraft(draft: Pick<PaperDraft, 'content' | 'questio
 /** 保存前校验:返回中文错误文案,通过时返回 null。 */
 export function paperDraftValidationError(draft: PaperDraft): string | null {
   const { content, questionText } = normalizePaperDraft(draft)
-  if (!content) {
+  if (!content && draft.assetUploadIds.length === 0) {
     return PAPER_DRAFT_ERROR.contentRequired
   }
   if (content.length > PAPER_CONTENT_MAX_LENGTH) {
@@ -81,6 +84,7 @@ export function paperDraftValidationError(draft: PaperDraft): string | null {
 /** 草稿到创建纸页载荷:只包含归一化后的字段,空集合不携带。 */
 export function paperCreateInputOf(draft: PaperDraft): {
   content: string
+  contentDocument?: RichTextDocument | null
   hasQuestion: boolean
   questionText?: string
   assetUploadIds?: string[]
@@ -88,6 +92,7 @@ export function paperCreateInputOf(draft: PaperDraft): {
   const { content, questionText } = normalizePaperDraft(draft)
   return {
     content,
+    ...(draft.contentDocument ? { contentDocument: draft.contentDocument } : {}),
     hasQuestion: draft.hasQuestion,
     ...(draft.hasQuestion && questionText ? { questionText } : {}),
     ...(draft.assetUploadIds.length > 0 ? { assetUploadIds: draft.assetUploadIds } : {}),
@@ -110,6 +115,7 @@ export function createPaperDraftReducer(
       return {
         paperId: action.paperId,
         content: action.initial?.content ?? '',
+        contentDocument: action.initial?.contentDocument,
         hasQuestion: action.initial?.hasQuestion ?? false,
         questionText: action.initial?.questionText,
         assetUploadIds: action.initial?.assetUploadIds ?? [],
@@ -124,7 +130,12 @@ export function createPaperDraftReducer(
       if (!state) {
         return state
       }
-      return { ...state, content: action.content, updatedAt: action.now }
+      return {
+        ...state,
+        content: action.content,
+        contentDocument: action.contentDocument,
+        updatedAt: action.now,
+      }
     }
     case 'setQuestion': {
       if (!state) {
