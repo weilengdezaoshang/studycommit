@@ -1,8 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { and, eq, isNull } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
 import { isConstraint } from '../common/idempotency'
 import { DatabaseService } from '../database/database.service'
-import { authIdentities, authSessions, users } from '../database/schema'
+import { authIdentities, authSessions, outboxEvents, users } from '../database/schema'
+import { OUTBOX_EVENT_TYPES } from '../outbox/outbox.constants'
 import { AUTH_IDENTITIES_PROVIDER_SUBJECT_UNIQUE, AUTH_PROVIDER } from './auth.constants'
 import type { DeviceType } from '@studycommit/rpc-contracts/auth'
 
@@ -12,6 +14,31 @@ export type AuthSession = typeof authSessions.$inferSelect
 @Injectable()
 export class AuthRepository {
   constructor(@Inject(DatabaseService) private readonly database: DatabaseService) {}
+
+  /**
+   * 首次验证成功创建用户:同一事务写入注册事件。
+   * 事件消费(注册奖励)失败不影响注册;消费幂等由 campaign_claims 唯一约束保证。
+   */
+  private async insertVerifiedEventInTx(
+    tx: Parameters<Parameters<DatabaseService['db']['transaction']>[0]>[0],
+    userId: string,
+    provider: string,
+  ) {
+    await tx.insert(outboxEvents).values({
+      eventId: randomUUID(),
+      type: OUTBOX_EVENT_TYPES.userVerified,
+      payload: {
+        userId,
+        provider,
+        verifiedAt: new Date().toISOString(),
+      },
+    })
+  }
+
+  async ensureDevelopmentUser(id: string) {
+    await this.database.db.insert(users).values({ id }).onConflictDoNothing({ target: users.id })
+    return this.findUserById(id)
+  }
 
   async findUserById(id: string) {
     const [user] = await this.database.db.select().from(users).where(eq(users.id, id)).limit(1)
@@ -47,6 +74,7 @@ export class AuthRepository {
           passwordHash,
           verifiedAt: new Date(),
         })
+        await this.insertVerifiedEventInTx(tx, user.id, AUTH_PROVIDER.account)
         return user
       })
     } catch (error) {
@@ -67,6 +95,7 @@ export class AuthRepository {
           providerSubject: subject,
           verifiedAt: new Date(),
         })
+        await this.insertVerifiedEventInTx(tx, user.id, AUTH_PROVIDER.phone)
         return user
       })
     } catch (error) {
@@ -100,6 +129,7 @@ export class AuthRepository {
             verifiedAt: new Date(),
           })
         }
+        await this.insertVerifiedEventInTx(tx, user.id, AUTH_PROVIDER.wechatMini)
         return user
       })
     } catch (error) {

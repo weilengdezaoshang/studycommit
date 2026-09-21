@@ -8,6 +8,6 @@ import { UploadsService } from './uploads.service'
 @Module({
   controllers: [UploadsRpcController],
   providers: [StorageGatewayProvider, UploadsRepository, UploadsService, ExpiredAssetsCleanupJob],
-  exports: [UploadsRepository, UploadsService],
+  exports: [UploadsRepository, UploadsService, StorageGatewayProvider],
 })
 export class UploadsModule {}

@@ -6,6 +6,33 @@ import { AuthService } from './auth.service'
 const phone = '13800138000'
 
 describe('AuthService', () => {
+  it('生产环境禁止初始化开发用户', async () => {
+    const repository = { ensureDevelopmentUser: vi.fn() }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: () => 'production' } as never,
+      {} as never,
+    )
+    await expect(service.ensureDevelopmentUser('dev-user')).rejects.toMatchObject({
+      response: { code: AUTH_ERROR.unauthenticated.code },
+    })
+    expect(repository.ensureDevelopmentUser).not.toHaveBeenCalled()
+  })
+
+  it('开发身份不允许使用已停用的用户', async () => {
+    const repository = { ensureDevelopmentUser: vi.fn().mockResolvedValue({ status: 'disabled' }) }
+    const service = new AuthService(
+      repository as never,
+      {} as never,
+      { get: () => 'development' } as never,
+      {} as never,
+    )
+    await expect(service.ensureDevelopmentUser('dev-user')).rejects.toMatchObject({
+      response: { code: AUTH_ERROR.unauthenticated.code },
+    })
+  })
+
   it('冷却期内拒绝重复发送验证码', async () => {
     const redis = { setNxEx: vi.fn().mockResolvedValue(false) }
     const service = new AuthService(

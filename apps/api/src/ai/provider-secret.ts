@@ -11,10 +11,6 @@ export const AI_PROVIDER_ENCRYPTION_ERROR = {
     code: 'AI_PROVIDER_ENCRYPTION_KEY_MISSING',
     message: '未配置加密主密钥，拒绝写入服务商密钥',
   },
-  invalid: {
-    code: 'AI_PROVIDER_ENCRYPTION_KEY_INVALID',
-    message: '加密主密钥无效',
-  },
   decrypt: {
     code: 'AI_PROVIDER_SECRET_UNAVAILABLE',
     message: '无法解密服务商密钥',
@@ -24,8 +20,8 @@ export const AI_PROVIDER_ENCRYPTION_ERROR = {
 /** 解析 32 字节主密钥:允许 64 位 hex 或标准 base64,不接受明文口令。 */
 export function parseEncryptionKey(raw: string | undefined | null): Buffer | null {
   if (!raw || raw.trim().length === 0) {
-return null
-}
+    return null
+  }
   const trimmed = raw.trim()
   if (/^[0-9a-fA-F]{64}$/.test(trimmed)) {
     return Buffer.from(trimmed, 'hex')
@@ -82,7 +78,7 @@ export function decryptSecret(payload: string, key: Buffer): string {
 export function maskApiKey(apiKey: string): string {
   const trimmed = apiKey.trim()
   if (trimmed.length <= 4) {
-return '••••'
-}
+    return '••••'
+  }
   return `••••${trimmed.slice(-4)}`
 }

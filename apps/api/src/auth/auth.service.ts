@@ -70,6 +70,16 @@ export class AuthService {
     @Inject(WechatMiniClient) private readonly wechatMini: WechatMiniClient,
   ) {}
 
+  async ensureDevelopmentUser(id: string): Promise<void> {
+    if (this.config.get('NODE_ENV') !== 'development') {
+      throw new UnauthorizedException(AUTH_ERROR.unauthenticated)
+    }
+    const user = await this.repository.ensureDevelopmentUser(id)
+    if (!user || user.status !== 'active') {
+      throw new UnauthorizedException(AUTH_ERROR.unauthenticated)
+    }
+  }
+
   // 短信发送尚未接入：验证码仅存 Redis（auth:otp:<sha256(phone)>），不会真实下发。
   async sendPhoneCode(phone: string): Promise<SendPhoneCodeOutput> {
     const cooled = await this.redis.setNxEx(otpCooldownKey(phone), AUTH_CODE_COOLDOWN_SECONDS, '1')

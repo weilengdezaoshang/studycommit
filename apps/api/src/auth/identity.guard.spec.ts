@@ -14,6 +14,23 @@ function contextWith(headers: Record<string, string>) {
 }
 
 describe('IdentityGuard', () => {
+  it('开发身份完成用户初始化后才允许业务请求', async () => {
+    const auth = { ensureDevelopmentUser: vi.fn().mockResolvedValue(undefined) }
+    const guard = new IdentityGuard(auth as never, { get: () => 'development' } as never)
+    const ctx = contextWith({ 'x-user-id': userId })
+    await expect(guard.canActivate(ctx as never)).resolves.toBe(true)
+    expect(auth.ensureDevelopmentUser).toHaveBeenCalledWith(userId)
+    expect(ctx.request.userId).toBe(userId)
+  })
+
+  it('开发用户初始化失败时不放行业务请求', async () => {
+    const auth = { ensureDevelopmentUser: vi.fn().mockRejectedValue(new Error('数据库不可用')) }
+    const guard = new IdentityGuard(auth as never, { get: () => 'development' } as never)
+    const ctx = contextWith({ 'x-user-id': userId })
+    await expect(guard.canActivate(ctx as never)).rejects.toThrow('数据库不可用')
+    expect(ctx.request.userId).toBeUndefined()
+  })
+
   it('优先使用登录令牌且忽略开发用户头', async () => {
     const auth = {
       requireAccess: vi.fn().mockResolvedValue({

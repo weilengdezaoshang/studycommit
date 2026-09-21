@@ -42,6 +42,9 @@ export class IdentityGuard implements CanActivate {
     if (this.config.get('NODE_ENV') !== 'production') {
       const result = z.uuid().safeParse(request.headers['x-user-id'])
       if (result.success) {
+        if (this.config.get('NODE_ENV') === 'development') {
+          await this.auth.ensureDevelopmentUser(result.data)
+        }
         request.userId = result.data
         return true
       }

@@ -127,14 +127,11 @@ export class UploadsRepository {
       })
     }
 
-    await tx
-      .update(paperAssets)
-      .set({ paperId, status: 'attached', updatedAt: new Date() })
-      .where(
-        inArray(
-          paperAssets.id,
-          uploadIds.map((uploadId) => rowsByUploadId.get(uploadId)!.id),
-        ),
-      )
+    for (const [position, uploadId] of uploadIds.entries()) {
+      await tx
+        .update(paperAssets)
+        .set({ paperId, position, status: 'attached', updatedAt: new Date() })
+        .where(eq(paperAssets.id, rowsByUploadId.get(uploadId)!.id))
+    }
   }
 }

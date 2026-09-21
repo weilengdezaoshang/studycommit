@@ -123,8 +123,8 @@ return true
 
   private async resolveProvider(modelOverride?: string): Promise<AiProvider> {
     if (this.injectedProvider) {
-return this.injectedProvider
-}
+      return this.injectedProvider
+    }
     const snapshot = await this.providerConfig.resolveRuntime()
     if (!snapshot) {
       throw new ServiceUnavailableException(AI_ERROR.unavailable)
