@@ -3,6 +3,7 @@ import type { CampaignDraftConfig } from '@studycommit/rpc-contracts/campaigns'
 import { desc, sql } from 'drizzle-orm'
 import {
   check,
+  date,
   index,
   integer,
   boolean,
@@ -17,6 +18,12 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
+
+export const puzzleArtworkStatus = pgEnum('puzzle_artwork_status', [
+  'draft',
+  'published',
+  'retired',
+])
 
 export const topicStatus = pgEnum('topic_status', ['active', 'archived'])
 export const studySessionStatus = pgEnum('study_session_status', ['running', 'paused', 'completed'])
@@ -1045,6 +1052,111 @@ export const aiCostBudgets = pgTable(
 )
 
 /** 事务事件投递:业务事务内写入,投递器异步消费;仅保存业务 ID,不含密钥与正文。 */
+export const puzzleArtworks = pgTable(
+  'puzzle_artworks',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    slug: varchar('slug', { length: 80 }).notNull(),
+    title: varchar('title', { length: 80 }).notNull(),
+    description: varchar('description', { length: 240 }).notNull().default(''),
+    style: varchar('style', { length: 40 }).notNull().default('绘本'),
+    assetKey: varchar('asset_key', { length: 160 }).notNull(),
+    version: integer('version').notNull().default(1),
+    pieceCount: integer('piece_count').notNull().default(12),
+    status: puzzleArtworkStatus('status').notNull().default('published'),
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('puzzle_artworks_slug_unique').on(table.slug),
+    check('puzzle_artworks_piece_count_check', sql`${table.pieceCount} = 12`),
+  ],
+)
+
+export const puzzleArtworkAssets = pgTable('puzzle_artwork_assets', {
+  key: varchar('key', { length: 80 }).primaryKey(),
+  title: varchar('title', { length: 80 }).notNull(),
+  style: varchar('style', { length: 40 }).notNull(),
+  storageKey: varchar('storage_key', { length: 500 }),
+  mimeType: varchar('mime_type', { length: 40 }).notNull().default('image/png'),
+  width: integer('width').notNull().default(1200),
+  height: integer('height').notNull().default(900),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const userPuzzleStates = pgTable('user_puzzle_states', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  selectedArtworkId: uuid('selected_artwork_id').references(() => puzzleArtworks.id, {
+    onDelete: 'restrict',
+  }),
+  featuredArtworkId: uuid('featured_artwork_id').references(() => puzzleArtworks.id, {
+    onDelete: 'restrict',
+  }),
+  credit: integer('credit').notNull().default(0),
+  lastRewardDate: date('last_reward_date'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+export const puzzleOrganizeEvents = pgTable(
+  'puzzle_organize_events',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    paperId: uuid('paper_id')
+      .notNull()
+      .references(() => papers.id, { onDelete: 'cascade' }),
+    countedAt: timestamp('counted_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.paperId] })],
+)
+
+export const userPuzzleCompletions = pgTable(
+  'user_puzzle_completions',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    artworkId: uuid('artwork_id')
+      .notNull()
+      .references(() => puzzleArtworks.id, { onDelete: 'restrict' }),
+    completedAt: timestamp('completed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.artworkId] })],
+)
+
+export const puzzleRewards = pgTable(
+  'puzzle_rewards',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    artworkId: uuid('artwork_id')
+      .notNull()
+      .references(() => puzzleArtworks.id, {
+        onDelete: 'restrict',
+      }),
+    pieceIndex: integer('piece_index').notNull(),
+    earnedAt: timestamp('earned_at', { withTimezone: true }).notNull().defaultNow(),
+    rewardDate: date('reward_date').notNull(),
+    revealedAt: timestamp('revealed_at', { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex('puzzle_rewards_piece_unique').on(table.userId, table.artworkId, table.pieceIndex),
+    uniqueIndex('puzzle_rewards_daily_unique').on(table.userId, table.rewardDate),
+    check(
+      'puzzle_rewards_piece_index_check',
+      sql`${table.pieceIndex} >= 0 AND ${table.pieceIndex} < 12`,
+    ),
+    index('puzzle_rewards_user_earned_idx').on(table.userId, table.earnedAt),
+  ],
+)
+
 export const outboxEvents = pgTable(
   'outbox_events',
   {
