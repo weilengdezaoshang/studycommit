@@ -1,3 +1,4 @@
+import { richTextDocumentSchema, richTextPlainText } from './rich-text.js'
 import { oc } from '@orpc/contract'
 import { z } from 'zod'
 import { assetKindSchema, assetMimeTypeSchema } from './uploads.js'
@@ -9,7 +10,8 @@ export const paperQuestionStatusSchema = z.enum(['none', 'thinking', 'resolved']
 
 export const paperSchema = z.object({
   id: z.uuid(),
-  content: z.string().min(1).max(20_000),
+  content: z.string().max(20_000),
+  contentDocument: richTextDocumentSchema.nullable().optional(),
   status: paperStatusSchema,
   topicId: z.uuid().nullable(),
   version: z.number().int().min(1),
@@ -35,20 +37,42 @@ export const paperSchema = z.object({
         mimeType: assetMimeTypeSchema,
         width: z.number().int().positive(),
         height: z.number().int().positive(),
+        position: z.number().int().min(0).max(8).default(0),
       }),
     )
     .optional(),
 })
 
-export const createPaperInputSchema = z.object({
-  content: z.string().trim().min(1).max(20_000),
-  hasQuestion: z.boolean().default(false),
-  /** 确认的问题文本;提供时 questionStatus 记为 thinking。 */
-  questionText: z.string().trim().min(1).max(2_000).optional(),
-  understandingText: z.string().trim().min(1).max(20_000).optional(),
-  /** 已完成直传的上传会话 ID;创建时事务内绑定到纸页。 */
-  assetUploadIds: z.array(z.uuid()).min(1).max(9).optional(),
-})
+export const createPaperInputSchema = z
+  .object({
+    content: z.string().trim().max(20_000).default(''),
+    contentDocument: richTextDocumentSchema.nullable().optional(),
+    hasQuestion: z.boolean().default(false),
+    /** 确认的问题文本;提供时 questionStatus 记为 thinking。 */
+    questionText: z.string().trim().min(1).max(2_000).optional(),
+    understandingText: z.string().trim().min(1).max(20_000).optional(),
+    /** 已完成直传的上传会话 ID;创建时事务内绑定到纸页。 */
+    assetUploadIds: z.array(z.uuid()).min(1).max(9).optional(),
+  })
+  .refine((value) => value.content.length > 0 || Boolean(value.assetUploadIds?.length), {
+    message: '正文和图片不能同时为空',
+    path: ['content'],
+  })
+  .refine(
+    (value) =>
+      !value.assetUploadIds || new Set(value.assetUploadIds).size === value.assetUploadIds.length,
+    { message: '图片上传会话不能重复', path: ['assetUploadIds'] },
+  )
+  .refine((value) => !value.hasQuestion || Boolean(value.questionText || value.content), {
+    message: '标记问题时需要填写正文或问题文本',
+    path: ['questionText'],
+  })
+  .refine(
+    (value) =>
+      !value.contentDocument ||
+      richTextPlainText(value.contentDocument.doc).trim() === value.content,
+    { message: '富文本与正文内容不一致', path: ['contentDocument'] },
+  )
 
 export const listPapersInputSchema = z
   .object({
@@ -72,12 +96,20 @@ export const paperPageSchema = z.object({
   }),
 })
 
-const paperIdSchema = z.object({ id: z.uuid() })
+export const paperIdSchema = z.object({ id: z.uuid() })
 export const paperCommandSchema = z.object({ id: z.uuid(), version: z.number().int().min(1) })
 
-export const updatePaperInputSchema = paperCommandSchema.extend({
-  content: z.string().trim().min(1).max(20_000),
-})
+export const updatePaperInputSchema = paperCommandSchema
+  .extend({
+    content: z.string().trim().max(20_000),
+    contentDocument: richTextDocumentSchema.nullable().optional(),
+  })
+  .refine(
+    (value) =>
+      !value.contentDocument ||
+      richTextPlainText(value.contentDocument.doc).trim() === value.content,
+    { message: '富文本与正文内容不一致', path: ['contentDocument'] },
+  )
 
 /** 更新问题状态的目标状态;questionText 仅在建立/修改问题时提供。 */
 export const updatePaperQuestionInputSchema = paperCommandSchema.extend({
@@ -93,7 +125,69 @@ export const deletePaperOutputSchema = z.object({
   deletedAt: z.iso.datetime({ offset: true }),
 })
 
+export const paperAdditionSchema = z.object({
+  id: z.uuid(),
+  kind: z.enum(['understanding', 'application']),
+  content: z.string(),
+  createdAt: z.string(),
+})
+export const paperRelationSchema = z.object({
+  id: z.uuid(),
+  targetId: z.uuid(),
+  content: z.string(),
+  reason: z.string(),
+  version: z.number(),
+  createdAt: z.string(),
+})
+export const PAPER_KNOWLEDGE_ADDITION_LIMIT = 100
+export const PAPER_KNOWLEDGE_RELATION_LIMIT = 100
+
+export const paperKnowledgeSchema = z.object({
+  additions: z.array(paperAdditionSchema),
+  relations: z.array(paperRelationSchema),
+  additionsHasMore: z.boolean().default(false),
+  relationsHasMore: z.boolean().default(false),
+})
+export const paperKnowledgeCommandSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('append'),
+    id: z.uuid(),
+    additionId: z.uuid(),
+    type: z.enum(['understanding', 'application']),
+    content: z.string().trim().min(1).max(20_000),
+  }),
+  z.object({
+    kind: z.literal('link'),
+    id: z.uuid(),
+    targetId: z.uuid(),
+    relationId: z.uuid(),
+    reason: z.string().trim().max(2_000),
+  }),
+  z.object({
+    kind: z.literal('unlink'),
+    id: z.uuid(),
+    relationId: z.uuid(),
+    version: z.number().int().positive(),
+  }),
+  z.object({
+    kind: z.literal('restoreLink'),
+    id: z.uuid(),
+    relationId: z.uuid(),
+    version: z.number().int().positive(),
+  }),
+])
+export type PaperKnowledge = z.infer<typeof paperKnowledgeSchema>
+export type PaperKnowledgeCommand = z.infer<typeof paperKnowledgeCommandSchema>
+
 export const paperContract = {
+  knowledge: oc
+    .route({ method: 'GET', path: '/papers/{id}/knowledge', summary: '读取理解应用历史与双向关联' })
+    .input(paperIdSchema)
+    .output(paperKnowledgeSchema),
+  updateKnowledge: oc
+    .route({ method: 'POST', path: '/papers/{id}/knowledge', summary: '追加理解应用或维护关联' })
+    .input(paperKnowledgeCommandSchema)
+    .output(paperKnowledgeSchema),
   create: oc
     .route({ method: 'POST', path: '/papers', successStatus: 201, summary: '记录文字内容' })
     .input(createPaperInputSchema)
@@ -141,3 +235,4 @@ export type OrganizePaperInput = z.infer<typeof organizePaperInputSchema>
 export type PaperCommandInput = z.infer<typeof paperCommandSchema>
 export type UpdatePaperQuestionInput = z.infer<typeof updatePaperQuestionInputSchema>
 export type PaperQuestionStatus = z.infer<typeof paperQuestionStatusSchema>
+export type DeletePaperOutput = z.infer<typeof deletePaperOutputSchema>

@@ -28,13 +28,41 @@ describe('paper contract', () => {
     })
   })
 
-  it('只接受非空纯文字内容', () => {
+  it('接受文字记录或纯图片记录并拒绝完全空记录', () => {
     expect(createPaperInputSchema.parse({ content: '  一段记录  ' })).toEqual({
       content: '一段记录',
       hasQuestion: false,
     })
     expect(createPaperInputSchema.safeParse({ content: '   ' }).success).toBe(false)
+    expect(
+      createPaperInputSchema.parse({
+        content: '   ',
+        assetUploadIds: ['0b8f3c64-6e2a-4a5d-9d0a-2f0f5d3a1b21'],
+      }),
+    ).toMatchObject({ content: '', assetUploadIds: [expect.any(String)] })
     expect(createPaperInputSchema.safeParse({ content: 'a'.repeat(20_001) }).success).toBe(false)
+  })
+
+  it('纯图片记录标记问题时需要正文或问题文本', () => {
+    const assetUploadIds = ['0b8f3c64-6e2a-4a5d-9d0a-2f0f5d3a1b21']
+    expect(createPaperInputSchema.safeParse({ assetUploadIds, hasQuestion: true }).success).toBe(
+      false,
+    )
+    expect(
+      createPaperInputSchema.safeParse({
+        assetUploadIds,
+        hasQuestion: true,
+        questionText: '这张图哪里需要继续理解？',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('拒绝重复绑定同一个图片上传会话', () => {
+    const uploadId = '0b8f3c64-6e2a-4a5d-9d0a-2f0f5d3a1b21'
+    expect(
+      createPaperInputSchema.safeParse({ content: '', assetUploadIds: [uploadId, uploadId] })
+        .success,
+    ).toBe(false)
   })
 
   it('创建时接受确认的问题与理解文本并去除首尾空白', () => {

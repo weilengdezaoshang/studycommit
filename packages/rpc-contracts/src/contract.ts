@@ -7,6 +7,7 @@ import { healthContract } from './health.js'
 import { learningRecordContract } from './learning-records.js'
 import { operationsContract } from './operations.js'
 import { paperContract } from './papers.js'
+import { puzzlesContract, adminPuzzlesContract } from './puzzles.js'
 import { reviewsContract } from './reviews.js'
 import { searchContract } from './search.js'
 import { studySessionContract } from './study-sessions.js'
@@ -18,6 +19,8 @@ export const apiContract = {
   health: healthContract,
   auth: authContract,
   papers: paperContract,
+  puzzles: puzzlesContract,
+  adminPuzzles: adminPuzzlesContract,
   topics: topicContract,
   templates: templateContract,
   studySessions: studySessionContract,

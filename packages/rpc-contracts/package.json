@@ -52,6 +52,10 @@
       "types": "./src/papers.ts",
       "default": "./dist/papers.js"
     },
+    "./puzzles": {
+      "types": "./src/puzzles.ts",
+      "default": "./dist/puzzles.js"
+    },
     "./paper-question": {
       "types": "./src/paper-question.ts",
       "default": "./dist/paper-question.js"
