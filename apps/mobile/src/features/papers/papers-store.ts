@@ -14,6 +14,7 @@ import type { PaperApi, TopicMutationApi } from '@studycommit/common/ports'
 import {
   applyQuestionCommand,
   applyQuestionConfirmed,
+  mergeListedPaper,
   questionFieldsForCreate,
 } from '@studycommit/common/paper-runtime'
 import type { PaperQuestionStatus } from '@studycommit/rpc-contracts/paper-question'
@@ -90,8 +91,9 @@ async function loadRemote(): Promise<void> {
       remoteServices.papers.list({ limit: 100 }),
       remoteServices.topics.listActive({ limit: 100 }),
     ])
+    const previousById = new Map(state.papers.map((paper) => [paper.id, paper]))
     setState({
-      papers: papers.items,
+      papers: papers.items.map((item) => mergeListedPaper(previousById.get(item.id), item)),
       extras: Object.fromEntries(
         papers.items
           .filter((paper) => paper.questionStatus !== 'none' || state.extras[paper.id]?.photoPath)
@@ -174,8 +176,15 @@ function conflictPaperOf(error: unknown): Paper | null {
 }
 
 export const papersActions = {
+  receivePaper(paper: Paper) {
+    setState({
+      papers: [...state.papers.filter((item) => item.id !== paper.id), paper],
+      extras: withQuestionExtras(state.extras, paper),
+    })
+  },
   async createPaper(input: {
-    content: string
+    content?: string
+    contentDocument?: Paper['contentDocument']
     hasQuestion?: boolean
     photoPath?: string
     questionText?: string
@@ -184,15 +193,17 @@ export const papersActions = {
     /** 已完成直传的图片上传会话,创建时事务内绑定到纸页 */
     assetUploadIds?: string[]
   }): Promise<Paper> {
+    const content = input.content ?? ''
     const now = new Date().toISOString()
     const questionFields = questionFieldsForCreate({
-      content: input.content,
+      content,
       hasQuestion: input.hasQuestion,
       questionText: input.questionText,
     })
     const paper: Paper = {
       id: input.idempotencyKey ?? uuid(),
-      content: input.content,
+      content,
+      contentDocument: input.contentDocument,
       status: 'inbox',
       topicId: null,
       version: 1,
@@ -227,6 +238,7 @@ export const papersActions = {
         const saved = await remoteServices.papers.create(
           {
             content: paper.content,
+            ...(paper.contentDocument ? { contentDocument: paper.contentDocument } : {}),
             hasQuestion: Boolean(input.hasQuestion),
             ...(input.questionText ? { questionText: input.questionText } : {}),
             ...(input.assetUploadIds?.length ? { assetUploadIds: input.assetUploadIds } : {}),
