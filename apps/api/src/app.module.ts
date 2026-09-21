@@ -36,6 +36,7 @@ import { OperationsModule } from './operations/operations.module'
 import { AiBillingModule } from './ai-billing/ai-billing.module'
 import { ScheduleModule } from '@nestjs/schedule'
 import { ThrottlerModule } from '@nestjs/throttler'
+import { PuzzlesModule } from './puzzles/puzzles.module'
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ThrottlerModule } from '@nestjs/throttler'
     StudySessionsModule,
     LearningLogsModule,
     PapersModule,
+    PuzzlesModule,
     TemplatesModule,
     AuthModule,
     AiModule,
