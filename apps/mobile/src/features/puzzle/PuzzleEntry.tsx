@@ -37,18 +37,18 @@ export function PuzzleEntry() {
             onState: setSyncState,
           })
         : null,
-    [session?.user.id, services.puzzles],
+    [session, services.puzzles],
   )
   const summary = usePuzzleOverview(offline?.album ?? null, Boolean(offline))
-  useEffect(
-    () =>
-      AppState.addEventListener('change', (state) => {
-        if (state === 'active') {
-void summary.reload()
-}
-      }).remove,
-    [summary.reload],
-  )
+  const reloadAlbum = summary.reload
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void reloadAlbum()
+      }
+    })
+    return () => subscription.remove()
+  }, [reloadAlbum])
   if (!session || data.source !== 'server') {
     return null
   }
@@ -59,8 +59,8 @@ void summary.reload()
         accessibilityLabel="打开拼图画册"
         onPress={() => {
           if (syncState === 'failed') {
-void summary.reload()
-}
+            void summary.reload()
+          }
           setOpen(true)
         }}
         style={({ pressed }) => [

@@ -16,8 +16,8 @@ export function PuzzleEntry() {
   const host = useMemo<PuzzleCloudHost | null>(() => {
     const api = window.studyCommit.puzzles
     if (!api || !account) {
-return null
-}
+      return null
+    }
     const cloud = createOfflinePuzzleApi({
       account,
       remote: {
@@ -54,11 +54,12 @@ return null
     }
   }, [account])
   const summary = usePuzzleOverview(host?.album ?? null, Boolean(host))
+  const reloadAlbum = summary.reload
   useEffect(() => {
-    const sync = () => void summary.reload()
+    const sync = () => void reloadAlbum()
     window.addEventListener('online', sync)
     return () => window.removeEventListener('online', sync)
-  }, [summary.reload])
+  }, [reloadAlbum])
   if (!account || data.source !== 'server' || !host) {
     return null
   }
@@ -69,8 +70,8 @@ return null
         className={`puzzle-entry-card${summary.overview?.pendingRewardId ? ' has-reward' : ''}`}
         onClick={() => {
           if (syncState === 'failed') {
-void summary.reload()
-}
+            void summary.reload()
+          }
           setOpen(true)
         }}
         aria-label="打开拼图画册"

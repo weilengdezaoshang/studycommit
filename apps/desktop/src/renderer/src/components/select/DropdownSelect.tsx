@@ -51,8 +51,8 @@ export function DropdownSelect({
     if (
       !isValidElement<{ value?: string | number; children?: ReactNode; disabled?: boolean }>(child)
     ) {
-return []
-}
+      return []
+    }
     return [
       {
         value: String(child.props.value ?? ''),
@@ -70,6 +70,7 @@ return []
   const menuContent = useRef<HTMLDivElement>(null)
   const search = useRef({ text: '', time: 0 })
   const visible = open && !disabled
+  const hasPosition = Boolean(position)
   if (disabled && open) {
     setOpen(false)
   }
@@ -87,19 +88,19 @@ return []
   const choose = (index: number) => {
     const option = options[index]
     if (!option || option.disabled) {
-return
-}
+      return
+    }
     setOpen(false)
     onValueChange?.(option.value)
   }
   useLayoutEffect(() => {
     if (!visible) {
-return
-}
+      return
+    }
     const update = () => {
       if (!trigger.current) {
-return
-}
+        return
+      }
       setPosition(
         getMenuPosition(
           trigger.current.getBoundingClientRect(),
@@ -114,16 +115,16 @@ return
         !trigger.current?.contains(event.target) &&
         !menu.current?.contains(event.target)
       ) {
-setOpen(false)
-}
+        setOpen(false)
+      }
     }
     const observer = new ResizeObserver(update)
     if (trigger.current) {
-observer.observe(trigger.current)
-}
+      observer.observe(trigger.current)
+    }
     if (menuContent.current) {
-observer.observe(menuContent.current)
-}
+      observer.observe(menuContent.current)
+    }
     update()
     window.addEventListener('resize', update)
     window.addEventListener('scroll', update, true)
@@ -134,12 +135,12 @@ observer.observe(menuContent.current)
       window.removeEventListener('scroll', update, true)
       document.removeEventListener('pointerdown', outside, true)
     }
-  }, [visible, options.length, Boolean(position)])
+  }, [visible, options.length, hasPosition])
   useLayoutEffect(() => {
     if (visible) {
-document.getElementById(`${menuId}-${active}`)?.scrollIntoView?.({ block: 'nearest' })
-}
-  }, [active, visible, menuId, Boolean(position)])
+      document.getElementById(`${menuId}-${active}`)?.scrollIntoView?.({ block: 'nearest' })
+    }
+  }, [active, visible, menuId, hasPosition])
   return (
     <span className="notebook-select">
       <SketchBorder />
@@ -175,10 +176,10 @@ document.getElementById(`${menuId}-${active}`)?.scrollIntoView?.({ block: 'neare
           if (['Enter', ' '].includes(event.key)) {
             event.preventDefault()
             if (visible) {
-choose(active)
-} else {
-show()
-}
+              choose(active)
+            } else {
+              show()
+            }
             return
           }
           if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
@@ -189,8 +190,8 @@ show()
             }
             const enabled = options.flatMap((option, index) => (option.disabled ? [] : [index]))
             if (!enabled.length) {
-return
-}
+              return
+            }
             const index = enabled.indexOf(active)
             setActive(
               event.key === 'Home'
@@ -264,8 +265,8 @@ return
                     className={`dropdown-select-option${active === index ? ' is-active' : ''}`}
                     onPointerMove={() => {
                       if (!option.disabled) {
-setActive(index)
-}
+                        setActive(index)
+                      }
                     }}
                     onClick={() => choose(index)}
                   >
